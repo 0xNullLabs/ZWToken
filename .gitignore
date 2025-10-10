@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Hardhat files
+cache/
+artifacts/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+coverage.json
+*.lcov
+
+# Circom build artifacts (keep only final outputs)
+circuits/out/*.zkey
+!circuits/out/claim_final.zkey
+circuits/out/*.r1cs
+circuits/out/*.sym
+circuits/out/**/witness_calculator.js
+
+# Powers of Tau (large files, download separately)
+*.ptau
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS
+Thumbs.db
+

@@ -1,0 +1,24 @@
+{
+  "name": "zk-claim-poc",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "scripts": {
+    "build-inputs": "node client/build_inputs.js",
+    "submit-claim": "node client/submit_claim.js",
+    "hh:compile": "hardhat compile",
+    "hh:deploy": "hardhat run scripts/deploy.js --network hardhat",
+    "test": "hardhat test"
+  },
+  "dependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "big-integer": "^1.6.52",
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.0.8",
+    "ethers": "^6.11.1",
+    "hardhat": "^2.22.9",
+    "minimist": "^1.2.8",
+    "rlp": "^3.0.0"
+  }
+}

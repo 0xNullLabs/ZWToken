@@ -1,0 +1,23 @@
+{
+  "public": {
+    "headerHash": "0x...",
+    "blockNumber": 19000000,
+    "stateRoot": "0x...",
+    "amount": "0x...",
+    "nullifier": "0x...",
+    "chainId": 1,
+    "contractAddr": "0xYourToken",
+    "to": "0xRecipient"
+  },
+  "private": {
+    "secret": "0x<32-bytes>",
+    "headerRlp": ["0x..."],
+    "accountProof": ["0x..."],
+    "storageProof": {
+      "key": "0x<slotKey>",
+      "proof": ["0x..."],
+      "value": "0x<balance>"
+    }
+  },
+  "notes": "Never persist or upload secret/addr20/slotKey to third-party services."
+}
