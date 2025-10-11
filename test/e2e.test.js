@@ -45,11 +45,27 @@ describe("E2E ZK Wrapper Token Flow", function () {
     console.log("ZWToken deployed:", await ZWToken.getAddress());
   });
 
-  it("完整流程：deposit 到隐私地址 → 生成证明 → claim 到新地址", async function () {
+  it("完整流程：deposit → 转到隐私地址 → 生成证明 → claim 到新地址", async function () {
     this.timeout(60000); // 60秒超时
 
-    // === 阶段 1: 计算隐私地址 A 并 deposit ===
-    console.log("\n=== 阶段 1: 计算隐私地址并 deposit ===");
+    // === 阶段 1: deployer deposit 获得 ZWToken ===
+    console.log("\n=== 阶段 1: deployer deposit 获得 ZWToken ===");
+
+    const amount = ethers.parseEther("1000");
+
+    // deployer 授权并 deposit（真实场景：用户用自己的私钥操作）
+    await sourceToken.approve(await ZWToken.getAddress(), amount);
+    await ZWToken.deposit(amount);
+
+    const deployerBalance = await ZWToken.balanceOf(deployer.address);
+    console.log(
+      "Deployer 的 ZWToken 余额:",
+      ethers.formatEther(deployerBalance)
+    );
+    expect(deployerBalance).to.equal(amount);
+
+    // === 阶段 2: 计算隐私地址 A 并转账 ZWToken ===
+    console.log("\n=== 阶段 2: 计算隐私地址 A 并转账 ZWToken ===");
 
     const poseidonHash = circomlibjs.poseidon;
     const addrScalar = poseidonHash([MAGIC, SECRET]);
@@ -59,39 +75,18 @@ describe("E2E ZK Wrapper Token Flow", function () {
     );
 
     console.log("Secret:", SECRET.toString());
-    console.log("隐私地址 A:", addressA);
+    console.log("隐私地址 A（无私钥黑洞地址）:", addressA);
 
-    // 向地址 A 转入 1000 source tokens
-    const amount = ethers.parseEther("1000");
-    await sourceToken.transfer(addressA, amount);
-    console.log(
-      "地址 A 的 source token 余额:",
-      ethers.formatEther(await sourceToken.balanceOf(addressA))
-    );
-
-    // 从地址 A deposit 到 ZWToken（需要用 impersonated account）
-    await ethers.provider.send("hardhat_impersonateAccount", [addressA]);
-    const signerA = await ethers.getSigner(addressA);
-
-    // 给地址 A 一些 ETH 用于 gas
-    await deployer.sendTransaction({
-      to: addressA,
-      value: ethers.parseEther("1"),
-    });
-
-    // 授权并 deposit
-    await sourceToken
-      .connect(signerA)
-      .approve(await ZWToken.getAddress(), amount);
-    await ZWToken.connect(signerA).deposit(amount);
-    await ethers.provider.send("hardhat_stopImpersonatingAccount", [addressA]);
+    // deployer 将 ZWToken 转给隐私地址 A
+    // 注意：地址 A 没有私钥，无法发起任何交易，只能被动接收
+    await ZWToken.transfer(addressA, amount);
 
     const balanceA = await ZWToken.balanceOf(addressA);
     console.log("地址 A 的 ZKW 余额:", ethers.formatEther(balanceA));
     expect(balanceA).to.equal(amount);
 
-    // === 阶段 2: 获取余额证明 ===
-    console.log("\n=== 阶段 2: 获取状态证明 ===");
+    // === 阶段 3: 获取余额证明 ===
+    console.log("\n=== 阶段 3: 获取状态证明 ===");
 
     // Mine 几个块以便有 head-2
     await ethers.provider.send("hardhat_mine", ["0x5"]);
@@ -114,11 +109,31 @@ describe("E2E ZK Wrapper Token Flow", function () {
       ethers.toBeHex(targetBlock),
     ]);
 
-    console.log("Storage proof 获取成功");
-    console.log("余额值:", proof.storageProof[0].value);
+    console.log("Storage proof 获取成功:", proof);
+    console.log("余额值（十六进制）:", proof.storageProof[0].value);
 
-    // === 阶段 3: 生成 ZK 证明（占位版） ===
-    console.log("\n=== 阶段 3: 构造证明输入 ===");
+    // 验证 storageProof 的值确实是地址 A 在目标区块的 ZWToken 余额
+    const balanceAAtTargetBlock = await ZWToken.balanceOf(addressA, {
+      blockTag: targetBlock,
+    });
+    console.log(
+      "地址 A 在目标区块的 ZWToken 余额:",
+      ethers.formatEther(balanceAAtTargetBlock)
+    );
+
+    // 将 storageProof 的值转换为 BigInt 进行比较
+    const storageValue = BigInt(proof.storageProof[0].value);
+    console.log("余额值（十进制）:", storageValue.toString());
+
+    // 断言：storageProof 的值应该等于目标区块时地址 A 的余额
+    expect(storageValue).to.equal(
+      balanceAAtTargetBlock,
+      "storageProof 的值应该等于地址 A 在目标区块的实际余额"
+    );
+    console.log("✅ storageProof 验证通过：值与地址 A 的余额一致");
+
+    // === 阶段 4: 生成 ZK 证明（占位版） ===
+    console.log("\n=== 阶段 4: 构造证明输入 ===");
 
     // 计算 nullifier
     const chainId = (await ethers.provider.getNetwork()).chainId;
@@ -146,8 +161,8 @@ describe("E2E ZK Wrapper Token Flow", function () {
 
     console.log("公共输入已构造");
 
-    // === 阶段 4: 提交 claim 到新地址 B ===
-    console.log("\n=== 阶段 4: 提交 claim 到新地址 B ===");
+    // === 阶段 5: 提交 claim 到新地址 B ===
+    console.log("\n=== 阶段 5: 提交 claim 到新地址 B ===");
 
     // 占位 proof（真实场景需要用 snarkjs 生成）
     const dummyProof = {
@@ -195,8 +210,8 @@ describe("E2E ZK Wrapper Token Flow", function () {
     // claim 会 mint 新的代币到地址 B
     expect(balanceB).to.equal(amount);
 
-    // === 阶段 5: 验证防重领 ===
-    console.log("\n=== 阶段 5: 验证防重领 ===");
+    // === 阶段 6: 验证防重领 ===
+    console.log("\n=== 阶段 6: 验证防重领 ===");
 
     // 注意：Anvil 的 revert 消息格式可能与 Hardhat 不同
     await expect(
