@@ -8,10 +8,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 interface ISnarkVerifier {
     function verifyProof(
-        uint256[2] calldata a,
-        uint256[2][2] calldata b,
-        uint256[2] calldata c,
-        uint256[] calldata input
+        uint[2] calldata a,
+        uint[2][2] calldata b,
+        uint[2] calldata c,
+        uint[8] calldata input
     ) external view returns (bool);
 }
 
@@ -87,15 +87,16 @@ contract ZWToken is ERC20 {
 
         // input signals must match circuit order:
         // [headerHash, blockNumber, stateRoot, amount, nullifier, chainId, contractAddr=self, to]
-        uint256[] memory input = new uint256[](8);
-        input[0] = uint256(headerHash);
-        input[1] = blockNumber;
-        input[2] = uint256(stateRoot);
-        input[3] = amount;
-        input[4] = uint256(nullifier);
-        input[5] = chainId;
-        input[6] = uint256(uint160(self));
-        input[7] = uint256(uint160(to));
+        uint[8] memory input = [
+            uint256(headerHash),
+            blockNumber,
+            uint256(stateRoot),
+            amount,
+            uint256(nullifier),
+            chainId,
+            uint256(uint160(self)),
+            uint256(uint160(to))
+        ];
 
         require(verifier.verifyProof(a, b, c, input), "bad proof");
 

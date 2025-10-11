@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "=== 使用 Anvil 运行支持 eth_getProof 的测试 ==="
+echo "=== 使用 Anvil 运行真实 ZK Proof 测试 ==="
 echo ""
 
 # 检查 anvil 是否安装
@@ -15,7 +15,7 @@ fi
 echo "✅ Anvil 已安装"
 echo ""
 
-# 启动 Anvil（支持 eth_getProof）
+# 启动 Anvil
 echo "🚀 启动 Anvil..."
 anvil --port 8545 &
 ANVIL_PID=$!
@@ -37,13 +37,14 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # 运行测试
-echo "🧪 运行测试..."
+echo "🧪 运行真实 ZK Proof 测试..."
+echo "⚠️  注意：生成证明需要时间，请耐心等待..."
 echo ""
 
 # 设置 Hardhat 使用 Anvil
 export HARDHAT_NETWORK=localhost
 
-npx hardhat test test/e2e.test.js --network localhost
+npx hardhat test test/e2e-with-real-proof.test.js --network localhost
 
 echo ""
 echo "✅ 测试完成"
