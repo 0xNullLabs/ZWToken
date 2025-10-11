@@ -43,5 +43,12 @@ snarkjs groth16 verify verification_key.json public.json proof.json
 Notes
 
 - 需保证公共信号顺序与合约 `ZWToken.claim(...)` 内组装一致：
-  `[headerHash, blockNumber, stateRoot, amount, nullifier, chainId, contractAddr, to]`。
+  `[headerHashHi, headerHashLo, amount, nullifier, chainId, contractAddr, to]`（共 7 个）。
+- headerHash 作为公开输入：
+  - 合约通过 `blockhash(blockNumber)` 获取 headerHash
+  - 拆分为 Hi/Lo 128 位后作为公开输入传给电路
+  - 证明绑定到特定区块，可公开验证
+- stateRoot 是私有输入，只在电路内部验证（从 header 解析）
+- 256 位哈希值被拆分为高/低 128 位，以确保值在 BN254 field 范围内。
+- blockNumber 仅在合约层验证（blockhash 和新鲜度检查），不作为电路公开输入。
 - MPT 组件仅需验证：账户（取 storageRoot）与存储（\_balances[addr20]）两条路径。

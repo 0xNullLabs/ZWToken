@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 /**
  * @title DevMockVerifier
  * @notice Mock verifier for development/testing
- * @dev 接口与 Groth16Verifier 完全一致，使用固定大小数组 uint[8]
+ * @dev 接口与 Groth16Verifier 完全一致，使用固定大小数组 uint[7]
  * 在开发环境中始终返回 true，方便测试
  */
 contract DevMockVerifier {
@@ -13,14 +13,14 @@ contract DevMockVerifier {
      * @param _pA proof 的 a 部分
      * @param _pB proof 的 b 部分  
      * @param _pC proof 的 c 部分
-     * @param _pubSignals 公共输入信号（固定 8 个）
+     * @param _pubSignals 公共输入信号（固定 7 个：headerHashHi, headerHashLo, amount, nullifier, chainId, contractAddr, to）
      * @return 始终返回 true
      */
     function verifyProof(
         uint[2] calldata _pA,
         uint[2][2] calldata _pB,
         uint[2] calldata _pC,
-        uint[8] calldata _pubSignals
+        uint[7] calldata _pubSignals
     ) external pure returns (bool) {
         // 避免编译器警告未使用的参数
         (_pA, _pB, _pC, _pubSignals);

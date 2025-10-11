@@ -166,14 +166,13 @@ describe("E2E ZK Wrapper Token Flow (Real ZK Proof)", function () {
 
     console.log("✅ 真实的 ZK Proof 生成成功！");
     console.log("📊 Public Signals (共 %d 个):", publicSignals.length);
-    console.log("  [0] headerHash:", publicSignals[0]);
-    console.log("  [1] blockNumber:", publicSignals[1]);
-    console.log("  [2] stateRoot:", publicSignals[2]);
-    console.log("  [3] amount:", publicSignals[3]);
-    console.log("  [4] nullifier:", publicSignals[4]);
-    console.log("  [5] chainId:", publicSignals[5]);
-    console.log("  [6] contractAddr:", publicSignals[6]);
-    console.log("  [7] to:", publicSignals[7]);
+    console.log("  [0] headerHashHi:", publicSignals[0]);
+    console.log("  [1] headerHashLo:", publicSignals[1]);
+    console.log("  [2] amount:", publicSignals[2]);
+    console.log("  [3] nullifier:", publicSignals[3]);
+    console.log("  [4] chainId:", publicSignals[4]);
+    console.log("  [5] contractAddr:", publicSignals[5]);
+    console.log("  [6] to:", publicSignals[6]);
 
     // 格式化为 Solidity 格式
     const solidityProof = formatProofForSolidity(zkProof);
@@ -204,13 +203,12 @@ describe("E2E ZK Wrapper Token Flow (Real ZK Proof)", function () {
     );
 
     // 使用真实的 ZK proof 发起 claim
+    // 注意：不再需要传递 headerHash 和 stateRoot，合约会通过 blockhash(blockNumber) 获取
     const claimTx = await ZWToken.connect(deployer).claim(
       solidityProof.a,
       solidityProof.b,
       solidityProof.c,
-      block.hash,
       targetBlock,
-      block.stateRoot || proof.storageHash || ethers.ZeroHash,
       balanceA,
       nullifierHex,
       userB.address
@@ -240,9 +238,7 @@ describe("E2E ZK Wrapper Token Flow (Real ZK Proof)", function () {
         solidityProof.a,
         solidityProof.b,
         solidityProof.c,
-        block.hash,
         targetBlock,
-        block.stateRoot || proof.storageHash || ethers.ZeroHash,
         balanceA,
         nullifierHex,
         userB.address

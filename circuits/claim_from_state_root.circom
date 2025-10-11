@@ -14,9 +14,8 @@ include "circomlib/circuits/comparators.circom"; // LessEqThan
 
 template ClaimFromStateRoot(DEPTH_ACCOUNT, DEPTH_STORAGE, MAGIC, TWO160) {
     // Public inputs
-    signal input headerHash;        // keccak(RLP(header))
-    signal input blockNumber;
-    signal input stateRoot;         // must equal header.stateRoot
+    signal input headerHashHi;      // high 128 bits of keccak(RLP(header)) - from blockhash()
+    signal input headerHashLo;      // low 128 bits of keccak(RLP(header)) - from blockhash()
     signal input amount;            // claimed amount
     signal input nullifier;         // Poseidon(secret, chainId, contractAddr)
     signal input chainId;
@@ -28,17 +27,23 @@ template ClaimFromStateRoot(DEPTH_ACCOUNT, DEPTH_STORAGE, MAGIC, TWO160) {
     signal input addr20;            // low 160 bits of Poseidon(MAGIC, secret)
     signal input q;                 // quotient for addr decomposition
 
+    // Private inputs: stateRoot from header (256-bit split into high/low 128-bit parts)
+    signal input stateRootHi;       // high 128 bits of header.stateRoot
+    signal input stateRootLo;       // low 128 bits of header.stateRoot
+
     // Placeholder private inputs for future RLP/Keccak/MPT integration
-    signal input headerHashCalc;    // should be keccak(RLP(header)) later
-    signal input numberParsed;      // header.number
-    signal input stateRootParsed;   // header.stateRoot
+    signal input headerHashHiCalc;  // should be keccak(RLP(header)) later (high 128 bits)
+    signal input headerHashLoCalc;  // should be keccak(RLP(header)) later (low 128 bits)
+    signal input stateRootHiParsed; // header.stateRoot (high 128 bits)
+    signal input stateRootLoParsed; // header.stateRoot (low 128 bits)
     signal input storageRootWitness;// account MPT -> storageRoot
     signal input balance;           // storage MPT -> balance (uint256 as field)
 
-    // 0) Bind placeholders to public context (to be replaced by real components later)
-    headerHash === headerHashCalc;
-    blockNumber === numberParsed;
-    stateRoot === stateRootParsed;
+    // 0) Bind placeholders to internal computation (to be replaced by real components later)
+    headerHashHi === headerHashHiCalc;
+    headerHashLo === headerHashLoCalc;
+    stateRootHi === stateRootHiParsed;
+    stateRootLo === stateRootLoParsed;
 
     // 1) addr20 = low160(Poseidon(MAGIC, secret)) with quotient constraint
     component posAddr = Poseidon(2);
@@ -73,5 +78,6 @@ template ClaimFromStateRoot(DEPTH_ACCOUNT, DEPTH_STORAGE, MAGIC, TWO160) {
 }
 
 // Instantiate with placeholder MAGIC=0 and TWO160=2^160; replace MAGIC at compile time
-component main {public [headerHash, blockNumber, stateRoot, amount, nullifier, chainId, contractAddr, to]} = ClaimFromStateRoot(8, 8, 0, 1461501637330902918203684832716283019655932542976);
+// Public inputs: headerHash (split), amount, nullifier, chainId, contractAddr, to
+component main {public [headerHashHi, headerHashLo, amount, nullifier, chainId, contractAddr, to]} = ClaimFromStateRoot(8, 8, 0, 1461501637330902918203684832716283019655932542976);
 

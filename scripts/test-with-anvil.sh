@@ -44,7 +44,7 @@ echo ""
 # 设置 Hardhat 使用 Anvil
 export HARDHAT_NETWORK=localhost
 
-npx hardhat test test/e2e-with-real-proof.test.js --network localhost
+npx hardhat test test/e2e.test.js --network localhost
 
 echo ""
 echo "✅ 测试完成"

@@ -124,14 +124,13 @@ describe("ZWToken claim with mocked proof data", function () {
     console.log("新地址 C (userB):", userBAddress);
 
     // userB 提交 claim
+    // 注意：不再需要传递 headerHash 和 stateRoot
     await expect(
       ZWToken.connect(userB).claim(
         a,
         b,
         c,
-        block.hash,
         targetBlock,
-        stateRoot,
         claimAmount,
         nullifierHex,
         userBAddress
@@ -188,9 +187,7 @@ describe("ZWToken claim with mocked proof data", function () {
         a,
         b,
         c,
-        block.hash,
         targetBlock,
-        stateRoot,
         claimAmount,
         nullifierHex,
         userBAddress

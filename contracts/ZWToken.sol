@@ -11,7 +11,7 @@ interface ISnarkVerifier {
         uint[2] calldata a,
         uint[2][2] calldata b,
         uint[2] calldata c,
-        uint[8] calldata input
+        uint[7] calldata input
     ) external view returns (bool);
 }
 
@@ -67,36 +67,36 @@ contract ZWToken is ERC20 {
         uint256[2] calldata a,
         uint256[2][2] calldata b,
         uint256[2] calldata c,
-        bytes32 headerHash,
         uint256 blockNumber,
-        bytes32 stateRoot,
         uint256 amount,
         bytes32 nullifier,
         address to
     ) external {
         require(block.number > blockNumber, "past block only");
         require(block.number - blockNumber <= freshnessK, "too old");
-        require(blockhash(blockNumber) == headerHash, "header mismatch");
+        
+        // Get headerHash from blockhash - no need to pass it as parameter
+        bytes32 headerHash = blockhash(blockNumber);
+        require(headerHash != bytes32(0), "block hash unavailable");
+        
         require(!usedNullifier[nullifier], "nullifier used");
 
         uint256 chainId;
         assembly {
             chainId := chainid()
         }
-        address self = address(this);
 
         // input signals must match circuit order:
-        // [headerHash, blockNumber, stateRoot, amount, nullifier, chainId, contractAddr=self, to]
-        uint[8] memory input = [
-            uint256(headerHash),
-            blockNumber,
-            uint256(stateRoot),
-            amount,
-            uint256(nullifier),
-            chainId,
-            uint256(uint160(self)),
-            uint256(uint160(to))
-        ];
+        // [headerHashHi, headerHashLo, amount, nullifier, chainId, contractAddr, to]
+        // Split 256-bit headerHash into high/low 128-bit parts to fit in BN254 field
+        uint[7] memory input;
+        input[0] = uint256(headerHash) >> 128;           // headerHashHi
+        input[1] = uint256(headerHash) & ((1 << 128) - 1); // headerHashLo
+        input[2] = amount;
+        input[3] = uint256(nullifier);
+        input[4] = chainId;
+        input[5] = uint256(uint160(address(this)));
+        input[6] = uint256(uint160(to));
 
         require(verifier.verifyProof(a, b, c, input), "bad proof");
 

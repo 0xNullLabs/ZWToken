@@ -12,6 +12,21 @@ const fs = require("fs");
 const path = require("path");
 
 const TWO160 = 1461501637330902918203684832716283019655932542976n; // 2^160
+const FIELD_SIZE =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n; // BN254 field modulus
+const TWO128 = 340282366920938463463374607431768211456n; // 2^128
+
+/**
+ * 将 256 位值拆分为高 128 位和低 128 位
+ * @param {BigInt} value - 256 位值
+ * @returns {{hi: BigInt, lo: BigInt}}
+ */
+function split256to128(value) {
+  const val = BigInt(value);
+  const lo = val & (TWO128 - 1n); // 低 128 位
+  const hi = val >> 128n; // 高 128 位
+  return { hi, lo };
+}
 
 /**
  * 构建电路输入
@@ -32,19 +47,28 @@ async function buildCircuitInput(params) {
 
   // 1. 计算 addr20 = low160(Poseidon(MAGIC, secret))
   const poseidon = circomlibjs.poseidon;
-  const addrScalar = poseidon([magic, secret]);
+  let addrScalar = poseidon([magic, secret]);
+
+  // 确保 addrScalar 在 field 范围内（Poseidon 已经返回 mod FIELD_SIZE 的值，但double-check）
+  addrScalar = addrScalar % FIELD_SIZE;
+
   const addr20 = addrScalar & ((1n << 160n) - 1n);
   const q = (addrScalar - addr20) / TWO160;
 
   // 2. 计算 nullifier = Poseidon(secret, chainId, contractAddr)
   const nullifier = poseidon([secret, chainId, BigInt(contractAddr)]);
 
-  // 3. 构建完整的电路输入
+  // 3. 拆分 256 位哈希为 128 位部分（避免超出 BN254 field size）
+  const headerHashSplit = split256to128(BigInt(headerHash));
+  const stateRootSplit = split256to128(BigInt(stateRoot));
+
+  // 4. 构建完整的电路输入
   const input = {
     // 公共输入
-    headerHash: BigInt(headerHash),
-    blockNumber: BigInt(blockNumber),
-    stateRoot: BigInt(stateRoot),
+    headerHashHi: headerHashSplit.hi,
+    headerHashLo: headerHashSplit.lo,
+    stateRootHi: stateRootSplit.hi,
+    stateRootLo: stateRootSplit.lo,
     amount: BigInt(amount),
     nullifier: nullifier,
     chainId: BigInt(chainId),
@@ -57,9 +81,10 @@ async function buildCircuitInput(params) {
     q: q,
 
     // Placeholder 输入（未来需要真实的 RLP/Keccak/MPT 证明）
-    headerHashCalc: BigInt(headerHash), // placeholder: 直接使用 headerHash
-    numberParsed: BigInt(blockNumber), // placeholder: 直接使用 blockNumber
-    stateRootParsed: BigInt(stateRoot), // placeholder: 直接使用 stateRoot
+    headerHashHiCalc: headerHashSplit.hi, // placeholder: 直接使用 headerHashHi
+    headerHashLoCalc: headerHashSplit.lo, // placeholder: 直接使用 headerHashLo
+    stateRootHiParsed: stateRootSplit.hi, // placeholder: 直接使用 stateRootHi
+    stateRootLoParsed: stateRootSplit.lo, // placeholder: 直接使用 stateRootLo
     storageRootWitness: 0n, // placeholder: 未使用
     balance: BigInt(balance), // placeholder: 直接提供余额
   };
