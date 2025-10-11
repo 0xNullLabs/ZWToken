@@ -2,13 +2,14 @@
 // - addr20 = low160(Poseidon(MAGIC, secret)) with correctness: addrScalar == addr20 + q * TWO160
 // - header binding (placeholder): headerHashCalc == headerHash, numberParsed == blockNumber, stateRootParsed == stateRoot
 // - account/storage MPT (placeholder): storageRootWitness as account result; balance as storage result
-// - amount == balance
+// - amount <= balance (partial or full withdrawal allowed)
 // - nullifier = Poseidon(secret, chainId, contractAddr)
 
 pragma circom 2.1.6;
 
 include "circomlib/circuits/poseidon.circom";
 include "circomlib/circuits/bitify.circom"; // Num2Bits
+include "circomlib/circuits/comparators.circom"; // LessEqThan
 // NOTE: RLP/Keccak/MPT components will be integrated here in a later step.
 
 template ClaimFromStateRoot(DEPTH_ACCOUNT, DEPTH_STORAGE, MAGIC, TWO160) {
@@ -55,8 +56,11 @@ template ClaimFromStateRoot(DEPTH_ACCOUNT, DEPTH_STORAGE, MAGIC, TWO160) {
     // signal storageRootDerived; // from account MPT; for now witness provided
     // storageRootDerived === storageRootWitness;
 
-    // 3) amount == balance (balance from storage MPT placeholder)
-    amount === balance;
+    // 3) amount <= balance (balance from storage MPT placeholder)
+    component leq = LessEqThan(252); // 252 bits sufficient for most token amounts
+    leq.in[0] <== amount;
+    leq.in[1] <== balance;
+    leq.out === 1; // enforce amount <= balance
 
     // 4) nullifier = Poseidon(secret, chainId, contractAddr)
     component posNullifier = Poseidon(3);
