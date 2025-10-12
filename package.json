@@ -1,14 +1,29 @@
 {
-  "name": "zk-claim-poc",
+  "name": "zwtoken",
+  "description": "Browser-friendly ZK Wrapper Token with privacy-preserving first receipt tracking",
+  "version": "2.0.0",
   "private": true,
-  "version": "0.1.0",
   "type": "commonjs",
+  "keywords": [
+    "zero-knowledge",
+    "zk-snark",
+    "privacy",
+    "ethereum",
+    "wrapper-token",
+    "poseidon",
+    "merkle-tree",
+    "groth16"
+  ],
   "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:v1": "hardhat test test/claim.test.js test/commitment.test.js test/e2e.test.js",
+    "test:v2": "hardhat test test/claim_v2_e2e.test.js test/commitment_v2.test.js test/e2e_v2.test.js",
+    "test:gas": "REPORT_GAS=true hardhat test",
+    "circuit:build": "./scripts/build_circuit.sh",
+    "deploy": "hardhat run scripts/deploy.js --network hardhat",
     "build-inputs": "node client/build_inputs.js",
-    "submit-claim": "node client/submit_claim.js",
-    "hh:compile": "hardhat compile",
-    "hh:deploy": "hardhat run scripts/deploy.js --network hardhat",
-    "test": "hardhat test"
+    "submit-claim": "node client/submit_claim.js"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
