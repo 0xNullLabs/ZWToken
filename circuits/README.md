@@ -25,9 +25,9 @@ Setup (Groth16)
 
 ```bash
 snarkjs groth16 setup claim_from_state_root.r1cs powersOfTau28_hez_final_19.ptau claim_0000.zkey
-snarkjs zkey contribute claim_0000.zkey claim_final.zkey --name "poc"
-snarkjs zkey export verificationkey claim_final.zkey verification_key.json
-snarkjs zkey export solidityverifier claim_final.zkey contracts/Verifier.sol
+snarkjs zkey contribute claim_0000.zkey claim_first_receipt_final.zkey --name "poc"
+snarkjs zkey export verificationkey claim_first_receipt_final.zkey verification_key.json
+snarkjs zkey export solidityverifier claim_first_receipt_final.zkey contracts/Verifier.sol
 ```
 
 Prove/Verify (local)
@@ -36,7 +36,7 @@ Prove/Verify (local)
 node claim_from_state_root_js/generate_witness.js \
   claim_from_state_root_js/claim_from_state_root.wasm \
   input.json witness.wtns
-snarkjs groth16 prove claim_final.zkey witness.wtns proof.json public.json
+snarkjs groth16 prove claim_first_receipt_final.zkey witness.wtns proof.json public.json
 snarkjs groth16 verify verification_key.json public.json proof.json
 ```
 

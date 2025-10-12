@@ -19,6 +19,7 @@
     "ethers": "^6.11.1",
     "hardhat": "^2.22.9",
     "minimist": "^1.2.8",
+    "poseidon-solidity": "^0.0.5",
     "rlp": "^3.0.0",
     "snarkjs": "^0.7.0"
   }

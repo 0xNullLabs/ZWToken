@@ -206,7 +206,10 @@ async function main() {
     projectRoot,
     "circuits/out/claim_from_state_root_js/claim_from_state_root.wasm"
   );
-  const zkeyPath = path.join(projectRoot, "circuits/out/claim_final.zkey");
+  const zkeyPath = path.join(
+    projectRoot,
+    "circuits/out/claim_first_receipt_final.zkey"
+  );
   const vkeyPath = path.join(projectRoot, "circuits/out/verification_key.json");
 
   // 生成证明

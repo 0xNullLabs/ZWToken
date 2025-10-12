@@ -35,7 +35,7 @@ coverage.json
 
 # Circom build artifacts (keep only final outputs)
 circuits/out/*.zkey
-!circuits/out/claim_final.zkey
+!circuits/out/claim_first_receipt_final.zkey
 circuits/out/*.r1cs
 circuits/out/*.sym
 circuits/out/**/witness_calculator.js

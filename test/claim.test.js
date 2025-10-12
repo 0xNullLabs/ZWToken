@@ -1,199 +1,408 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const circomlibjs = require("circomlibjs");
+const { poseidon } = require("circomlibjs");
 
-function zbytes32(hex) {
-  return ethers.zeroPadValue(hex, 32);
-}
+/**
+ * ZWToken E2E 测试
+ * 基于新架构：Poseidon Merkle tree + 首次接收记录
+ */
+describe("ZWToken - E2E Claim Test", function () {
+  let zwToken, underlying, verifier, poseidonT3;
+  let deployer, alice, bob;
 
-describe("ZWToken claim with mocked proof data", function () {
-  let sourceToken, ZWToken, verifier;
-  let deployer, userB;
-
-  const MAGIC = 42n;
   const SECRET = 123456789n;
 
   before(async function () {
-    [deployer, userB] = await ethers.getSigners();
+    [deployer, alice, bob] = await ethers.getSigners();
 
-    // 部署底层 ERC20
-    const MockERC20 = await ethers.getContractFactory("MockERC20");
-    sourceToken = await MockERC20.deploy(
-      "Source Token",
-      "SRC",
+    console.log("\n🚀 部署合约...");
+
+    // 1. 部署 PoseidonT3 库
+    const PoseidonT3 = await ethers.getContractFactory(
+      "poseidon-solidity/PoseidonT3.sol:PoseidonT3"
+    );
+    poseidonT3 = await PoseidonT3.deploy();
+    await poseidonT3.waitForDeployment();
+    console.log("✅ PoseidonT3 deployed:", await poseidonT3.getAddress());
+
+    // 2. 部署底层 ERC20
+    const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
+    underlying = await ERC20Mock.deploy(
+      "Underlying Token",
+      "UDLT",
       ethers.parseEther("1000000")
     );
-    await sourceToken.waitForDeployment();
+    await underlying.waitForDeployment();
+    console.log("✅ Underlying deployed:", await underlying.getAddress());
 
-    // 部署 Mock Verifier（总是返回 true）
-    const DevMockVerifier = await ethers.getContractFactory("DevMockVerifier");
-    verifier = await DevMockVerifier.deploy();
+    // 3. 部署 Mock Verifier（总是返回 true）
+    const MockVerifier = await ethers.getContractFactory("MockVerifier");
+    verifier = await MockVerifier.deploy();
     await verifier.waitForDeployment();
+    await verifier.setResult(true); // 设置总是返回 true
+    console.log("✅ Verifier deployed:", await verifier.getAddress());
 
-    // 部署 ZWToken
-    const ZWTokenFactory = await ethers.getContractFactory("ZWToken");
-    ZWToken = await ZWTokenFactory.deploy(
-      "ZK Wrapped Token",
-      "ZKW",
-      await sourceToken.getAddress(),
-      await verifier.getAddress(),
-      10
+    // 4. 部署 ZWToken
+    const ZWToken = await ethers.getContractFactory("ZWToken", {
+      libraries: {
+        PoseidonT3: await poseidonT3.getAddress(),
+      },
+    });
+    zwToken = await ZWToken.deploy(
+      "ZK Wrapper Token",
+      "ZWT",
+      await underlying.getAddress(),
+      await verifier.getAddress()
     );
-    await ZWToken.waitForDeployment();
+    await zwToken.waitForDeployment();
+    console.log("✅ ZWToken deployed:", await zwToken.getAddress());
+
+    // 5. 分配 underlying token
+    await underlying.transfer(alice.address, ethers.parseEther("1000"));
+    console.log("✅ Allocated tokens to Alice");
   });
 
-  it("完整流程：deposit → 转给隐私地址 → claim → withdraw", async function () {
-    // === 阶段 1: deployer 存入 sourceToken 获得 ZWToken ===
-    console.log("\n=== 阶段 1: deployer 存入 sourceToken 获得 ZWToken ===");
+  it("完整流程：deposit → transfer to privacy address → claim → withdraw", async function () {
+    console.log("\n" + "=".repeat(60));
+    console.log("📝 测试完整流程");
+    console.log("=".repeat(60));
 
-    const depositAmount = ethers.parseEther("1000");
-    await sourceToken.approve(await ZWToken.getAddress(), depositAmount);
-    await ZWToken.deposit(depositAmount);
+    // ========== 阶段 1: Alice deposit ==========
+    console.log("\n📌 阶段 1: Alice deposit underlying token");
 
-    console.log(
-      "Deployer 的 ZWToken 余额:",
-      ethers.formatEther(await ZWToken.balanceOf(deployer.address))
+    const depositAmount = ethers.parseEther("500");
+    await underlying
+      .connect(alice)
+      .approve(await zwToken.getAddress(), depositAmount);
+    await zwToken.connect(alice).deposit(depositAmount);
+
+    const aliceBalance = await zwToken.balanceOf(alice.address);
+    console.log(`   Alice ZWT balance: ${ethers.formatEther(aliceBalance)}`);
+    expect(aliceBalance).to.equal(depositAmount);
+
+    // 验证 deposit 不记录 commitment
+    const commitmentCount1 = await zwToken.getCommitmentCount();
+    console.log(`   Commitment count: ${commitmentCount1}`);
+    expect(commitmentCount1).to.equal(0); // deposit 不记录
+
+    // ========== 阶段 2: 计算隐私地址并转账 ==========
+    console.log("\n📌 阶段 2: 计算隐私地址并转账");
+
+    // 从 secret 推导隐私地址
+    const addrScalar = poseidon([SECRET]);
+    const addr20 = addrScalar & ((1n << 160n) - 1n);
+    const privacyAddress = ethers.getAddress(
+      "0x" + addr20.toString(16).padStart(40, "0")
     );
 
-    // === 阶段 2: 计算隐私地址 A 并转账 ZWToken ===
-    console.log("\n=== 阶段 2: 计算隐私地址 A 并转账 ZWToken ===");
+    console.log(`   Secret: ${SECRET}`);
+    console.log(`   Privacy address: ${privacyAddress}`);
 
-    const poseidonHash = circomlibjs.poseidon;
-    const addrScalar = poseidonHash([MAGIC, SECRET]);
-    const addr20Bi = addrScalar & ((1n << 160n) - 1n);
-    const addressA = ethers.getAddress(
-      "0x" + addr20Bi.toString(16).padStart(40, "0")
-    );
-
-    console.log("Secret:", SECRET.toString());
-    console.log("隐私地址 A:", addressA);
-
-    // deployer 将 ZWToken 转给隐私地址 A
+    // Alice 转账到隐私地址
     const transferAmount = ethers.parseEther("200");
-    await ZWToken.transfer(addressA, transferAmount);
+    const tx = await zwToken
+      .connect(alice)
+      .transfer(privacyAddress, transferAmount);
+    const receipt = await tx.wait();
 
+    console.log(`   Transferred ${ethers.formatEther(transferAmount)} ZWT`);
+
+    // 验证转账触发了 commitment 记录
+    const commitmentCount2 = await zwToken.getCommitmentCount();
+    console.log(`   Commitment count: ${commitmentCount2}`);
+    expect(commitmentCount2).to.equal(1); // 首次接收，应该记录
+
+    // 验证 commitment 值（从事件中获取）
+    const commitmentEvent = receipt.logs.find(
+      (log) => log.fragment && log.fragment.name === "CommitmentAdded"
+    );
+    const actualCommitment = commitmentEvent.args[0];
+
+    const expectedCommitment = poseidon([addr20, BigInt(transferAmount)]);
+    const expectedHex =
+      "0x" + expectedCommitment.toString(16).padStart(64, "0");
+    console.log(`   Expected commitment: ${expectedHex}`);
+    console.log(`   Actual commitment: ${actualCommitment}`);
+    expect(actualCommitment).to.equal(expectedHex);
+
+    // 验证隐私地址余额
+    const privacyBalance = await zwToken.balanceOf(privacyAddress);
     console.log(
-      "隐私地址 A 的 ZWToken 余额:",
-      ethers.formatEther(await ZWToken.balanceOf(addressA))
+      `   Privacy address balance: ${ethers.formatEther(privacyBalance)}`
+    );
+    expect(privacyBalance).to.equal(transferAmount);
+
+    // ========== 阶段 3: 构造 ZK proof 数据 ==========
+    console.log("\n📌 阶段 3: 构造 ZK proof 数据（模拟前端）");
+
+    // 获取当前 root
+    const root = await zwToken.root();
+    console.log(`   Current root: ${root}`);
+
+    // 计算 nullifier
+    const nullifier = poseidon([addr20]);
+    const nullifierHex = "0x" + nullifier.toString(16).padStart(64, "0");
+    console.log(`   Nullifier: ${nullifierHex}`);
+
+    // Mock proof（实际应该由 snarkjs 生成）
+    const mockProof = {
+      a: [1n, 2n],
+      b: [
+        [3n, 4n],
+        [5n, 6n],
+      ],
+      c: [7n, 8n],
+    };
+
+    console.log(`   ✅ Proof data prepared (mocked)`);
+
+    // ========== 阶段 4: Bob 使用 ZK proof claim ==========
+    console.log("\n📌 阶段 4: Bob 使用 ZK proof claim");
+
+    const claimAmount = ethers.parseEther("150");
+    console.log(`   Bob address: ${bob.address}`);
+    console.log(`   Claim amount: ${ethers.formatEther(claimAmount)}`);
+
+    // 验证 Bob 的初始状态
+    const bobBalanceBefore = await zwToken.balanceOf(bob.address);
+    expect(bobBalanceBefore).to.equal(0);
+
+    // Bob 提交 claim
+    const claimTx = await zwToken.claim(
+      mockProof.a,
+      mockProof.b,
+      mockProof.c,
+      root,
+      nullifierHex,
+      bob.address,
+      claimAmount
     );
 
-    // === 阶段 3: Mine 区块并获取区块信息 ===
-    console.log("\n=== 阶段 3: Mine 区块并获取区块信息 ===");
+    // 验证 Claimed 事件
+    await expect(claimTx)
+      .to.emit(zwToken, "Claimed")
+      .withArgs(nullifierHex, bob.address, claimAmount);
 
-    // Mine 几个块
-    await ethers.provider.send("hardhat_mine", ["0x5"]);
-    const head = await ethers.provider.getBlockNumber();
-    const targetBlock = head - 2;
-    const block = await ethers.provider.getBlock(targetBlock);
+    // 验证 CommitmentAdded 事件（Bob 首次接收）
+    await expect(claimTx).to.emit(zwToken, "CommitmentAdded");
 
-    console.log("目标区块:", targetBlock);
-    console.log("区块哈希:", block.hash);
-    console.log("区块状态根:", block.stateRoot);
+    const bobBalanceAfter = await zwToken.balanceOf(bob.address);
+    console.log(`   Bob ZWT balance: ${ethers.formatEther(bobBalanceAfter)}`);
+    expect(bobBalanceAfter).to.equal(claimAmount);
 
-    // Hardhat Network 默认不支持 stateRoot
-    const stateRoot = block.stateRoot || ethers.ZeroHash;
+    // 验证 commitment 增加
+    const commitmentCount3 = await zwToken.getCommitmentCount();
+    console.log(`   Commitment count: ${commitmentCount3}`);
+    expect(commitmentCount3).to.equal(2); // privacy address + bob
 
-    // === 阶段 4: 为隐私地址 A 构造 zkProof ===
-    console.log("\n=== 阶段 4: 为隐私地址 A 构造 zkProof ===");
+    // ========== 阶段 5: Bob withdraw underlying token ==========
+    console.log("\n📌 阶段 5: Bob withdraw underlying token");
 
-    const chainId = (await ethers.provider.getNetwork()).chainId;
-    const nullifier = poseidonHash([
-      SECRET,
-      chainId,
-      BigInt(await ZWToken.getAddress()),
-    ]);
-    const nullifierHex = zbytes32("0x" + nullifier.toString(16));
+    const bobUnderlyingBefore = await underlying.balanceOf(bob.address);
+    console.log(
+      `   Bob underlying before: ${ethers.formatEther(bobUnderlyingBefore)}`
+    );
 
-    console.log("Nullifier:", nullifierHex);
+    await zwToken.connect(bob).withdraw(claimAmount);
 
-    // Mock 证明参数（DevMockVerifier 会接受任何证明）
-    const a = [1n, 2n];
-    const b = [
-      [3n, 4n],
-      [5n, 6n],
-    ];
-    const c = [7n, 8n];
+    const bobUnderlyingAfter = await underlying.balanceOf(bob.address);
+    const bobZWTAfter = await zwToken.balanceOf(bob.address);
 
-    // B's cliamAccount <= A's balance
-    const claimAmount = ethers.parseEther("100");
+    console.log(
+      `   Bob underlying after: ${ethers.formatEther(bobUnderlyingAfter)}`
+    );
+    console.log(`   Bob ZWT after: ${ethers.formatEther(bobZWTAfter)}`);
 
-    // === 阶段 5: 新地址 C (userB) 使用 zkProof 调用 claim ===
-    console.log("\n=== 阶段 5: 新地址 C (userB) 使用 zkProof 调用 claim ===");
+    expect(bobUnderlyingAfter).to.equal(bobUnderlyingBefore + claimAmount);
+    expect(bobZWTAfter).to.equal(0);
 
-    const userBAddress = await userB.getAddress();
-    console.log("新地址 C (userB):", userBAddress);
+    // ========== 阶段 6: 测试防重放 ==========
+    console.log("\n📌 阶段 6: 测试防重放");
 
-    // userB 提交 claim
-    // 注意：不再需要传递 headerHash 和 stateRoot
     await expect(
-      ZWToken.connect(userB).claim(
-        a,
-        b,
-        c,
-        targetBlock,
-        claimAmount,
+      zwToken.claim(
+        mockProof.a,
+        mockProof.b,
+        mockProof.c,
+        root,
         nullifierHex,
-        userBAddress
+        bob.address,
+        claimAmount
       )
-    )
-      .to.emit(ZWToken, "Claimed")
-      .withArgs(nullifierHex, userBAddress, claimAmount);
+    ).to.be.revertedWithCustomError(zwToken, "NullifierUsed");
 
-    const userBZWTokenBalance = await ZWToken.balanceOf(userBAddress);
+    console.log("   ✅ 防重放验证通过");
+
+    console.log("\n" + "=".repeat(60));
+    console.log("✅ 完整流程测试通过！");
+    console.log("=".repeat(60));
+  });
+
+  it("测试 claim 到已有余额的地址", async function () {
+    console.log("\n" + "=".repeat(60));
+    console.log("📝 测试 claim 到已有余额的地址");
+    console.log("=".repeat(60));
+
+    // 使用新的 secret
+    const SECRET2 = 987654321n;
+    const addrScalar2 = poseidon([SECRET2]);
+    const addr20_2 = addrScalar2 & ((1n << 160n) - 1n);
+    const privacyAddress2 = ethers.getAddress(
+      "0x" + addr20_2.toString(16).padStart(40, "0")
+    );
+
+    console.log(`\n📌 准备：Alice 转账到新隐私地址`);
+    console.log(`   Privacy address 2: ${privacyAddress2}`);
+
+    // Alice 转账到新隐私地址
+    const transferAmount2 = ethers.parseEther("100");
+    await zwToken.connect(alice).transfer(privacyAddress2, transferAmount2);
+    console.log(`   ✅ Transferred ${ethers.formatEther(transferAmount2)} ZWT`);
+
+    // 获取当前状态
+    const commitmentCountBefore = await zwToken.getCommitmentCount();
+    const root2 = await zwToken.root();
+    const nullifier2 = poseidon([addr20_2]);
+    const nullifierHex2 = "0x" + nullifier2.toString(16).padStart(64, "0");
+
+    console.log(`   Current commitment count: ${commitmentCountBefore}`);
+
+    // Bob 再次 claim（这次不应该增加新 commitment，因为 Bob 已经有记录了）
+    console.log(`\n📌 Bob 再次 claim（不应增加 commitment）`);
+
+    const claimAmount2 = ethers.parseEther("50");
+    const bobBalanceBefore = await zwToken.balanceOf(bob.address);
     console.log(
-      "新地址 C (userB) 的 ZWToken 余额:",
-      ethers.formatEther(userBZWTokenBalance)
-    );
-    expect(userBZWTokenBalance).to.equal(claimAmount);
-
-    // === 阶段 6: 新地址 C (userB) 通过 withdraw 取回 sourceToken ===
-    console.log(
-      "\n=== 阶段 6: 新地址 C (userB) 通过 withdraw 取回 sourceToken ==="
+      `   Bob balance before: ${ethers.formatEther(bobBalanceBefore)}`
     );
 
-    const userBSourceTokenBefore = await sourceToken.balanceOf(userBAddress);
-    console.log(
-      "withdraw 前 userB 的 sourceToken 余额:",
-      ethers.formatEther(userBSourceTokenBefore)
+    const mockProof2 = {
+      a: [9n, 10n],
+      b: [
+        [11n, 12n],
+        [13n, 14n],
+      ],
+      c: [15n, 16n],
+    };
+
+    // Bob claim（不应该 emit CommitmentAdded）
+    const claimTx = await zwToken.claim(
+      mockProof2.a,
+      mockProof2.b,
+      mockProof2.c,
+      root2,
+      nullifierHex2,
+      bob.address,
+      claimAmount2
     );
 
-    // userB 调用 withdraw
-    await ZWToken.connect(userB).withdraw(claimAmount);
+    // 应该 emit Claimed
+    await expect(claimTx)
+      .to.emit(zwToken, "Claimed")
+      .withArgs(nullifierHex2, bob.address, claimAmount2);
 
-    const userBSourceTokenAfter = await sourceToken.balanceOf(userBAddress);
-    const userBZWTokenAfter = await ZWToken.balanceOf(userBAddress);
-
-    console.log(
-      "withdraw 后 userB 的 sourceToken 余额:",
-      ethers.formatEther(userBSourceTokenAfter)
+    // 不应该 emit CommitmentAdded（Bob 已经有记录）
+    const receipt = await claimTx.wait();
+    const commitmentEvents = receipt.logs.filter(
+      (log) => log.fragment && log.fragment.name === "CommitmentAdded"
     );
-    console.log(
-      "withdraw 后 userB 的 ZWToken 余额:",
-      ethers.formatEther(userBZWTokenAfter)
+    expect(commitmentEvents.length).to.equal(0);
+    console.log("   ✅ No CommitmentAdded event (as expected)");
+
+    // 验证余额增加
+    const bobBalanceAfter = await zwToken.balanceOf(bob.address);
+    console.log(`   Bob balance after: ${ethers.formatEther(bobBalanceAfter)}`);
+    expect(bobBalanceAfter).to.equal(bobBalanceBefore + claimAmount2);
+
+    // 验证 commitment count 不变
+    const commitmentCountAfter = await zwToken.getCommitmentCount();
+    console.log(`   Commitment count after: ${commitmentCountAfter}`);
+    expect(commitmentCountAfter).to.equal(commitmentCountBefore);
+
+    console.log("\n" + "=".repeat(60));
+    console.log("✅ 测试通过：claim 到已有地址不增加 commitment");
+    console.log("=".repeat(60));
+  });
+
+  it("测试 Merkle root 历史支持", async function () {
+    console.log("\n" + "=".repeat(60));
+    console.log("📝 测试 Merkle root 历史支持");
+    console.log("=".repeat(60));
+
+    // 使用新的 secret
+    const SECRET3 = 111111111n;
+    const addrScalar3 = poseidon([SECRET3]);
+    const addr20_3 = addrScalar3 & ((1n << 160n) - 1n);
+    const privacyAddress3 = ethers.getAddress(
+      "0x" + addr20_3.toString(16).padStart(40, "0")
     );
 
-    expect(userBSourceTokenAfter).to.equal(
-      userBSourceTokenBefore + claimAmount
+    console.log(`\n📌 步骤 1: 记录旧 root`);
+
+    // Alice 转账到隐私地址 3
+    const transferAmount3 = ethers.parseEther("80");
+    await zwToken.connect(alice).transfer(privacyAddress3, transferAmount3);
+
+    const oldRoot = await zwToken.root();
+    console.log(`   Old root: ${oldRoot}`);
+
+    // 再转一笔给其他地址，更新 root
+    console.log(`\n📌 步骤 2: 更新 root（转账给新地址）`);
+
+    const SECRET4 = 222222222n;
+    const addrScalar4 = poseidon([SECRET4]);
+    const addr20_4 = addrScalar4 & ((1n << 160n) - 1n);
+    const privacyAddress4 = ethers.getAddress(
+      "0x" + addr20_4.toString(16).padStart(40, "0")
     );
-    expect(userBZWTokenAfter).to.equal(0);
 
-    console.log("✅ 完整流程测试通过");
+    await zwToken
+      .connect(alice)
+      .transfer(privacyAddress4, ethers.parseEther("30"));
 
-    // === 测试防重放 ===
-    console.log("\n=== 测试防重放 ===");
+    const newRoot = await zwToken.root();
+    console.log(`   New root: ${newRoot}`);
+    expect(newRoot).to.not.equal(oldRoot);
 
+    // 使用旧 root 进行 claim
+    console.log(`\n📌 步骤 3: 使用旧 root claim（应该成功）`);
+
+    const nullifier3 = poseidon([addr20_3]);
+    const nullifierHex3 = "0x" + nullifier3.toString(16).padStart(64, "0");
+
+    const mockProof3 = {
+      a: [17n, 18n],
+      b: [
+        [19n, 20n],
+        [21n, 22n],
+      ],
+      c: [23n, 24n],
+    };
+
+    // 使用 deployer claim（新地址）
+    const claimAmount3 = ethers.parseEther("60");
+
+    // 应该成功（oldRoot 仍然有效）
     await expect(
-      ZWToken.connect(userB).claim(
-        a,
-        b,
-        c,
-        targetBlock,
-        claimAmount,
-        nullifierHex,
-        userBAddress
+      zwToken.claim(
+        mockProof3.a,
+        mockProof3.b,
+        mockProof3.c,
+        oldRoot, // 使用旧 root
+        nullifierHex3,
+        deployer.address,
+        claimAmount3
       )
-    ).to.be.revertedWith("nullifier used");
+    ).to.emit(zwToken, "Claimed");
 
-    console.log("✅ 防重放测试通过");
+    console.log("   ✅ Claim with old root succeeded");
+
+    const deployerBalance = await zwToken.balanceOf(deployer.address);
+    console.log(`   Deployer balance: ${ethers.formatEther(deployerBalance)}`);
+    expect(deployerBalance).to.equal(claimAmount3);
+
+    console.log("\n" + "=".repeat(60));
+    console.log("✅ 测试通过：支持历史 root");
+    console.log("=".repeat(60));
   });
 });
