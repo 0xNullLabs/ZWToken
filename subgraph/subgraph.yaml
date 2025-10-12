@@ -6,7 +6,7 @@ dataSources:
     name: ZWToken
     network: hardhat # 本地测试使用 hardhat 网络
     source:
-      address: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" # 测试时会动态替换
+      address: "0xD84379CEae14AA33C123Af12424A37803F885889" # 测试时会动态替换
       abi: ZWToken
       startBlock: 0 # 测试时从第一个区块开始
     mapping:

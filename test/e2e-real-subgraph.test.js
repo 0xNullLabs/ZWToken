@@ -286,6 +286,29 @@ describe("ZWToken E2E - Real Subgraph Integration", function () {
     console.log("🚀 阶段 0: 环境准备");
     console.log("=".repeat(70));
 
+    // 检查是否使用正确的运行方式
+    const network =
+      ethers.provider._networkName || (await ethers.provider.getNetwork()).name;
+    const isLocalhost = network === "localhost" || network === "unknown";
+
+    if (!isLocalhost) {
+      console.log("\n" + "⚠️".repeat(35));
+      console.log("❌ 此测试需要独立的 Hardhat 节点！");
+      console.log("");
+      console.log("📖 正确的运行方式：");
+      console.log("   ./scripts/run-e2e-subgraph-test.sh");
+      console.log("");
+      console.log("💡 原因：");
+      console.log("   - Graph Node 需要连接到持久运行的 Hardhat 节点");
+      console.log("   - 内置测试网络会在测试结束后立即停止");
+      console.log("   - 脚本会自动启动/停止独立节点");
+      console.log("⚠️".repeat(35) + "\n");
+      this.skip();
+      return;
+    }
+
+    console.log("✅ 检测到 localhost 网络");
+
     // 检查 Docker
     const dockerRunning = await checkDockerRunning();
     if (!dockerRunning) {
