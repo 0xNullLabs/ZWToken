@@ -1,0 +1,10 @@
+type Commitment @entity {
+  id: ID! # commitment hash
+  commitment: Bytes!
+  index: BigInt!
+  recipient: Bytes!
+  amount: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

@@ -1,0 +1,23 @@
+{
+  "name": "zwtoken-subgraph",
+  "version": "1.0.0",
+  "description": "Subgraph for indexing ZWToken CommitmentAdded events",
+  "private": true,
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ zwtoken-subgraph",
+    "deploy:local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 zwtoken-subgraph",
+    "create:local": "graph create --node http://localhost:8020/ zwtoken-subgraph",
+    "remove:local": "graph remove --node http://localhost:8020/ zwtoken-subgraph"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.8.0",
+    "@graphprotocol/graph-cli": "0.56.0",
+    "@graphprotocol/graph-ts": "0.31.0",
+    "circomlibjs": "^0.1.7",
+    "cross-fetch": "^4.0.0",
+    "graphql": "^16.8.0"
+  },
+  "devDependencies": {}
+}

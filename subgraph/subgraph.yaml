@@ -1,0 +1,24 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: ZWToken
+    network: hardhat # 本地测试使用 hardhat 网络
+    source:
+      address: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" # 测试时会动态替换
+      abi: ZWToken
+      startBlock: 0 # 测试时从第一个区块开始
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Commitment
+      abis:
+        - name: ZWToken
+          file: ./abis/ZWToken.json
+      eventHandlers:
+        - event: CommitmentAdded(indexed bytes32,uint256,indexed address,uint256)
+          handler: handleCommitmentAdded
+      file: ./src/mapping.ts

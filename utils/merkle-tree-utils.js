@@ -78,10 +78,12 @@ class IncrementalMerkleTree {
       } else {
         // 当前节点是左子节点，需要计算右侧 sibling
         const siblingIndex = currentIndex + 1;
-        if (siblingIndex < this.nextIndex) {
-          // 有真实的右兄弟，需要重建它的值
-          // 简化：使用 zero（完整实现需要重建整个右子树）
-          pathElements.push(this.zeros[i]);
+        const levelSize = Math.pow(2, i);
+        const siblingLeafStart = siblingIndex * levelSize;
+
+        if (siblingLeafStart < this.nextIndex) {
+          // 有真实的右兄弟，需要重建它的子树
+          pathElements.push(this._reconstructSubtree(siblingLeafStart, i));
         } else {
           // 没有右兄弟，使用 zero
           pathElements.push(this.zeros[i]);
@@ -91,6 +93,33 @@ class IncrementalMerkleTree {
     }
 
     return { root: this.root, pathElements, pathIndices };
+  }
+
+  /**
+   * 重建子树的根哈希
+   * @param {number} leafIndex - 子树起始叶子索引
+   * @param {number} level - 子树的层级（0 = 叶子层）
+   * @returns {BigInt} 子树根哈希
+   */
+  _reconstructSubtree(leafIndex, level) {
+    if (level === 0) {
+      // 叶子层
+      if (leafIndex < this.leaves.length) {
+        return BigInt(this.leaves[leafIndex]);
+      } else {
+        return this.zeros[0];
+      }
+    }
+
+    // 递归构建左右子树
+    const levelSize = Math.pow(2, level - 1);
+    const leftChild = this._reconstructSubtree(leafIndex, level - 1);
+    const rightChild = this._reconstructSubtree(
+      leafIndex + levelSize,
+      level - 1
+    );
+
+    return poseidon([leftChild, rightChild]);
   }
 }
 

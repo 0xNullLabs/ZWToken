@@ -23,7 +23,12 @@
     "circuit:build": "./scripts/build_circuit.sh",
     "deploy": "hardhat run scripts/deploy.js --network hardhat",
     "build-inputs": "node client/build_inputs.js",
-    "submit-claim": "node client/submit_claim.js"
+    "submit-claim": "node client/submit_claim.js",
+    "subgraph:prepare": "node subgraph/scripts/prepare.js",
+    "subgraph:copy-abi": "mkdir -p subgraph/abis && cp artifacts/contracts/ZWToken.sol/ZWToken.json subgraph/abis/",
+    "subgraph:codegen": "cd subgraph && npm run codegen",
+    "subgraph:build": "cd subgraph && npm run build",
+    "subgraph:deploy:local": "cd subgraph && npm run deploy:local"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
@@ -37,5 +42,10 @@
     "poseidon-solidity": "^0.0.5",
     "rlp": "^3.0.0",
     "snarkjs": "^0.7.0"
+  },
+  "devDependencies": {
+    "@apollo/client": "^4.0.7",
+    "cross-fetch": "^4.1.0",
+    "graphql": "^16.11.0"
   }
 }

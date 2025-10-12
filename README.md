@@ -97,6 +97,80 @@ zKey 大小：~12 MB
 
 ---
 
+## 📡 Subgraph 支持
+
+ZWToken 现在支持 The Graph 协议，用于高效查询所有 `CommitmentAdded` 事件，让前端能够：
+
+- 🔍 **快速查询**：无需扫描区块链，直接查询所有 commitments
+- 🌲 **构建 Merkle Tree**：前端可自行构建完整的 Merkle tree 和 proof
+- 📊 **实时同步**：自动跟踪新的 commitments 和 root 更新
+- ⚡ **零 Gas 成本**：查询不消耗 gas
+
+### Subgraph 快速入门
+
+```bash
+# 1. 准备 Subgraph
+cd subgraph
+npm install
+
+# 2. 更新配置（替换为实际的合约地址和网络）
+./scripts/update-config.sh sepolia 0x1234...5678 1234567
+
+# 3. 生成代码
+npm run codegen
+
+# 4. 构建
+npm run build
+
+# 5. 部署到本地 Graph 节点
+npm run create:local
+npm run deploy:local
+```
+
+### 前端集成示例
+
+```javascript
+import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+import { ethers } from "ethers";
+
+// 1. 连接 Subgraph（查询历史事件）
+const apolloClient = new ApolloClient({
+  uri: "http://localhost:8000/subgraphs/name/zwtoken-subgraph",
+  cache: new InMemoryCache(),
+});
+
+// 2. 连接合约（查询当前状态）
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+// 3. 查询所有 commitments（从 Subgraph）
+const { data } = await apolloClient.query({
+  query: gql`
+    query {
+      commitments(first: 1000, orderBy: index) {
+        commitment
+        index
+      }
+    }
+  `,
+});
+
+// 4. 查询链上状态（从合约）
+const currentRoot = await contract.root();
+const count = await contract.getCommitmentCount();
+
+// 5. 构建 Merkle tree 并验证
+const tree = await buildMerkleTreeFromSubgraph(data.commitments);
+console.assert(tree.root() === currentRoot, "Root 验证失败！");
+
+// 6. 生成 proof
+const proof = tree.generateProof(leafIndex);
+```
+
+详细文档和示例请参阅 [`subgraph/README.md`](subgraph/README.md)
+
+---
+
 ## 🚀 快速开始
 
 ### 1. 安装依赖
