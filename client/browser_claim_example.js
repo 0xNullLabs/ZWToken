@@ -10,6 +10,7 @@
 const { ethers } = require("ethers");
 const { poseidon } = require("circomlibjs");
 const snarkjs = require("snarkjs");
+const { IncrementalMerkleTree } = require("../utils/merkle-tree-utils");
 
 /**
  * 方案 1: 从链上事件重建 Merkle tree（适合中小规模）
@@ -267,82 +268,6 @@ class MerklePathOptimized {
  */
 
 /**
- * Incremental Merkle Tree 实现
- */
-class IncrementalMerkleTree {
-  constructor(depth) {
-    this.depth = depth;
-    this.zeros = [];
-    this.filledSubtrees = new Array(depth);
-    this.leaves = [];
-    this.nextIndex = 0;
-
-    // 初始化 zero hashes
-    let currentZero = 0n;
-    this.zeros[0] = currentZero;
-    for (let i = 1; i < depth; i++) {
-      currentZero = poseidon([currentZero, currentZero]);
-      this.zeros[i] = currentZero;
-    }
-    this.root = this.zeros[depth - 1];
-  }
-
-  insert(leaf) {
-    this.leaves.push(leaf);
-    const index = this.nextIndex;
-    let currentHash = BigInt(leaf);
-    let currentIndex = index;
-
-    for (let i = 0; i < this.depth; i++) {
-      if (currentIndex % 2 === 0) {
-        this.filledSubtrees[i] = currentHash;
-        currentHash = poseidon([currentHash, this.zeros[i]]);
-      } else {
-        currentHash = poseidon([this.filledSubtrees[i], currentHash]);
-      }
-      currentIndex = Math.floor(currentIndex / 2);
-    }
-
-    this.root = currentHash;
-    this.nextIndex++;
-  }
-
-  getProof(index) {
-    if (index >= this.nextIndex) {
-      throw new Error("Index out of bounds");
-    }
-
-    const pathElements = [];
-    const pathIndices = [];
-    let currentIndex = index;
-
-    for (let i = 0; i < this.depth; i++) {
-      const isRight = currentIndex % 2 === 1;
-      pathIndices.push(isRight ? 1 : 0);
-
-      if (isRight) {
-        // 当前节点是右子节点，sibling 是 filledSubtrees[i]
-        pathElements.push(this.filledSubtrees[i] || this.zeros[i]);
-      } else {
-        // 当前节点是左子节点，需要计算右侧 sibling
-        const siblingIndex = currentIndex + 1;
-        if (siblingIndex < this.nextIndex) {
-          // 有真实的右兄弟，需要重建它的值
-          // 简化：使用 zero（完整实现需要重建整个右子树）
-          pathElements.push(this.zeros[i]);
-        } else {
-          // 没有右兄弟，使用 zero
-          pathElements.push(this.zeros[i]);
-        }
-      }
-      currentIndex = Math.floor(currentIndex / 2);
-    }
-
-    return { pathElements, pathIndices };
-  }
-}
-
-/**
  * 完整的浏览器端 Claim 流程
  */
 class BrowserClaimFlow {
@@ -536,6 +461,5 @@ async function exampleUsage() {
 module.exports = {
   MerklePathFromEvents,
   MerklePathOptimized,
-  IncrementalMerkleTree,
   BrowserClaimFlow,
 };

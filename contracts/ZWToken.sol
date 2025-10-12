@@ -4,7 +4,8 @@ pragma solidity ^0.8.20;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {PoseidonT3} from "poseidon-solidity/PoseidonT3.sol";
+import {PoseidonMerkleTree} from "./utils/PoseidonMerkleTree.sol";
+import {ISnarkVerifier} from "./interfaces/ISnarkVerifier.sol";
 
 /**
  * @title ZWToken
@@ -24,14 +25,12 @@ import {PoseidonT3} from "poseidon-solidity/PoseidonT3.sol";
  * - claim(): Mint to recipient + explicit commitment call → Records if first receipt
  * - withdraw(): Burn (to=0) → NO commitment recorded
  */
-contract ZWToken is ERC20 {
+contract ZWToken is ERC20, PoseidonMerkleTree {
     using SafeERC20 for IERC20;
 
     // ========== Constants ==========
     
-    uint256 public constant TREE_DEPTH = 20;
-    uint256 public constant MAX_COMMITMENTS = 2**20; // 1,048,576
-    uint256 public constant ROOT_HISTORY_SIZE = 100;
+    uint256 private constant _TREE_DEPTH = 20;
     
     // ========== Immutable Variables ==========
     
@@ -39,17 +38,6 @@ contract ZWToken is ERC20 {
     ISnarkVerifier public immutable verifier;
     
     // ========== State Variables ==========
-    
-    // Merkle tree
-    bytes32 public root;
-    uint256 public nextIndex;
-    
-    // Merkle tree cache (for efficient incremental updates)
-    bytes32[TREE_DEPTH] public zeros;
-    bytes32[TREE_DEPTH] public filledSubtrees;
-    
-    // Root history (all historical roots are valid)
-    mapping(bytes32 => bool) public isKnownRoot;
     
     // First receipt tracking
     mapping(address => bool) public hasFirstReceiptRecorded;
@@ -62,16 +50,13 @@ contract ZWToken is ERC20 {
     
     event Deposited(address indexed from, uint256 amount);
     event CommitmentAdded(bytes32 indexed commitment, uint256 index, address indexed recipient, uint256 amount);
-    event RootUpdated(bytes32 indexed oldRoot, bytes32 indexed newRoot);
     event Claimed(bytes32 indexed nullifier, address indexed to, uint256 amount);
     
     // ========== Errors ==========
     
-    error TreeFull();
     error InvalidRoot();
     error NullifierUsed();
     error InvalidProof();
-    error InvalidAmount();
     
     // ========== Constructor ==========
     
@@ -80,15 +65,12 @@ contract ZWToken is ERC20 {
         string memory symbol_,
         address underlying_,
         address verifier_
-    ) ERC20(name_, symbol_) {
+    ) ERC20(name_, symbol_) PoseidonMerkleTree(_TREE_DEPTH) {
         require(underlying_ != address(0), "Invalid underlying");
         require(verifier_ != address(0), "Invalid verifier");
         
         underlying = IERC20(underlying_);
         verifier = ISnarkVerifier(verifier_);
-        
-        // Initialize Merkle tree with zero hashes
-        _initMerkleTree();
     }
     
     // ========== Public Functions ==========
@@ -207,92 +189,23 @@ contract ZWToken is ERC20 {
             // Compute commitment = Poseidon(address, firstAmount)
             bytes32 commitment = _poseidonHash(uint256(uint160(to)), amount);
             
-            // Insert to Merkle tree
+            // Store commitment index (before insertion increments nextIndex)
+            commitmentToIndex[commitment] = nextIndex;
+            
+            // Insert to Merkle tree (inherited from PoseidonMerkleTree)
             _insertLeaf(commitment);
             
             emit CommitmentAdded(commitment, nextIndex - 1, to, amount);
         }
     }
     
-    /**
-     * @dev Initialize Merkle tree with zero hashes
-     */
-    function _initMerkleTree() private {
-        // Compute zero hashes for each level
-        bytes32 currentZero = bytes32(0);
-        zeros[0] = currentZero;
-        
-        for (uint256 i = 1; i < TREE_DEPTH; i++) {
-            currentZero = _poseidonHash(uint256(currentZero), uint256(currentZero));
-            zeros[i] = currentZero;
-        }
-        
-        root = zeros[TREE_DEPTH - 1];
-        isKnownRoot[root] = true;
-    }
-    
-    /**
-     * @dev Insert a leaf into the Merkle tree
-     */
-    function _insertLeaf(bytes32 leaf) private {
-        uint256 index = nextIndex;
-        if (index >= MAX_COMMITMENTS) {
-            revert TreeFull();
-        }
-        
-        commitmentToIndex[leaf] = index;
-        nextIndex++;
-        
-        bytes32 currentHash = leaf;
-        uint256 currentIndex = index;
-        
-        for (uint256 i = 0; i < TREE_DEPTH; i++) {
-            if (currentIndex % 2 == 0) {
-                // Left child
-                filledSubtrees[i] = currentHash;
-                currentHash = _poseidonHash(uint256(currentHash), uint256(zeros[i]));
-            } else {
-                // Right child
-                currentHash = _poseidonHash(uint256(filledSubtrees[i]), uint256(currentHash));
-            }
-            
-            currentIndex /= 2;
-        }
-        
-        bytes32 oldRoot = root;
-        root = currentHash;
-        isKnownRoot[root] = true;
-        
-        emit RootUpdated(oldRoot, root);
-    }
-    
-    /**
-     * @dev Compute Poseidon hash of two inputs
-     */
-    function _poseidonHash(uint256 left, uint256 right) private pure returns (bytes32) {
-        uint256[2] memory input = [left, right];
-        return bytes32(PoseidonT3.hash(input));
-    }
-    
     // ========== View Functions ==========
     
     /**
      * @notice Get commitment count
-     * @dev Returns nextIndex (no array storage for gas optimization)
+     * @dev Returns nextIndex from PoseidonMerkleTree
      */
     function getCommitmentCount() external view returns (uint256) {
         return nextIndex;
     }
 }
-
-// ========== Verifier Interface ==========
-
-interface ISnarkVerifier {
-    function verifyProof(
-        uint256[2] calldata a,
-        uint256[2][2] calldata b,
-        uint256[2] calldata c,
-        uint256[4] calldata input
-    ) external view returns (bool);
-}
-

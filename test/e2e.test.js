@@ -4,6 +4,7 @@ const { poseidon } = require("circomlibjs");
 const snarkjs = require("snarkjs");
 const path = require("path");
 const fs = require("fs");
+const { IncrementalMerkleTree } = require("../utils/merkle-tree-utils");
 
 /**
  * ZWToken E2E 测试 - 真实 ZK Proof
@@ -159,72 +160,7 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     const events = await zwToken.queryFilter(filter, 0, "latest");
     console.log(`   Found ${events.length} commitment(s)`);
 
-    // 重建 Merkle tree
-    class IncrementalMerkleTree {
-      constructor(depth) {
-        this.depth = depth;
-        this.zeros = [];
-        this.filledSubtrees = new Array(depth);
-        this.leaves = [];
-        this.nextIndex = 0;
-
-        // 初始化 zero hashes
-        let currentZero = 0n;
-        this.zeros[0] = currentZero;
-        for (let i = 1; i < depth; i++) {
-          currentZero = poseidon([currentZero, currentZero]);
-          this.zeros[i] = currentZero;
-        }
-        this.root = this.zeros[depth - 1];
-      }
-
-      insert(leaf) {
-        this.leaves.push(leaf);
-        const index = this.nextIndex;
-        let currentHash = BigInt(leaf);
-        let currentIndex = index;
-
-        for (let i = 0; i < this.depth; i++) {
-          if (currentIndex % 2 === 0) {
-            this.filledSubtrees[i] = currentHash;
-            currentHash = poseidon([currentHash, this.zeros[i]]);
-          } else {
-            currentHash = poseidon([this.filledSubtrees[i], currentHash]);
-          }
-          currentIndex = Math.floor(currentIndex / 2);
-        }
-
-        this.root = currentHash;
-        this.nextIndex++;
-      }
-
-      getProof(index) {
-        const pathElements = [];
-        const pathIndices = [];
-        let currentIndex = index;
-
-        for (let i = 0; i < this.depth; i++) {
-          const isRight = currentIndex % 2 === 1;
-          pathIndices.push(isRight ? 1 : 0);
-
-          if (isRight) {
-            pathElements.push(this.filledSubtrees[i] || this.zeros[i]);
-          } else {
-            const siblingIndex = currentIndex + 1;
-            if (siblingIndex < this.nextIndex) {
-              // 简化：直接使用 zero（实际应重建）
-              pathElements.push(this.zeros[i]);
-            } else {
-              pathElements.push(this.zeros[i]);
-            }
-          }
-          currentIndex = Math.floor(currentIndex / 2);
-        }
-
-        return { root: this.root, pathElements, pathIndices };
-      }
-    }
-
+    // 重建 Merkle tree（使用共享工具）
     const tree = new IncrementalMerkleTree(20);
     for (const event of events) {
       tree.insert(event.args.commitment);
