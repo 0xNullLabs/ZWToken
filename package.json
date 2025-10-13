@@ -20,6 +20,7 @@
     "test:v1": "hardhat test test/claim.test.js test/commitment.test.js test/e2e.test.js",
     "test:v2": "hardhat test test/claim_v2_e2e.test.js test/commitment_v2.test.js test/e2e_v2.test.js",
     "test:gas": "REPORT_GAS=true hardhat test",
+    "test:gas-profile": "hardhat test test/gas-profile.test.js",
     "circuit:build": "./scripts/build_circuit.sh",
     "deploy": "hardhat run scripts/deploy.js --network hardhat",
     "build-inputs": "node client/build_inputs.js",

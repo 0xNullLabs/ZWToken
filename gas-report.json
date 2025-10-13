@@ -1,0 +1,175 @@
+{
+  "timestamp": "2025-10-13T07:01:16.870Z",
+  "gasPrice": {
+    "gwei": 0.2,
+    "ethPriceUSD": 4000
+  },
+  "operations": [
+    {
+      "operation": "ERC20: transfer (first time)",
+      "gasUsed": "35110",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000007022",
+      "costUSD": "$0.028088"
+    },
+    {
+      "operation": "ERC20: transfer (subsequent)",
+      "gasUsed": "35110",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000007022",
+      "costUSD": "$0.028088"
+    },
+    {
+      "operation": "ERC20: transferFrom (first time)",
+      "gasUsed": "38104",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000007621",
+      "costUSD": "$0.030483"
+    },
+    {
+      "operation": "ZWToken: deposit (first time)",
+      "gasUsed": "106796",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000021359",
+      "costUSD": "$0.085437"
+    },
+    {
+      "operation": "ZWToken: deposit (subsequent)",
+      "gasUsed": "55496",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000011099",
+      "costUSD": "$0.044397"
+    },
+    {
+      "operation": "ZWToken: withdraw (first time)",
+      "gasUsed": "51035",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000010207",
+      "costUSD": "$0.040828"
+    },
+    {
+      "operation": "ZWToken: withdraw (subsequent)",
+      "gasUsed": "51035",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000010207",
+      "costUSD": "$0.040828"
+    },
+    {
+      "operation": "ZWToken: transfer (first receipt, records commitment)",
+      "gasUsed": "1071023",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000214205",
+      "costUSD": "$0.856818"
+    },
+    {
+      "operation": "ZWToken: transfer (subsequent, no commitment)",
+      "gasUsed": "37548",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000007510",
+      "costUSD": "$0.030038"
+    },
+    {
+      "operation": "ZWToken: claim (with ZK proof)",
+      "gasUsed": "764311",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000152862",
+      "costUSD": "$0.611449"
+    },
+    {
+      "operation": "ZWToken: claim (subsequent, no new commitment)",
+      "gasUsed": "75272",
+      "gasPriceGwei": 0.2,
+      "costETH": "0.000015054",
+      "costUSD": "$0.060218"
+    }
+  ],
+  "summary": {
+    "erc20Operations": [
+      {
+        "operation": "ERC20: transfer (first time)",
+        "gasUsed": "35110",
+        "gasPriceGwei": 0.2,
+        "costETH": "0.000007022",
+        "costUSD": "$0.028088"
+      },
+      {
+        "operation": "ERC20: transfer (subsequent)",
+        "gasUsed": "35110",
+        "gasPriceGwei": 0.2,
+        "costETH": "0.000007022",
+        "costUSD": "$0.028088"
+      },
+      {
+        "operation": "ERC20: transferFrom (first time)",
+        "gasUsed": "38104",
+        "gasPriceGwei": 0.2,
+        "costETH": "0.000007621",
+        "costUSD": "$0.030483"
+      }
+    ],
+    "zwTokenOperations": {
+      "depositWithdraw": [
+        {
+          "operation": "ZWToken: deposit (first time)",
+          "gasUsed": "106796",
+          "gasPriceGwei": 0.2,
+          "costETH": "0.000021359",
+          "costUSD": "$0.085437"
+        },
+        {
+          "operation": "ZWToken: deposit (subsequent)",
+          "gasUsed": "55496",
+          "gasPriceGwei": 0.2,
+          "costETH": "0.000011099",
+          "costUSD": "$0.044397"
+        },
+        {
+          "operation": "ZWToken: withdraw (first time)",
+          "gasUsed": "51035",
+          "gasPriceGwei": 0.2,
+          "costETH": "0.000010207",
+          "costUSD": "$0.040828"
+        },
+        {
+          "operation": "ZWToken: withdraw (subsequent)",
+          "gasUsed": "51035",
+          "gasPriceGwei": 0.2,
+          "costETH": "0.000010207",
+          "costUSD": "$0.040828"
+        }
+      ],
+      "transfer": [
+        {
+          "operation": "ZWToken: transfer (first receipt, records commitment)",
+          "gasUsed": "1071023",
+          "gasPriceGwei": 0.2,
+          "costETH": "0.000214205",
+          "costUSD": "$0.856818"
+        },
+        {
+          "operation": "ZWToken: transfer (subsequent, no commitment)",
+          "gasUsed": "37548",
+          "gasPriceGwei": 0.2,
+          "costETH": "0.000007510",
+          "costUSD": "$0.030038"
+        }
+      ],
+      "claim": [
+        {
+          "operation": "ZWToken: claim (with ZK proof)",
+          "gasUsed": "764311",
+          "gasPriceGwei": 0.2,
+          "costETH": "0.000152862",
+          "costUSD": "$0.611449"
+        },
+        {
+          "operation": "ZWToken: claim (subsequent, no new commitment)",
+          "gasUsed": "75272",
+          "gasPriceGwei": 0.2,
+          "costETH": "0.000015054",
+          "costUSD": "$0.060218"
+        }
+      ]
+    }
+  }
+}
