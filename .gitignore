@@ -48,6 +48,9 @@ tmp/
 temp/
 *.tmp
 
+# Deployment records (keep local only)
+deployments/
+
 # OS
 Thumbs.db
 
