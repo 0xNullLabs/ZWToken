@@ -7,6 +7,7 @@
  */
 import Footer from './Footer';
 import { Question, SelectLang } from './RightContent';
-import { AvatarDropdown, AvatarName } from './RightContent/AvatarDropdown';
+import ConnectWallet from './ConnectWallet';
+import Web3Provider from './Web3Provider';
 
-export { AvatarDropdown, AvatarName, Footer, Question, SelectLang };
+export { Footer, Question, SelectLang, ConnectWallet, Web3Provider };

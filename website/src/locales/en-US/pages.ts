@@ -1,4 +1,76 @@
 export default {
+  // ZWToken pages
+  'pages.zwtoken.title': 'ZWToken - Privacy Token Management',
+  'pages.zwtoken.subtitle': 'Privacy Transfer System Based on Zero-Knowledge Proofs',
+  'pages.zwtoken.connectWallet': '⚠️ Please click the "Connect Wallet" button in the upper right corner to connect your wallet',
+  
+  // Tabs
+  'pages.zwtoken.tab.deposit': '💰 Deposit',
+  'pages.zwtoken.tab.transfer': '🔄 Transfer',
+  'pages.zwtoken.tab.claim': '🎁 Claim',
+  
+  // Deposit
+  'pages.zwtoken.deposit.amount': 'Deposit Amount',
+  'pages.zwtoken.deposit.amount.placeholder': 'Enter deposit amount',
+  'pages.zwtoken.deposit.amount.required': 'Please enter deposit amount',
+  'pages.zwtoken.deposit.amount.min': 'Amount must be greater than 0',
+  'pages.zwtoken.deposit.button': 'Deposit',
+  'pages.zwtoken.deposit.reset': 'Reset',
+  'pages.zwtoken.deposit.tip.title': '💡 Tips',
+  'pages.zwtoken.deposit.tip.1': '• Deposit will convert your underlying token to ZWToken',
+  'pages.zwtoken.deposit.tip.2': '• After deposit, you can make privacy transfers',
+  'pages.zwtoken.deposit.tip.3': '• Please ensure you have approved the contract to use your tokens',
+  'pages.zwtoken.deposit.submitting': 'Transaction submitting...',
+  'pages.zwtoken.deposit.success': 'Deposit successful!',
+  'pages.zwtoken.deposit.failed': 'Deposit failed',
+  
+  // Transfer
+  'pages.zwtoken.transfer.privacyAddress': 'Privacy Address',
+  'pages.zwtoken.transfer.privacyAddress.placeholder': '0x...',
+  'pages.zwtoken.transfer.privacyAddress.required': "Please enter recipient's privacy address",
+  'pages.zwtoken.transfer.privacyAddress.invalid': 'Please enter a valid Ethereum address',
+  'pages.zwtoken.transfer.amount': 'Transfer Amount',
+  'pages.zwtoken.transfer.amount.placeholder': 'Enter transfer amount',
+  'pages.zwtoken.transfer.amount.required': 'Please enter transfer amount',
+  'pages.zwtoken.transfer.amount.min': 'Amount must be greater than 0',
+  'pages.zwtoken.transfer.button': 'Transfer',
+  'pages.zwtoken.transfer.reset': 'Reset',
+  'pages.zwtoken.transfer.tip.title': '💡 Tips',
+  'pages.zwtoken.transfer.tip.1': '• Privacy address is generated through Poseidon hash',
+  'pages.zwtoken.transfer.tip.2': '• First transfer to a new address will automatically generate commitment',
+  'pages.zwtoken.transfer.tip.3': "• Recipient's address and amount are private",
+  'pages.zwtoken.transfer.submitting': 'Transaction submitting...',
+  'pages.zwtoken.transfer.success': 'Transfer successful!',
+  'pages.zwtoken.transfer.failed': 'Transfer failed',
+  
+  // Claim
+  'pages.zwtoken.claim.secret': 'Secret (Private Key)',
+  'pages.zwtoken.claim.secret.placeholder': 'Enter your secret',
+  'pages.zwtoken.claim.secret.required': 'Please enter your secret',
+  'pages.zwtoken.claim.recipient': 'Recipient Address',
+  'pages.zwtoken.claim.recipient.placeholder': '0x...',
+  'pages.zwtoken.claim.recipient.required': 'Please enter recipient address',
+  'pages.zwtoken.claim.recipient.invalid': 'Please enter a valid Ethereum address',
+  'pages.zwtoken.claim.amount': 'Claim Amount',
+  'pages.zwtoken.claim.amount.placeholder': 'Enter claim amount',
+  'pages.zwtoken.claim.amount.required': 'Please enter claim amount',
+  'pages.zwtoken.claim.amount.min': 'Amount must be greater than 0',
+  'pages.zwtoken.claim.button': 'Generate Proof and Claim',
+  'pages.zwtoken.claim.reset': 'Reset',
+  'pages.zwtoken.claim.tip.title': '💡 Tips',
+  'pages.zwtoken.claim.tip.1': '• Claiming requires generating ZK proof, takes about 5-12 seconds',
+  'pages.zwtoken.claim.tip.2': '• Secret is the private key used to generate the privacy address',
+  'pages.zwtoken.claim.tip.3': '• Claim amount cannot exceed the first received amount',
+  'pages.zwtoken.claim.tip.4': '• Each address can only claim once (double-spending prevention via nullifier)',
+  'pages.zwtoken.claim.generating': 'Generating ZK proof, this may take 5-12 seconds...',
+  'pages.zwtoken.claim.submitting': 'Transaction submitting...',
+  'pages.zwtoken.claim.success': 'Claim successful!',
+  'pages.zwtoken.claim.failed': 'Claim failed',
+  'pages.zwtoken.claim.needImplement': 'Claim function requires ZK proof generation logic integration, please refer to project documentation',
+  
+  // Common
+  'pages.zwtoken.error.connectWallet': 'Please connect wallet first',
+  
   'pages.layouts.userLayout.title':
     'Ant Design is the most influential web design specification in Xihu district',
   'pages.login.accountLogin.tab': 'Account Login',

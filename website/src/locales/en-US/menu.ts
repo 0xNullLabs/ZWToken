@@ -1,4 +1,5 @@
 export default {
+  'menu.ZWToken': 'ZWToken',
   'menu.welcome': 'Welcome',
   'menu.more-blocks': 'More Blocks',
   'menu.home': 'Home',
