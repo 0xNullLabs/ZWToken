@@ -163,4 +163,3 @@ npx hardhat test
 
 - 电路代码: `circuits/claim_first_receipt.circom`
 - 前端示例: `client/browser_claim_example.js`
-- Subgraph: `subgraph/`

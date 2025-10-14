@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-13T07:01:16.870Z",
+  "timestamp": "2025-10-14T04:35:18.752Z",
   "gasPrice": {
     "gwei": 0.2,
     "ethPriceUSD": 4000
@@ -56,10 +56,10 @@
     },
     {
       "operation": "ZWToken: transfer (first receipt, records commitment)",
-      "gasUsed": "1071023",
+      "gasUsed": "1135029",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000214205",
-      "costUSD": "$0.856818"
+      "costETH": "0.000227006",
+      "costUSD": "$0.908023"
     },
     {
       "operation": "ZWToken: transfer (subsequent, no commitment)",
@@ -70,10 +70,10 @@
     },
     {
       "operation": "ZWToken: claim (with ZK proof)",
-      "gasUsed": "764311",
+      "gasUsed": "811217",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000152862",
-      "costUSD": "$0.611449"
+      "costETH": "0.000162243",
+      "costUSD": "$0.648974"
     },
     {
       "operation": "ZWToken: claim (subsequent, no new commitment)",
@@ -141,10 +141,10 @@
       "transfer": [
         {
           "operation": "ZWToken: transfer (first receipt, records commitment)",
-          "gasUsed": "1071023",
+          "gasUsed": "1135029",
           "gasPriceGwei": 0.2,
-          "costETH": "0.000214205",
-          "costUSD": "$0.856818"
+          "costETH": "0.000227006",
+          "costUSD": "$0.908023"
         },
         {
           "operation": "ZWToken: transfer (subsequent, no commitment)",
@@ -157,10 +157,10 @@
       "claim": [
         {
           "operation": "ZWToken: claim (with ZK proof)",
-          "gasUsed": "764311",
+          "gasUsed": "811217",
           "gasPriceGwei": 0.2,
-          "costETH": "0.000152862",
-          "costUSD": "$0.611449"
+          "costETH": "0.000162243",
+          "costUSD": "$0.648974"
         },
         {
           "operation": "ZWToken: claim (subsequent, no new commitment)",

@@ -250,9 +250,8 @@ class MerklePathOptimized {
  * - 去中心化
  *
  * 实现：
- * 1. 创建 subgraph 索引 CommitmentAdded 事件
- * 2. 浏览器查询 Graph API
- * 3. 本地重建 Merkle tree
+ * 1. 从合约存储获取所有 commitments
+ * 2. 本地重建 Merkle tree
  *
  * GraphQL 查询示例：
  * ```graphql

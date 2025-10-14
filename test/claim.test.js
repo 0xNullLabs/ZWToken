@@ -112,18 +112,18 @@ describe("ZWToken - E2E Claim Test", function () {
     console.log(`   Commitment count: ${commitmentCount2}`);
     expect(commitmentCount2).to.equal(1); // 首次接收，应该记录
 
-    // 验证 commitment 值（从事件中获取）
-    const commitmentEvent = receipt.logs.find(
-      (log) => log.fragment && log.fragment.name === "CommitmentAdded"
-    );
-    const actualCommitment = commitmentEvent.args[0];
+    // 验证 commitment 值（从存储中获取）
+    const leaves = await zwToken.getLeafRange(0, 1);
+    const storedCommitment = leaves[0];
 
-    const expectedCommitment = poseidon([addr20, BigInt(transferAmount)]);
-    const expectedHex =
-      "0x" + expectedCommitment.toString(16).padStart(64, "0");
-    console.log(`   Expected commitment: ${expectedHex}`);
-    console.log(`   Actual commitment: ${actualCommitment}`);
-    expect(actualCommitment).to.equal(expectedHex);
+    expect(storedCommitment.to).to.equal(privacyAddress);
+    expect(storedCommitment.amount).to.equal(transferAmount);
+
+    console.log(
+      `   Stored commitment - to: ${
+        storedCommitment.to
+      }, amount: ${ethers.formatEther(storedCommitment.amount)}`
+    );
 
     // 验证隐私地址余额
     const privacyBalance = await zwToken.balanceOf(privacyAddress);
@@ -183,8 +183,14 @@ describe("ZWToken - E2E Claim Test", function () {
       .to.emit(zwToken, "Claimed")
       .withArgs(nullifierHex, bob.address, claimAmount);
 
-    // 验证 CommitmentAdded 事件（Bob 首次接收）
-    await expect(claimTx).to.emit(zwToken, "CommitmentAdded");
+    // 验证 commitment 被创建（Bob 首次接收）
+    const leafCountAfterClaim = await zwToken.getStoredLeafCount();
+    expect(leafCountAfterClaim).to.equal(2); // 1 from privacy address + 1 from claim
+
+    // 验证最新的 commitment 数据
+    const claimLeaves = await zwToken.getLeafRange(1, 1);
+    expect(claimLeaves[0].to).to.equal(bob.address);
+    expect(claimLeaves[0].amount).to.equal(claimAmount);
 
     const bobBalanceAfter = await zwToken.balanceOf(bob.address);
     console.log(`   Bob ZWT balance: ${ethers.formatEther(bobBalanceAfter)}`);
@@ -301,13 +307,10 @@ describe("ZWToken - E2E Claim Test", function () {
       .to.emit(zwToken, "Claimed")
       .withArgs(nullifierHex2, bob.address, claimAmount2);
 
-    // 不应该 emit CommitmentAdded（Bob 已经有记录）
-    const receipt = await claimTx.wait();
-    const commitmentEvents = receipt.logs.filter(
-      (log) => log.fragment && log.fragment.name === "CommitmentAdded"
-    );
-    expect(commitmentEvents.length).to.equal(0);
-    console.log("   ✅ No CommitmentAdded event (as expected)");
+    // 不应该创建新的 commitment（Bob 已经有记录）
+    const leafCountAfterSecondClaim = await zwToken.getStoredLeafCount();
+    expect(leafCountAfterSecondClaim).to.equal(3); // 应该仍然是 3 个 commitment（没有为 Bob 创建新的）
+    console.log("   ✅ No new commitment created (as expected)");
 
     // 验证余额增加
     const bobBalanceAfter = await zwToken.balanceOf(bob.address);

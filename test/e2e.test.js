@@ -155,15 +155,19 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     // ========== 阶段 3: 重建 Merkle tree ==========
     console.log("\n📌 阶段 3: 从链上重建 Merkle tree（模拟前端）");
 
-    // 获取所有 commitment events
-    const filter = zwToken.filters.CommitmentAdded();
-    const events = await zwToken.queryFilter(filter, 0, "latest");
-    console.log(`   Found ${events.length} commitment(s)`);
+    // 获取所有 commitments 从存储
+    const leafCount = await zwToken.getStoredLeafCount();
+    console.log(`   Found ${leafCount} commitment(s)`);
+
+    const leaves = await zwToken.getLeafRange(0, leafCount);
+    console.log(`   Retrieved ${leaves.length} leaf(s) from storage`);
 
     // 重建 Merkle tree（使用共享工具）
     const tree = new IncrementalMerkleTree(20);
-    for (const event of events) {
-      tree.insert(event.args.commitment);
+    for (const leaf of leaves) {
+      // 计算 commitment = Poseidon(address, amount)
+      const commitment = poseidon([BigInt(leaf.to), BigInt(leaf.amount)]);
+      tree.insert(commitment);
     }
 
     const onchainRoot = await zwToken.root();

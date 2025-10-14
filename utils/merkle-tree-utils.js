@@ -125,7 +125,7 @@ class IncrementalMerkleTree {
 
 /**
  * Poseidon Merkle Tree 实现（完整版）
- * 适用于 Subgraph 客户端，支持完整的验证功能
+ * 适用于合约存储客户端，支持完整的验证功能
  */
 class PoseidonMerkleTree {
   constructor(depth, poseidonInstance) {

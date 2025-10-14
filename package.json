@@ -17,21 +17,13 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "test:v1": "hardhat test test/claim.test.js test/commitment.test.js test/e2e.test.js",
-    "test:v2": "hardhat test test/claim_v2_e2e.test.js test/commitment_v2.test.js test/e2e_v2.test.js",
-    "test:gas": "REPORT_GAS=true hardhat test",
     "test:gas-profile": "hardhat test test/gas-profile.test.js",
     "circuit:build": "./scripts/build_circuit.sh",
     "deploy": "hardhat run scripts/deploy.js --network hardhat",
     "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
     "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
     "build-inputs": "node client/build_inputs.js",
-    "submit-claim": "node client/submit_claim.js",
-    "subgraph:prepare": "node subgraph/scripts/prepare.js",
-    "subgraph:copy-abi": "mkdir -p subgraph/abis && cp artifacts/contracts/ZWToken.sol/ZWToken.json subgraph/abis/",
-    "subgraph:codegen": "cd subgraph && npm run codegen",
-    "subgraph:build": "cd subgraph && npm run build",
-    "subgraph:deploy:local": "cd subgraph && npm run deploy:local"
+    "submit-claim": "node client/submit_claim.js"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
@@ -47,9 +39,5 @@
     "rlp": "^3.0.0",
     "snarkjs": "^0.7.0"
   },
-  "devDependencies": {
-    "@apollo/client": "^4.0.7",
-    "cross-fetch": "^4.1.0",
-    "graphql": "^16.11.0"
-  }
+  "devDependencies": {}
 }

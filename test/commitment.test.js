@@ -47,14 +47,16 @@ describe("ZWToken - Commitment Recording", function () {
   });
 
   describe("Deposit - Should NOT record commitment", function () {
-    it("Should not emit CommitmentAdded on deposit", async function () {
+    it("Should not create commitment on deposit", async function () {
       await underlying
         .connect(alice)
         .approve(await zwToken.getAddress(), ethers.parseEther("100"));
 
-      await expect(
-        zwToken.connect(alice).deposit(ethers.parseEther("100"))
-      ).to.not.emit(zwToken, "CommitmentAdded");
+      await zwToken.connect(alice).deposit(ethers.parseEther("100"));
+
+      // Check no commitments were created
+      const leafCount = await zwToken.getStoredLeafCount();
+      expect(leafCount).to.equal(0);
     });
 
     it("Should not mark as first receipt recorded after deposit", async function () {
@@ -92,66 +94,71 @@ describe("ZWToken - Commitment Recording", function () {
       await zwToken.connect(alice).deposit(ethers.parseEther("100"));
     });
 
-    it("Should emit CommitmentAdded on first transfer to Bob", async function () {
+    it("Should create commitment on first transfer to Bob", async function () {
       const amount = ethers.parseEther("50");
 
-      await expect(
-        zwToken.connect(alice).transfer(bob.address, amount)
-      ).to.emit(zwToken, "CommitmentAdded");
+      await zwToken.connect(alice).transfer(bob.address, amount);
+
+      // Check commitment was created
+      const leafCount = await zwToken.getStoredLeafCount();
+      expect(leafCount).to.equal(1);
+
+      // Verify the commitment data
+      const leaves = await zwToken.getLeafRange(0, 1);
+      expect(leaves[0].to).to.equal(bob.address);
+      expect(leaves[0].amount).to.equal(amount);
     });
 
     it("Should record correct commitment value", async function () {
       const amount = ethers.parseEther("50");
 
-      // Calculate expected commitment
-      const bobAddr = BigInt(bob.address);
-      const amountBN = BigInt(amount);
-      const expectedCommitment = poseidon([bobAddr, amountBN]);
+      await zwToken.connect(alice).transfer(bob.address, amount);
 
-      const tx = await zwToken.connect(alice).transfer(bob.address, amount);
-      const receipt = await tx.wait();
+      // Verify the commitment data matches expected values
+      const leaves = await zwToken.getLeafRange(0, 1);
+      expect(leaves[0].to).to.equal(bob.address);
+      expect(leaves[0].amount).to.equal(amount);
 
-      const event = receipt.logs.find(
-        (log) => log.fragment && log.fragment.name === "CommitmentAdded"
-      );
-
-      expect(event).to.not.be.undefined;
-
-      const actualCommitment = event.args.commitment;
-      const expectedHex =
-        "0x" + expectedCommitment.toString(16).padStart(64, "0");
-
-      expect(actualCommitment).to.equal(expectedHex);
+      // Verify commitment count
+      const leafCount = await zwToken.getStoredLeafCount();
+      expect(leafCount).to.equal(1);
     });
 
-    it("Should NOT emit CommitmentAdded on second transfer to same recipient", async function () {
+    it("Should NOT create new commitment on second transfer to same recipient", async function () {
       // First transfer
       await zwToken
         .connect(alice)
         .transfer(bob.address, ethers.parseEther("50"));
 
+      const leafCountAfterFirst = await zwToken.getStoredLeafCount();
+      expect(leafCountAfterFirst).to.equal(1);
+
       // Second transfer
-      await expect(
-        zwToken.connect(alice).transfer(bob.address, ethers.parseEther("20"))
-      ).to.not.emit(zwToken, "CommitmentAdded");
+      await zwToken
+        .connect(alice)
+        .transfer(bob.address, ethers.parseEther("20"));
+
+      // Should still have only 1 commitment
+      const leafCountAfterSecond = await zwToken.getStoredLeafCount();
+      expect(leafCountAfterSecond).to.equal(1);
     });
 
     it("Should increment commitment count correctly", async function () {
       await zwToken
         .connect(alice)
         .transfer(bob.address, ethers.parseEther("30"));
-      expect(await zwToken.getCommitmentCount()).to.equal(1);
+      expect(await zwToken.getStoredLeafCount()).to.equal(1);
 
       await zwToken
         .connect(alice)
         .transfer(charlie.address, ethers.parseEther("30"));
-      expect(await zwToken.getCommitmentCount()).to.equal(2);
+      expect(await zwToken.getStoredLeafCount()).to.equal(2);
 
       // Second transfer to Bob should not increase count
       await zwToken
         .connect(alice)
         .transfer(bob.address, ethers.parseEther("10"));
-      expect(await zwToken.getCommitmentCount()).to.equal(2);
+      expect(await zwToken.getStoredLeafCount()).to.equal(2);
     });
 
     it("Should mark recipient as having first receipt recorded", async function () {
@@ -176,24 +183,36 @@ describe("ZWToken - Commitment Recording", function () {
         .approve(bob.address, ethers.parseEther("100"));
     });
 
-    it("Should emit CommitmentAdded when Bob transfers to Charlie", async function () {
-      await expect(
-        zwToken
-          .connect(bob)
-          .transferFrom(alice.address, charlie.address, ethers.parseEther("50"))
-      ).to.emit(zwToken, "CommitmentAdded");
+    it("Should create commitment when Bob transfers to Charlie", async function () {
+      await zwToken
+        .connect(bob)
+        .transferFrom(alice.address, charlie.address, ethers.parseEther("50"));
+
+      // Check commitment was created
+      const leafCount = await zwToken.getStoredLeafCount();
+      expect(leafCount).to.equal(1);
+
+      // Verify the commitment data
+      const leaves = await zwToken.getLeafRange(0, 1);
+      expect(leaves[0].to).to.equal(charlie.address);
+      expect(leaves[0].amount).to.equal(ethers.parseEther("50"));
     });
 
-    it("Should NOT emit CommitmentAdded on second transferFrom to same recipient", async function () {
+    it("Should NOT create new commitment on second transferFrom to same recipient", async function () {
       await zwToken
         .connect(bob)
         .transferFrom(alice.address, charlie.address, ethers.parseEther("30"));
 
-      await expect(
-        zwToken
-          .connect(bob)
-          .transferFrom(alice.address, charlie.address, ethers.parseEther("20"))
-      ).to.not.emit(zwToken, "CommitmentAdded");
+      const leafCountAfterFirst = await zwToken.getStoredLeafCount();
+      expect(leafCountAfterFirst).to.equal(1);
+
+      await zwToken
+        .connect(bob)
+        .transferFrom(alice.address, charlie.address, ethers.parseEther("20"));
+
+      // Should still have only 1 commitment
+      const leafCountAfterSecond = await zwToken.getStoredLeafCount();
+      expect(leafCountAfterSecond).to.equal(1);
     });
   });
 
@@ -219,7 +238,7 @@ describe("ZWToken - Commitment Recording", function () {
       // Now we have 1 commitment for privacyAddr
     });
 
-    it("Should emit CommitmentAdded when claiming to Bob (first receipt)", async function () {
+    it("Should create commitment when claiming to Bob (first receipt)", async function () {
       // Mock verifier to return true
       await verifier.setResult(true);
 
@@ -227,23 +246,30 @@ describe("ZWToken - Commitment Recording", function () {
       const root = await zwToken.root(); // Use actual root from tree
       const nullifier = ethers.id("test-nullifier-1");
 
-      await expect(
-        zwToken.claim(
+      await zwToken.claim(
+        [0, 0],
+        [
           [0, 0],
-          [
-            [0, 0],
-            [0, 0],
-          ],
           [0, 0],
-          root,
-          nullifier,
-          bob.address,
-          amount
-        )
-      ).to.emit(zwToken, "CommitmentAdded");
+        ],
+        [0, 0],
+        root,
+        nullifier,
+        bob.address,
+        amount
+      );
+
+      // Check commitment was created
+      const leafCount = await zwToken.getStoredLeafCount();
+      expect(leafCount).to.equal(2); // 1 from privacy address transfer + 1 from claim
+
+      // Verify the latest commitment data
+      const leaves = await zwToken.getLeafRange(1, 1);
+      expect(leaves[0].to).to.equal(bob.address);
+      expect(leaves[0].amount).to.equal(amount);
     });
 
-    it("Should NOT emit CommitmentAdded when claiming to previously received address", async function () {
+    it("Should NOT create new commitment when claiming to previously received address", async function () {
       await verifier.setResult(true);
 
       // First, Alice transfers to Bob (creates commitment for Bob)
@@ -251,25 +277,30 @@ describe("ZWToken - Commitment Recording", function () {
         .connect(alice)
         .transfer(bob.address, ethers.parseEther("10"));
 
+      const leafCountAfterTransfer = await zwToken.getStoredLeafCount();
+      expect(leafCountAfterTransfer).to.equal(2); // 1 from privacy address + 1 from Bob transfer
+
       // Now claim to Bob (should not create new commitment)
       const amount = ethers.parseEther("30");
       const root = await zwToken.root(); // Use actual root from tree
       const nullifier = ethers.id("test-nullifier-2");
 
-      await expect(
-        zwToken.claim(
+      await zwToken.claim(
+        [0, 0],
+        [
           [0, 0],
-          [
-            [0, 0],
-            [0, 0],
-          ],
           [0, 0],
-          root,
-          nullifier,
-          bob.address,
-          amount
-        )
-      ).to.not.emit(zwToken, "CommitmentAdded");
+        ],
+        [0, 0],
+        root,
+        nullifier,
+        bob.address,
+        amount
+      );
+
+      // Should still have only 2 commitments (no new one created)
+      const leafCountAfterClaim = await zwToken.getStoredLeafCount();
+      expect(leafCountAfterClaim).to.equal(2);
     });
 
     it("Should mint ZWToken to recipient on claim", async function () {
@@ -335,40 +366,23 @@ describe("ZWToken - Commitment Recording", function () {
       const amount1 = ethers.parseEther("50");
       const amount2 = ethers.parseEther("60");
 
-      const tx1 = await zwToken.connect(alice).transfer(bob.address, amount1);
-      const receipt1 = await tx1.wait();
-
-      const tx2 = await zwToken
-        .connect(alice)
-        .transfer(charlie.address, amount2);
-      const receipt2 = await tx2.wait();
+      await zwToken.connect(alice).transfer(bob.address, amount1);
+      await zwToken.connect(alice).transfer(charlie.address, amount2);
 
       // Verify commitment count
-      const count = await zwToken.getCommitmentCount();
+      const count = await zwToken.getStoredLeafCount();
       expect(count).to.equal(2);
 
-      // Verify first commitment from event
-      const event1 = receipt1.logs.find(
-        (log) => log.fragment && log.fragment.name === "CommitmentAdded"
-      );
-      const bobCommitment = poseidon([BigInt(bob.address), BigInt(amount1)]);
-      expect(event1.args[0]).to.equal(
-        "0x" + bobCommitment.toString(16).padStart(64, "0")
-      );
-      expect(event1.args[1]).to.equal(0n); // index 0
+      // Verify commitments are stored in correct order
+      const leaves = await zwToken.getLeafRange(0, 2);
 
-      // Verify second commitment from event
-      const event2 = receipt2.logs.find(
-        (log) => log.fragment && log.fragment.name === "CommitmentAdded"
-      );
-      const charlieCommitment = poseidon([
-        BigInt(charlie.address),
-        BigInt(amount2),
-      ]);
-      expect(event2.args[0]).to.equal(
-        "0x" + charlieCommitment.toString(16).padStart(64, "0")
-      );
-      expect(event2.args[1]).to.equal(1n); // index 1
+      // First commitment (Bob)
+      expect(leaves[0].to).to.equal(bob.address);
+      expect(leaves[0].amount).to.equal(amount1);
+
+      // Second commitment (Charlie)
+      expect(leaves[1].to).to.equal(charlie.address);
+      expect(leaves[1].amount).to.equal(amount2);
     });
   });
 });

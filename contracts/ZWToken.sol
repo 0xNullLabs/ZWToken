@@ -46,10 +46,16 @@ contract ZWToken is ERC20, PoseidonMerkleTree {
     // Anti-double-claim
     mapping(bytes32 => bool) public nullifierUsed;
     
+    // Array to store leafs with <to, amount> format
+    struct Leaf {
+        address to;
+        uint256 amount;
+    }
+    Leaf[] public leafs;
+    
     // ========== Events ==========
     
     event Deposited(address indexed from, uint256 amount);
-    event CommitmentAdded(bytes32 indexed commitment, uint256 index, address indexed recipient, uint256 amount);
     event Claimed(bytes32 indexed nullifier, address indexed to, uint256 amount);
     
     // ========== Errors ==========
@@ -195,7 +201,8 @@ contract ZWToken is ERC20, PoseidonMerkleTree {
             // Insert to Merkle tree (inherited from PoseidonMerkleTree)
             _insertLeaf(commitment);
             
-            emit CommitmentAdded(commitment, nextIndex - 1, to, amount);
+            // Store leaf in array
+            leafs.push(Leaf(to, amount));
         }
     }
     
@@ -207,5 +214,31 @@ contract ZWToken is ERC20, PoseidonMerkleTree {
      */
     function getCommitmentCount() external view returns (uint256) {
         return nextIndex;
+    }
+    
+    /**
+     * @notice Get multiple leaves in a range
+     * @param startIndex Starting index (inclusive)
+     * @param length Number of leaves to retrieve
+     * @return leaves Array of Leaf structs
+     */
+    function getLeafRange(uint256 startIndex, uint256 length) external view returns (Leaf[] memory leaves) {
+        require(startIndex + length <= leafs.length, "Range out of bounds");
+        
+        leaves = new Leaf[](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            leaves[i] = leafs[startIndex + i];
+        }
+        
+        return leaves;
+    }
+    
+    /**
+     * @notice Get total number of leafs stored in array
+     * @return Total number of leafs stored
+     */
+    function getStoredLeafCount() external view returns (uint256) {
+        return leafs.length;
     }
 }

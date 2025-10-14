@@ -31,20 +31,6 @@ ZWToken/
 ├── client/                         # 前端示例
 │   └── browser_claim_example.js   # 浏览器端 claim 完整流程
 │
-├── subgraph/                       # The Graph 索引
-│   ├── schema.graphql             # GraphQL schema
-│   ├── src/
-│   │   └── mapping.ts             # 事件处理器
-│   ├── client-example.js          # 客户端查询示例
-│   ├── examples/
-│   │   ├── query-examples.graphql
-│   │   └── react-integration.jsx
-│   ├── scripts/
-│   │   ├── prepare.js
-│   │   └── update-config.sh
-│   ├── QUICKSTART.md
-│   └── README.md
-│
 ├── test/                           # 测试文件
 │   ├── e2e.test.js                # 端到端测试（真实 ZK proof）
 │   ├── commitment.test.js         # Commitment 记录测试
@@ -105,8 +91,8 @@ ZWToken/
 
 - `merkle-tree-utils.js`:
   - `IncrementalMerkleTree`: 简化版（测试/浏览器）
-  - `PoseidonMerkleTree`: 完整版（Subgraph 客户端）
-  - 被 3 个模块共用（test, client, subgraph）
+  - `PoseidonMerkleTree`: 完整版（合约存储客户端）
+  - 被 2 个模块共用（test, client）
 
 ### 4. 前端集成层 (`client/`)
 
@@ -115,19 +101,9 @@ ZWToken/
 - `browser_claim_example.js`:
   - 方案 1: 从链上事件重建 Merkle tree
   - 方案 2: 优化版增量获取
-  - 方案 3: 合约查询接口（需合约支持）
-  - 方案 4: The Graph 索引（推荐）
+  - 方案 3: 合约查询接口（推荐）
 
-### 5. Subgraph 层 (`subgraph/`)
-
-**The Graph 索引服务**:
-
-- `schema.graphql`: 定义 Commitment 实体
-- `mapping.ts`: 监听 CommitmentAdded 事件
-- `client-example.js`: 查询 + Merkle tree 构建
-- `examples/`: GraphQL 查询示例 + React 集成
-
-### 6. 测试层 (`test/`)
+### 5. 测试层 (`test/`)
 
 **测试套件**:
 
@@ -154,11 +130,6 @@ ZWToken/
 
 - **ethers.js**: 以太坊交互
 - **circomlibjs**: Poseidon 哈希 JS 实现
-
-### 索引服务
-
-- **The Graph**: 链上数据索引
-- **Apollo Client**: GraphQL 客户端
 
 ## 🚀 快速开始
 
@@ -187,16 +158,6 @@ npx hardhat test                    # 所有测试
 npx hardhat test test/e2e.test.js  # E2E 测试
 ```
 
-### 5. 部署 Subgraph
-
-```bash
-cd subgraph
-npm install
-npm run prepare  # 准备配置
-npm run codegen  # 生成代码
-npm run deploy   # 部署到 Graph Node
-```
-
 ## 📊 数据流
 
 ### Deposit → Transfer → Claim 流程
@@ -214,17 +175,11 @@ npm run deploy   # 部署到 Graph Node
    ↓
    _insertLeaf() → 更新 Merkle tree
    ↓
-   emit CommitmentAdded(commitment, 0, privacyAddr, 500)
+   store commitment in leafs array
 
-3. Subgraph 索引事件
+3. 用户生成 ZK proof
    ↓
-   mapping.ts: handleCommitmentAdded()
-   ↓
-   存储到 GraphQL 数据库
-
-4. 用户生成 ZK proof
-   ↓
-   从 Subgraph 查询 commitments
+   从合约存储查询 commitments
    ↓
    本地重建 Merkle tree + 生成 proof
    ↓
@@ -256,8 +211,6 @@ npm run deploy   # 部署到 Graph Node
 
 - [主 README](./README.md): 项目概述
 - [合约文档](./contracts/README.md): 智能合约详解
-- [Subgraph 文档](./subgraph/README.md): 索引服务使用
-- [Subgraph 快速开始](./subgraph/QUICKSTART.md): 5 分钟上手指南
 
 ## 🤝 贡献
 
