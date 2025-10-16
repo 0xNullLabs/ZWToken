@@ -8,102 +8,117 @@ import { ethers } from 'ethers';
 
 /**
  * Incremental Merkle Tree 实现
- * 参考 utils/merkle-tree-utils
+ * 使用 Poseidon hash（与合约和 e2e 测试一致）
  */
 export class IncrementalMerkleTree {
   depth: number;
-  leaves: bigint[];
   zeros: bigint[];
+  filledSubtrees: bigint[];
+  leaves: bigint[];
+  nextIndex: number;
+  root: bigint;
+  poseidon: any;
   
-  constructor(depth: number) {
+  constructor(depth: number, poseidon: any) {
     this.depth = depth;
-    this.leaves = [];
     this.zeros = [];
+    this.filledSubtrees = new Array(depth);
+    this.leaves = [];
+    this.nextIndex = 0;
+    this.poseidon = poseidon;
     
-    // 初始化零值
-    this.zeros[0] = 0n;
-    for (let i = 1; i <= depth; i++) {
-      this.zeros[i] = this.hash(this.zeros[i - 1], this.zeros[i - 1]);
+    // 初始化零值（使用 Poseidon hash）
+    let currentZero = 0n;
+    this.zeros[0] = currentZero;
+    for (let i = 1; i < depth; i++) {
+      currentZero = this.hash(currentZero, currentZero);
+      this.zeros[i] = currentZero;
     }
+    this.root = this.zeros[depth - 1];
   }
   
-  // Poseidon hash (需要在实际使用时替换为真实的 Poseidon)
+  // Poseidon hash（使用 circomlibjs）
   private hash(left: bigint, right: bigint): bigint {
-    // 这里需要使用 circomlibjs 的 poseidon
-    // 暂时使用简单的 keccak256 替代（实际应用中需要替换）
-    const packed = ethers.solidityPacked(['uint256', 'uint256'], [left, right]);
-    return BigInt(ethers.keccak256(packed));
+    const result = this.poseidon([left, right]);
+    return BigInt(this.poseidon.F.toString(result));
   }
   
   insert(leaf: bigint) {
     this.leaves.push(leaf);
-  }
-  
-  get root(): bigint {
-    if (this.leaves.length === 0) {
-      return this.zeros[this.depth];
+    const index = this.nextIndex;
+    let currentHash = BigInt(leaf);
+    let currentIndex = index;
+    
+    for (let i = 0; i < this.depth; i++) {
+      if (currentIndex % 2 === 0) {
+        this.filledSubtrees[i] = currentHash;
+        currentHash = this.hash(currentHash, this.zeros[i]);
+      } else {
+        currentHash = this.hash(this.filledSubtrees[i], currentHash);
+      }
+      currentIndex = Math.floor(currentIndex / 2);
     }
     
-    let currentLevel = [...this.leaves];
-    
-    for (let level = 0; level < this.depth; level++) {
-      const nextLevel: bigint[] = [];
-      
-      for (let i = 0; i < currentLevel.length; i += 2) {
-        const left = currentLevel[i];
-        const right = i + 1 < currentLevel.length ? currentLevel[i + 1] : this.zeros[level];
-        nextLevel.push(this.hash(left, right));
-      }
-      
-      if (currentLevel.length % 2 === 1) {
-        // 奇数个节点，最后一个需要与零值配对
-      }
-      
-      currentLevel = nextLevel;
-      
-      if (currentLevel.length === 0) {
-        return this.zeros[this.depth - level];
-      }
-    }
-    
-    return currentLevel[0] || this.zeros[this.depth];
+    this.root = currentHash;
+    this.nextIndex++;
+    return currentHash;
   }
   
   getProof(index: number): { pathElements: bigint[]; pathIndices: number[] } {
-    if (index >= this.leaves.length) {
+    if (index >= this.nextIndex) {
       throw new Error('Index out of bounds');
     }
     
     const pathElements: bigint[] = [];
     const pathIndices: number[] = [];
-    
-    let currentLevel = [...this.leaves];
     let currentIndex = index;
     
-    for (let level = 0; level < this.depth; level++) {
-      const isLeft = currentIndex % 2 === 0;
-      const siblingIndex = isLeft ? currentIndex + 1 : currentIndex - 1;
+    for (let i = 0; i < this.depth; i++) {
+      const isRight = currentIndex % 2 === 1;
+      pathIndices.push(isRight ? 1 : 0);
       
-      const sibling = siblingIndex < currentLevel.length 
-        ? currentLevel[siblingIndex] 
-        : this.zeros[level];
-      
-      pathElements.push(sibling);
-      pathIndices.push(isLeft ? 0 : 1);
-      
-      // 移动到下一层
-      const nextLevel: bigint[] = [];
-      for (let i = 0; i < currentLevel.length; i += 2) {
-        const left = currentLevel[i];
-        const right = i + 1 < currentLevel.length ? currentLevel[i + 1] : this.zeros[level];
-        nextLevel.push(this.hash(left, right));
+      if (isRight) {
+        // 当前节点是右子节点，sibling 是 filledSubtrees[i]
+        pathElements.push(this.filledSubtrees[i] || this.zeros[i]);
+      } else {
+        // 当前节点是左子节点，需要计算右侧 sibling
+        const siblingIndex = currentIndex + 1;
+        const levelSize = Math.pow(2, i);
+        const siblingLeafStart = siblingIndex * levelSize;
+        
+        if (siblingLeafStart < this.nextIndex) {
+          // 有真实的右兄弟，需要重建它的子树
+          pathElements.push(this._reconstructSubtree(siblingLeafStart, i));
+        } else {
+          // 没有右兄弟，使用 zero
+          pathElements.push(this.zeros[i]);
+        }
       }
-      
-      currentLevel = nextLevel;
       currentIndex = Math.floor(currentIndex / 2);
     }
     
     return { pathElements, pathIndices };
+  }
+  
+  /**
+   * 重建子树的根哈希
+   */
+  private _reconstructSubtree(leafIndex: number, level: number): bigint {
+    if (level === 0) {
+      // 叶子层
+      if (leafIndex < this.leaves.length) {
+        return BigInt(this.leaves[leafIndex]);
+      } else {
+        return this.zeros[0];
+      }
+    }
+    
+    // 递归构建左右子树
+    const levelSize = Math.pow(2, level - 1);
+    const leftChild = this._reconstructSubtree(leafIndex, level - 1);
+    const rightChild = this._reconstructSubtree(leafIndex + levelSize, level - 1);
+    
+    return this.hash(leftChild, rightChild);
   }
 }
 
@@ -137,6 +152,7 @@ export async function deriveFromSecret(secret: string) {
 
 /**
  * 从链上重建 Merkle Tree
+ * 与 e2e.test.js 逻辑完全一致
  */
 export async function rebuildMerkleTree(
   contract: ethers.Contract,
@@ -154,10 +170,11 @@ export async function rebuildMerkleTree(
   const leaves = await contract.getLeafRange(0, leafCount);
   console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
   
-  // 重建 Merkle tree
-  const tree = new IncrementalMerkleTree(20);
+  // 重建 Merkle tree（传入 poseidon 实例）
+  const tree = new IncrementalMerkleTree(20, poseidon);
   for (const leaf of leaves) {
     // 计算 commitment = Poseidon(address, amount)
+    // 注意：这里直接使用 poseidon() 的返回值，它已经是 Field 元素
     const commitment = poseidon([BigInt(leaf.to), BigInt(leaf.amount)]);
     tree.insert(BigInt(poseidon.F.toString(commitment)));
   }
