@@ -43,3 +43,10 @@ Underlying Token:   0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
 Verifier:           0xdAAAa905B017Fb45764d3F1210d9a0eb84D6588E
 ZWToken:            0x8913094084839c03E7753A15FF6CC7E4Bcb7E11B
 ────────────────────────────────────────────────────────────────────────────────
+
+
+新地址：
+PoseidonT3:         0x45F66B102f5768f96d623b58AEf1Ff9650C81678
+Underlying Token:   0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
+Verifier:           0xAf5F32a63e23A3E39f0b87586319FAC18995792a
+ZWToken:            0xFaA20C4D2c30eC24d924Fb8E2c5089F986F30567
