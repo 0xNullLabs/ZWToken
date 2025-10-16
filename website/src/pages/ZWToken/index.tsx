@@ -25,9 +25,34 @@ const ZWToken: React.FC = () => {
   const [secretForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [secretModalVisible, setSecretModalVisible] = useState(false);
+  const [tokenDecimals, setTokenDecimals] = useState<number>(18); // 默认 18 位，实际会动态查询
 
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
+
+  // 获取代币小数位数
+  React.useEffect(() => {
+    const fetchDecimals = async () => {
+      if (!wallet) return;
+      
+      try {
+        const provider = new ethers.BrowserProvider(wallet.provider, 'any');
+        const underlyingContract = new ethers.Contract(
+          CONTRACT_ADDRESSES.UnderlyingToken,
+          ['function decimals() view returns (uint8)'],
+          provider
+        );
+        const decimals = await underlyingContract.decimals();
+        setTokenDecimals(Number(decimals));
+        console.log('Token decimals:', decimals);
+      } catch (error) {
+        console.error('Failed to fetch token decimals:', error);
+        // 保持默认值 18
+      }
+    };
+    
+    fetchDecimals();
+  }, [wallet]);
 
   // 获取provider和signer
   const getProvider = () => {
@@ -105,7 +130,10 @@ const ZWToken: React.FC = () => {
         signer
       );
       
-      const depositAmount = ethers.parseEther(values.amount.toString());
+      // 使用正确的小数位数
+      const depositAmount = ethers.parseUnits(values.amount.toString(), tokenDecimals);
+      console.log(`Deposit amount: ${values.amount} tokens = ${depositAmount.toString()} units (${tokenDecimals} decimals)`);
+      
       const currentAllowance = await underlyingContract.allowance(account, CONTRACT_ADDRESSES.ZWToken);
       
       // 如果授权不足，先授权
@@ -157,7 +185,12 @@ const ZWToken: React.FC = () => {
         CONTRACT_ABIS.ZWToken,
         signer
       );
-      const tx = await contract.withdraw(ethers.parseEther(values.amount.toString()));
+      
+      // 使用正确的小数位数
+      const withdrawAmount = ethers.parseUnits(values.amount.toString(), tokenDecimals);
+      console.log(`Withdraw amount: ${values.amount} tokens = ${withdrawAmount.toString()} units (${tokenDecimals} decimals)`);
+      
+      const tx = await contract.withdraw(withdrawAmount);
       
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.withdraw.submitting' }), 0);
       await tx.wait();
@@ -192,10 +225,12 @@ const ZWToken: React.FC = () => {
         CONTRACT_ABIS.ZWToken,
         signer
       );
-      const tx = await contract.transfer(
-        values.targetAddress,
-        ethers.parseEther(values.amount.toString())
-      );
+      
+      // 使用正确的小数位数
+      const transferAmount = ethers.parseUnits(values.amount.toString(), tokenDecimals);
+      console.log(`Transfer amount: ${values.amount} tokens = ${transferAmount.toString()} units (${tokenDecimals} decimals)`);
+      
+      const tx = await contract.transfer(values.targetAddress, transferAmount);
       
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.transfer.submitting' }), 0);
       await tx.wait();
@@ -283,10 +318,12 @@ const ZWToken: React.FC = () => {
       }
       
       console.log(`Found commitment at index ${userCommitment.index}`);
-      console.log(`First amount: ${ethers.formatEther(userCommitment.amount)}`);
+      console.log(`First amount: ${ethers.formatUnits(userCommitment.amount, tokenDecimals)}`);
       
       // 验证 claim amount 不超过 first amount
-      const claimAmount = ethers.parseEther(values.claimAmount.toString());
+      const claimAmount = ethers.parseUnits(values.claimAmount.toString(), tokenDecimals);
+      console.log(`Claim amount: ${values.claimAmount} tokens = ${claimAmount.toString()} units (${tokenDecimals} decimals)`);
+      
       if (claimAmount > userCommitment.amount) {
         message.destroy();
         message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.amountExceeded' }));

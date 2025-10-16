@@ -27,6 +27,7 @@ export const CONTRACT_ABIS = {
     'function allowance(address owner, address spender) external view returns (uint256)',
     'function balanceOf(address account) external view returns (uint256)',
     'function transfer(address to, uint256 amount) external returns (bool)',
+    'function decimals() external view returns (uint8)',
   ],
   
   // ZWToken 合约
