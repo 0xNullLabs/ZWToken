@@ -5,9 +5,10 @@ export default {
   'pages.zwtoken.connectWallet': '请先点击右上角的 "Connect Wallet" 按钮连接您的钱包',
   
   // Tabs
-  'pages.zwtoken.tab.deposit': '💰 存款 (Deposit)',
-  'pages.zwtoken.tab.transfer': '🔄 转账 (Transfer)',
-  'pages.zwtoken.tab.claim': '🎁 提现 (Claim)',
+  'pages.zwtoken.tab.deposit': '💰 存款',
+  'pages.zwtoken.tab.withdraw': '💳 取款',
+  'pages.zwtoken.tab.transfer': '🔄 转账',
+  'pages.zwtoken.tab.claim': '🎁 提现',
   
   // Deposit
   'pages.zwtoken.deposit.amount': '存款金额',
@@ -23,6 +24,21 @@ export default {
   'pages.zwtoken.deposit.submitting': '交易提交中...',
   'pages.zwtoken.deposit.success': '存款成功！',
   'pages.zwtoken.deposit.failed': '存款失败',
+  
+  // Withdraw
+  'pages.zwtoken.withdraw.amount': '取款金额',
+  'pages.zwtoken.withdraw.amount.placeholder': '请输入取款金额',
+  'pages.zwtoken.withdraw.amount.required': '请输入取款金额',
+  'pages.zwtoken.withdraw.amount.min': '金额必须大于0',
+  'pages.zwtoken.withdraw.button': '取款',
+  'pages.zwtoken.withdraw.reset': '重置',
+  'pages.zwtoken.withdraw.tip.title': '💡 提示',
+  'pages.zwtoken.withdraw.tip.1': '• 取款会销毁您的ZWToken并返还基础代币(Underlying Token)',
+  'pages.zwtoken.withdraw.tip.2': '• 取款金额不能超过您的ZWToken余额',
+  'pages.zwtoken.withdraw.tip.3': '• 取款操作不会记录commitment',
+  'pages.zwtoken.withdraw.submitting': '交易提交中...',
+  'pages.zwtoken.withdraw.success': '取款成功！',
+  'pages.zwtoken.withdraw.failed': '取款失败',
   
   // Transfer
   'pages.zwtoken.transfer.privacyAddress': '隐私地址',

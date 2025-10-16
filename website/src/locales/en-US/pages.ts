@@ -6,6 +6,7 @@ export default {
   
   // Tabs
   'pages.zwtoken.tab.deposit': '💰 Deposit',
+  'pages.zwtoken.tab.withdraw': '💳 Withdraw',
   'pages.zwtoken.tab.transfer': '🔄 Transfer',
   'pages.zwtoken.tab.claim': '🎁 Claim',
   
@@ -23,6 +24,21 @@ export default {
   'pages.zwtoken.deposit.submitting': 'Transaction submitting...',
   'pages.zwtoken.deposit.success': 'Deposit successful!',
   'pages.zwtoken.deposit.failed': 'Deposit failed',
+  
+  // Withdraw
+  'pages.zwtoken.withdraw.amount': 'Withdraw Amount',
+  'pages.zwtoken.withdraw.amount.placeholder': 'Enter withdraw amount',
+  'pages.zwtoken.withdraw.amount.required': 'Please enter withdraw amount',
+  'pages.zwtoken.withdraw.amount.min': 'Amount must be greater than 0',
+  'pages.zwtoken.withdraw.button': 'Withdraw',
+  'pages.zwtoken.withdraw.reset': 'Reset',
+  'pages.zwtoken.withdraw.tip.title': '💡 Tips',
+  'pages.zwtoken.withdraw.tip.1': '• Withdraw will burn your ZWToken and return the underlying token',
+  'pages.zwtoken.withdraw.tip.2': '• Withdraw amount cannot exceed your ZWToken balance',
+  'pages.zwtoken.withdraw.tip.3': '• Withdraw operation will not record commitment',
+  'pages.zwtoken.withdraw.submitting': 'Transaction submitting...',
+  'pages.zwtoken.withdraw.success': 'Withdraw successful!',
+  'pages.zwtoken.withdraw.failed': 'Withdraw failed',
   
   // Transfer
   'pages.zwtoken.transfer.privacyAddress': 'Privacy Address',

@@ -11,6 +11,7 @@ const ZWToken: React.FC = () => {
   const intl = useIntl();
   const [{ wallet }] = useConnectWallet();
   const [depositForm] = Form.useForm();
+  const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
   const [claimForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -55,6 +56,39 @@ const ZWToken: React.FC = () => {
       depositForm.resetFields();
     } catch (error: any) {
       message.error(`${intl.formatMessage({ id: 'pages.zwtoken.deposit.failed' })}: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Withdraw操作
+  const handleWithdraw = async (values: { amount: number }) => {
+    if (!account) {
+      message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const provider = getProvider();
+      if (!provider) return;
+
+      const signer = await provider.getSigner();
+      
+      // TODO: 导入合约配置
+      const contractAddress = '0x0000000000000000000000000000000000000000'; // 替换为实际地址
+      const contractABI = ['function withdraw(uint256 amount) external'];
+      
+      const contract = new ethers.Contract(contractAddress, contractABI, signer);
+      const tx = await contract.withdraw(ethers.parseEther(values.amount.toString()));
+      
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.withdraw.submitting' }), 0);
+      await tx.wait();
+      message.destroy();
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.withdraw.success' }));
+      withdrawForm.resetFields();
+    } catch (error: any) {
+      message.error(`${intl.formatMessage({ id: 'pages.zwtoken.withdraw.failed' })}: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -190,6 +224,50 @@ const ZWToken: React.FC = () => {
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.1' })}</p>
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.2' })}</p>
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.3' })}</p>
+              </div>
+            </div>
+          </TabPane>
+
+          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.withdraw' })} key="withdraw">
+            <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+              <Form
+                form={withdrawForm}
+                layout="vertical"
+                onFinish={handleWithdraw}
+              >
+                <Form.Item
+                  label={intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount' })}
+                  name="amount"
+                  rules={[
+                    { required: true, message: intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount.required' }) },
+                    { type: 'number', min: 0.000001, message: intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount.min' }) },
+                  ]}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    placeholder={intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount.placeholder' })}
+                    precision={6}
+                    min={0}
+                  />
+                </Form.Item>
+
+                <Form.Item>
+                  <Space>
+                    <Button type="primary" htmlType="submit" loading={loading}>
+                      {intl.formatMessage({ id: 'pages.zwtoken.withdraw.button' })}
+                    </Button>
+                    <Button onClick={() => withdrawForm.resetFields()}>
+                      {intl.formatMessage({ id: 'pages.zwtoken.withdraw.reset' })}
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
+
+              <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+                <h4>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.title' })}</h4>
+                <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.1' })}</p>
+                <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.2' })}</p>
+                <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.3' })}</p>
               </div>
             </div>
           </TabPane>
