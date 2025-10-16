@@ -103,9 +103,11 @@ async function main() {
 
   const zwTokenName = "Zero Knowledge Wrapper " + underlyingName;
   const zwTokenSymbol = "ZW" + underlyingSymbol;
+  const underlyingDecimals = await underlying.decimals();
   const zwToken = await ZWToken.deploy(
     zwTokenName,
     zwTokenSymbol,
+    underlyingDecimals,
     underlyingAddress,
     verifierAddress
   );
@@ -115,6 +117,7 @@ async function main() {
   console.log("✅ ZWToken 已部署至:", zwTokenAddress);
   console.log("   名称:", zwTokenName);
   console.log("   符号:", zwTokenSymbol);
+  console.log("   小数位数:", underlyingDecimals);
   console.log("   底层代币:", underlyingAddress);
   console.log("   验证器:", verifierAddress);
 
