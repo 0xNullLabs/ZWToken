@@ -12,6 +12,8 @@ import {
   findUserCommitment,
   prepareCircuitInput 
 } from '@/utils/zkProof';
+// @ts-ignore
+import * as snarkjs from 'snarkjs';
 
 const { TabPane } = Tabs;
 
@@ -355,38 +357,60 @@ const ZWToken: React.FC = () => {
       
       // === 步骤 6: 生成 ZK proof ===
       message.destroy();
-      message.info(intl.formatMessage({ id: 'pages.zwtoken.claim.zkProofNeeded' }));
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.generatingZKProof' }), 0);
+      console.log('Step 6: Generating ZK proof (this may take 10-30 seconds)...');
       
-      // TODO: 集成 snarkjs 生成真实的 ZK proof
-      // 需要 wasm 和 zkey 文件
-      // const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-      //   circuitInput,
-      //   '/path/to/claim_first_receipt.wasm',
-      //   '/path/to/claim_first_receipt_final.zkey'
-      // );
-      // 
-      // const calldata = await snarkjs.groth16.exportSolidityCallData(proof, publicSignals);
-      // const calldataJson = JSON.parse('[' + calldata + ']');
-      // 
-      // const tx = await contract.claim(
-      //   calldataJson[0], // a
-      //   calldataJson[1], // b
-      //   calldataJson[2], // c
-      //   localRoot,
-      //   nullifierHex,
-      //   values.recipient,
-      //   claimAmount
-      // );
-      // 
-      // message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.submitting' }), 0);
-      // await tx.wait();
-      // message.destroy();
-      // message.success(intl.formatMessage({ id: 'pages.zwtoken.claim.success' }));
-      
-      console.log('✅ All preparation steps completed');
-      console.log('⚠️  ZK proof generation requires snarkjs integration');
-      
-      claimForm.resetFields();
+      try {
+        // 生成真实的 ZK proof
+        const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
+          circuitInput,
+          '/circuits/claim_first_receipt.wasm',
+          '/circuits/claim_first_receipt_final.zkey'
+        );
+        
+        console.log('✅ ZK proof generated!');
+        console.log('Public signals:', publicSignals);
+        
+        // 格式化为 Solidity calldata
+        const calldata = await snarkjs.groth16.exportSolidityCallData(zkProof, publicSignals);
+        const calldataJson = JSON.parse('[' + calldata + ']');
+        
+        const solidityProof = {
+          a: calldataJson[0],
+          b: calldataJson[1],
+          c: calldataJson[2],
+        };
+        
+        console.log('✅ Proof formatted for Solidity');
+        
+        // === 步骤 7: 提交 claim 交易 ===
+        message.destroy();
+        message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.submitting' }), 0);
+        console.log('Step 7: Submitting claim transaction...');
+        
+        const tx = await contract.claim(
+          solidityProof.a,
+          solidityProof.b,
+          solidityProof.c,
+          localRoot,
+          nullifierHex,
+          values.recipient,
+          claimAmount
+        );
+        
+        console.log('Transaction submitted, waiting for confirmation...');
+        const receipt = await tx.wait();
+        
+        message.destroy();
+        message.success(intl.formatMessage({ id: 'pages.zwtoken.claim.success' }));
+        console.log(`✅ Claim succeeded! Gas used: ${receipt.gasUsed}`);
+        
+        claimForm.resetFields();
+      } catch (proofError: any) {
+        message.destroy();
+        console.error('ZK proof generation or claim error:', proofError);
+        message.error(`${intl.formatMessage({ id: 'pages.zwtoken.claim.failed' })}: ${proofError.message}`);
+      }
     } catch (error: any) {
       message.destroy();
       console.error('Claim error:', error);

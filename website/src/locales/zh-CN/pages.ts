@@ -95,6 +95,7 @@ export default {
   'pages.zwtoken.claim.rebuildingTree': '从链上重建Merkle树...',
   'pages.zwtoken.claim.findingCommitment': '查找commitment...',
   'pages.zwtoken.claim.generatingProof': '生成Merkle proof...',
+  'pages.zwtoken.claim.generatingZKProof': '正在生成ZK证明，这可能需要10-30秒...',
   'pages.zwtoken.claim.generating': '正在生成ZK证明，这可能需要5-12秒...',
   'pages.zwtoken.claim.submitting': '交易提交中...',
   'pages.zwtoken.claim.success': '提现成功！',
