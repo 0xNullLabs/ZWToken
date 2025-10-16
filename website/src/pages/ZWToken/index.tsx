@@ -6,6 +6,12 @@ import { ethers } from 'ethers';
 import React, { useState } from 'react';
 import { buildPoseidon } from 'circomlibjs';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from '@/config/contracts';
+import { 
+  deriveFromSecret, 
+  rebuildMerkleTree, 
+  findUserCommitment,
+  prepareCircuitInput 
+} from '@/utils/zkProof';
 
 const { TabPane } = Tabs;
 
@@ -212,15 +218,16 @@ const ZWToken: React.FC = () => {
     }
 
     setLoading(true);
+    const hideLoading = message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.preparing' }), 0);
+    
     try {
       const provider = getProvider();
-      if (!provider) return;
+      if (!provider) {
+        hideLoading();
+        return;
+      }
 
       const signer = await provider.getSigner();
-      
-      // TODO: 实现ZK proof生成逻辑
-      // 这里需要调用ZK proof生成相关的代码
-      message.info(intl.formatMessage({ id: 'pages.zwtoken.claim.generating' }));
       
       // 使用配置文件中的合约地址
       const contract = new ethers.Contract(
@@ -229,32 +236,123 @@ const ZWToken: React.FC = () => {
         signer
       );
       
-      // TODO: 生成实际的proof参数
-      // 需要集成以下步骤：
-      // 1. 从链上获取所有 commitments (通过 getLeafRange)
-      // 2. 重建 Merkle tree
-      // 3. 生成 Merkle proof
-      // 4. 使用 snarkjs 生成 ZK proof
-      // 参考: test/e2e.test.js 中的完整流程
+      // === 步骤 1: 从 Secret 推导参数 ===
+      console.log('Step 1: Deriving from secret...');
+      const { privacyAddress, addr20, q, nullifier, secret } = await deriveFromSecret(values.secret);
+      console.log(`Privacy address: ${privacyAddress}`);
+      console.log(`Nullifier: 0x${nullifier.toString(16)}`);
       
+      // 检查 nullifier 是否已使用
+      const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+      const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+      if (isNullifierUsed) {
+        hideLoading();
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.nullifierUsed' }));
+        return;
+      }
+      
+      // === 步骤 2: 从链上重建 Merkle tree ===
+      hideLoading();
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.rebuildingTree' }), 0);
+      console.log('Step 2: Rebuilding Merkle tree from chain...');
+      
+      const poseidon = await buildPoseidon();
+      const tree = await rebuildMerkleTree(contract, poseidon);
+      
+      const onchainRoot = await contract.root();
+      const localRoot = '0x' + tree.root.toString(16).padStart(64, '0');
+      console.log(`On-chain root: ${onchainRoot}`);
+      console.log(`Local root:    ${localRoot}`);
+      
+      if (localRoot !== onchainRoot) {
+        message.destroy();
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.rootMismatch' }));
+        return;
+      }
+      
+      // === 步骤 3: 查找用户的 commitment ===
       message.destroy();
-      message.info(intl.formatMessage({ id: 'pages.zwtoken.claim.needImplement' }));
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.findingCommitment' }), 0);
+      console.log('Step 3: Finding user commitment...');
       
-      // 示例调用（需要实际的 proof 参数）：
-      // const tx = await contract.claim(
-      //   proof.a,
-      //   proof.b,
-      //   proof.c,
-      //   root,
-      //   nullifier,
-      //   values.recipient,
-      //   ethers.parseEther(values.claimAmount.toString())
+      const userCommitment = await findUserCommitment(contract, privacyAddress, poseidon);
+      if (!userCommitment) {
+        message.destroy();
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.commitmentNotFound' }));
+        return;
+      }
+      
+      console.log(`Found commitment at index ${userCommitment.index}`);
+      console.log(`First amount: ${ethers.formatEther(userCommitment.amount)}`);
+      
+      // 验证 claim amount 不超过 first amount
+      const claimAmount = ethers.parseEther(values.claimAmount.toString());
+      if (claimAmount > userCommitment.amount) {
+        message.destroy();
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.amountExceeded' }));
+        return;
+      }
+      
+      // === 步骤 4: 生成 Merkle proof ===
+      message.destroy();
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.generatingProof' }), 0);
+      console.log('Step 4: Generating Merkle proof...');
+      
+      const merkleProof = tree.getProof(userCommitment.index);
+      console.log(`Merkle proof generated (${merkleProof.pathElements.length} elements)`);
+      
+      // === 步骤 5: 准备电路输入 ===
+      const circuitInput = prepareCircuitInput({
+        root: tree.root,
+        nullifier,
+        recipient: values.recipient,
+        claimAmount: BigInt(claimAmount),
+        secret,
+        addr20,
+        firstAmount: userCommitment.amount,
+        q,
+        merkleProof,
+      });
+      
+      console.log('Circuit input prepared:', circuitInput);
+      
+      // === 步骤 6: 生成 ZK proof ===
+      message.destroy();
+      message.info(intl.formatMessage({ id: 'pages.zwtoken.claim.zkProofNeeded' }));
+      
+      // TODO: 集成 snarkjs 生成真实的 ZK proof
+      // 需要 wasm 和 zkey 文件
+      // const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+      //   circuitInput,
+      //   '/path/to/claim_first_receipt.wasm',
+      //   '/path/to/claim_first_receipt_final.zkey'
       // );
+      // 
+      // const calldata = await snarkjs.groth16.exportSolidityCallData(proof, publicSignals);
+      // const calldataJson = JSON.parse('[' + calldata + ']');
+      // 
+      // const tx = await contract.claim(
+      //   calldataJson[0], // a
+      //   calldataJson[1], // b
+      //   calldataJson[2], // c
+      //   localRoot,
+      //   nullifierHex,
+      //   values.recipient,
+      //   claimAmount
+      // );
+      // 
+      // message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.submitting' }), 0);
       // await tx.wait();
+      // message.destroy();
+      // message.success(intl.formatMessage({ id: 'pages.zwtoken.claim.success' }));
+      
+      console.log('✅ All preparation steps completed');
+      console.log('⚠️  ZK proof generation requires snarkjs integration');
       
       claimForm.resetFields();
     } catch (error: any) {
       message.destroy();
+      console.error('Claim error:', error);
       message.error(`${intl.formatMessage({ id: 'pages.zwtoken.claim.failed' })}: ${error.message}`);
     } finally {
       setLoading(false);
