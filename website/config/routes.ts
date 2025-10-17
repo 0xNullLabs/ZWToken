@@ -12,14 +12,24 @@
  */
 export default [
   {
-    path: '/zwtoken',
-    name: 'ZWToken',
+    path: '/zwusdc',
+    name: 'ZWUSDC',
     icon: 'wallet',
     component: './ZWToken',
   },
   {
+    path: '#',
+    name: 'ZWUSDT',
+    icon: 'wallet',
+  },
+  {
+    path: '#',
+    name: 'ZWETH',
+    icon: 'wallet',
+  },
+  {
     path: '/',
-    redirect: '/zwtoken',
+    redirect: '/zwusdc',
   },
   {
     path: '*',

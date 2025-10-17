@@ -1,5 +1,7 @@
 export default {
-  'menu.ZWToken': 'ZWToken',
+  'menu.ZWUSDC': 'ZWUSDC',
+  'menu.ZWUSDT': 'ZWUSDT (即将推出)',
+  'menu.ZWETH': 'ZWETH (即将推出)',
   'menu.welcome': '欢迎',
   'menu.more-blocks': '更多区块',
   'menu.home': '首页',

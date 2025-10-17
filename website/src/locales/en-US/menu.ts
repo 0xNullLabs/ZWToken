@@ -1,5 +1,7 @@
 export default {
-  'menu.ZWToken': 'ZWToken',
+  'menu.ZWUSDC': 'ZWUSDC',
+  'menu.ZWUSDT': 'ZWUSDT (Coming soon)',
+  'menu.ZWETH': 'ZWETH (Coming soon)',
   'menu.welcome': 'Welcome',
   'menu.more-blocks': 'More Blocks',
   'menu.home': 'Home',
