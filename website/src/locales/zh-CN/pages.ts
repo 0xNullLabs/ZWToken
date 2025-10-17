@@ -1,6 +1,6 @@
 export default {
   // ZWToken 页面
-  'pages.zwtoken.title': 'ZWToken - 隐私Token管理',
+  'pages.zwtoken.title': 'ZWToken - Make privacy a native feature of every token',
   'pages.zwtoken.subtitle': '基于零知识证明的隐私转账系统',
   'pages.zwtoken.connectWallet': '请先点击右上角的 "Connect Wallet" 按钮连接您的钱包',
   

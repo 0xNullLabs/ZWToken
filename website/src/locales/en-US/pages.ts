@@ -1,6 +1,6 @@
 export default {
   // ZWToken pages
-  'pages.zwtoken.title': 'ZWToken - Privacy Token Management',
+  'pages.zwtoken.title': 'ZWToken - Make privacy a native feature of every token',
   'pages.zwtoken.subtitle': 'Privacy Transfer System Based on Zero-Knowledge Proofs',
   'pages.zwtoken.connectWallet': '⚠️ Please click the "Connect Wallet" button in the upper right corner to connect your wallet',
   
