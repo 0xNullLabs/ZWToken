@@ -28,6 +28,8 @@ const ZWToken: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [secretModalVisible, setSecretModalVisible] = useState(false);
   const [tokenDecimals, setTokenDecimals] = useState<number>(18); // 默认 18 位，实际会动态查询
+  const [usdcBalance, setUsdcBalance] = useState<string>('0');
+  const [zwusdcBalance, setZwusdcBalance] = useState<string>('0');
 
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
@@ -55,6 +57,49 @@ const ZWToken: React.FC = () => {
     
     fetchDecimals();
   }, [wallet]);
+
+  // 刷新余额的函数
+  const refreshBalances = React.useCallback(async () => {
+    if (!wallet || !account) {
+      setUsdcBalance('0');
+      setZwusdcBalance('0');
+      return;
+    }
+    
+    try {
+      const provider = new ethers.BrowserProvider(wallet.provider, 'any');
+      
+      // 查询 USDC 余额
+      const usdcContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingToken,
+        CONTRACT_ABIS.ERC20,
+        provider
+      );
+      const usdcBal = await usdcContract.balanceOf(account);
+      setUsdcBalance(ethers.formatUnits(usdcBal, tokenDecimals));
+      
+      // 查询 ZWUSDC 余额
+      const zwusdcContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWToken,
+        CONTRACT_ABIS.ZWToken,
+        provider
+      );
+      const zwusdcBal = await zwusdcContract.balanceOf(account);
+      setZwusdcBalance(ethers.formatUnits(zwusdcBal, tokenDecimals));
+    } catch (error) {
+      console.error('Failed to fetch balances:', error);
+    }
+  }, [wallet, account, tokenDecimals]);
+
+  // 获取余额
+  React.useEffect(() => {
+    refreshBalances();
+    
+    // 每10秒刷新一次余额
+    const interval = setInterval(refreshBalances, 10000);
+    
+    return () => clearInterval(interval);
+  }, [refreshBalances]);
 
   // 获取provider和signer
   const getProvider = () => {
@@ -159,6 +204,8 @@ const ZWToken: React.FC = () => {
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
       depositForm.resetFields();
+      // 刷新余额
+      refreshBalances();
     } catch (error: any) {
       message.destroy();
       message.error(`${intl.formatMessage({ id: 'pages.zwtoken.deposit.failed' })}: ${error.message}`);
@@ -199,6 +246,8 @@ const ZWToken: React.FC = () => {
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.withdraw.success' }));
       withdrawForm.resetFields();
+      // 刷新余额
+      refreshBalances();
     } catch (error: any) {
       message.destroy();
       message.error(`${intl.formatMessage({ id: 'pages.zwtoken.withdraw.failed' })}: ${error.message}`);
@@ -239,6 +288,8 @@ const ZWToken: React.FC = () => {
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.success' }));
       transferForm.resetFields();
+      // 刷新余额
+      refreshBalances();
     } catch (error: any) {
       message.destroy();
       message.error(`${intl.formatMessage({ id: 'pages.zwtoken.transfer.failed' })}: ${error.message}`);
@@ -406,6 +457,8 @@ const ZWToken: React.FC = () => {
         console.log(`✅ Claim succeeded! Gas used: ${receipt.gasUsed}`);
         
         claimForm.resetFields();
+        // 刷新余额
+        refreshBalances();
       } catch (proofError: any) {
         message.destroy();
         console.error('ZK proof generation or claim error:', proofError);
@@ -424,10 +477,88 @@ const ZWToken: React.FC = () => {
     <PageContainer
       header={{
         title: intl.formatMessage({ id: 'pages.zwtoken.title' }),
-        subTitle: intl.formatMessage({ id: 'pages.zwtoken.subtitle' }),
+        subTitle: "Zero Knowledge Wrapper USDC",
       }}
     >
       <Card>
+        {/* 余额显示区域 */}
+        {account && (
+          <div style={{ 
+            marginBottom: 24, 
+            padding: '16px 24px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 8,
+            display: 'flex',
+            justifyContent: 'space-around',
+            alignItems: 'center',
+            gap: 24
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ 
+                fontSize: 14, 
+                color: 'rgba(255, 255, 255, 0.8)',
+                marginBottom: 8
+              }}>
+                USDC 余额
+              </div>
+              <div style={{ 
+                fontSize: 24, 
+                fontWeight: 'bold',
+                color: '#fff'
+              }}>
+                {parseFloat(usdcBalance).toFixed(6)}{' '}
+                <a 
+                  href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.UnderlyingToken}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ 
+                    color: '#fff',
+                    textDecoration: 'underline',
+                    textDecorationColor: 'rgba(255, 255, 255, 0.6)'
+                  }}
+                >
+                  USDC
+                </a>
+              </div>
+            </div>
+            
+            <div style={{ 
+              width: 1, 
+              height: 60, 
+              background: 'rgba(255, 255, 255, 0.2)' 
+            }} />
+            
+            <div style={{ flex: 1 }}>
+              <div style={{ 
+                fontSize: 14, 
+                color: 'rgba(255, 255, 255, 0.8)',
+                marginBottom: 8
+              }}>
+                ZWUSDC 余额
+              </div>
+              <div style={{ 
+                fontSize: 24, 
+                fontWeight: 'bold',
+                color: '#fff'
+              }}>
+                {parseFloat(zwusdcBalance).toFixed(6)}{' '}
+                <a 
+                  href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ZWToken}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ 
+                    color: '#fff',
+                    textDecoration: 'underline',
+                    textDecorationColor: 'rgba(255, 255, 255, 0.6)'
+                  }}
+                >
+                  ZWUSDC
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <Tabs defaultActiveKey="deposit" type="card">
           <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.deposit' })} key="deposit">
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>

@@ -4,6 +4,10 @@ export default {
   'pages.zwtoken.subtitle': '基于零知识证明的隐私转账系统',
   'pages.zwtoken.connectWallet': '请先点击右上角的 "Connect Wallet" 按钮连接您的钱包',
   
+  // Balance
+  'pages.zwtoken.balance.usdc': 'USDC 余额',
+  'pages.zwtoken.balance.zwusdc': 'ZWUSDC 余额',
+  
   // Tabs
   'pages.zwtoken.tab.deposit': '💰 存款',
   'pages.zwtoken.tab.withdraw': '💳 取款',

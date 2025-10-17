@@ -4,6 +4,10 @@ export default {
   'pages.zwtoken.subtitle': 'Privacy Transfer System Based on Zero-Knowledge Proofs',
   'pages.zwtoken.connectWallet': '⚠️ Please click the "Connect Wallet" button in the upper right corner to connect your wallet',
   
+  // Balance
+  'pages.zwtoken.balance.usdc': 'USDC Balance',
+  'pages.zwtoken.balance.zwusdc': 'ZWUSDC Balance',
+  
   // Tabs
   'pages.zwtoken.tab.deposit': '💰 Deposit',
   'pages.zwtoken.tab.withdraw': '💳 Withdraw',
