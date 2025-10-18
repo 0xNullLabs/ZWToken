@@ -17,6 +17,9 @@ import * as snarkjs from 'snarkjs';
 
 const { TabPane } = Tabs;
 
+// Sepolia 测试网的 chainId
+const SEPOLIA_CHAIN_ID = 11155111;
+
 const ZWToken: React.FC = () => {
   const intl = useIntl();
   const [{ wallet }] = useConnectWallet();
@@ -34,13 +37,107 @@ const ZWToken: React.FC = () => {
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
 
+  // 检查并切换到 Sepolia 网络
+  React.useEffect(() => {
+    const checkNetwork = async () => {
+      if (!wallet) return;
+      
+      try {
+        // 不传入 chainId，获取实际连接的网络
+        const provider = new ethers.BrowserProvider(wallet.provider);
+        const network = await provider.getNetwork();
+        
+        console.log('当前连接的网络 chainId:', Number(network.chainId));
+        
+        if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+          message.error(`错误：当前连接的是 Chain ID ${Number(network.chainId)} 的网络，请切换到 Sepolia 测试网 (Chain ID: 11155111)`, 10);
+          
+          // 尝试切换网络
+          try {
+            await wallet.provider.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}` }],
+            });
+            message.success('已成功切换到 Sepolia 测试网');
+          } catch (switchError: any) {
+            console.error('切换网络失败:', switchError);
+            // 如果网络不存在，尝试添加网络
+            if (switchError.code === 4902) {
+              try {
+                await wallet.provider.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
+                    chainName: 'Sepolia Test Network',
+                    nativeCurrency: {
+                      name: 'Sepolia ETH',
+                      symbol: 'SEP',
+                      decimals: 18
+                    },
+                    rpcUrls: ['https://sepolia.infura.io/v3/'],
+                    blockExplorerUrls: ['https://sepolia.etherscan.io']
+                  }],
+                });
+                message.success('已添加并切换到 Sepolia 测试网');
+              } catch (addError) {
+                console.error('添加网络失败:', addError);
+                message.error('无法添加 Sepolia 网络，请手动在钱包中添加');
+              }
+            } else {
+              message.error('网络切换失败，请手动切换到 Sepolia 测试网');
+            }
+          }
+        } else {
+          console.log('✅ 已连接到 Sepolia 测试网');
+        }
+      } catch (error) {
+        console.error('检查网络失败:', error);
+      }
+    };
+    
+    checkNetwork();
+    
+    // 监听网络变化事件
+    if (wallet?.provider) {
+      const handleChainChanged = (chainId: string) => {
+        const decimalChainId = parseInt(chainId, 16);
+        console.log('网络已切换到 chainId:', decimalChainId);
+        
+        if (decimalChainId !== SEPOLIA_CHAIN_ID) {
+          message.warning(`当前网络已切换到 Chain ID ${decimalChainId}，请切换回 Sepolia 测试网 (Chain ID: 11155111)`);
+        } else {
+          message.success('✅ 已连接到 Sepolia 测试网');
+        }
+        
+        // 刷新页面以重新加载数据
+        window.location.reload();
+      };
+      
+      wallet.provider.on('chainChanged', handleChainChanged);
+      
+      // 清理函数
+      return () => {
+        if (wallet?.provider?.removeListener) {
+          wallet.provider.removeListener('chainChanged', handleChainChanged);
+        }
+      };
+    }
+  }, [wallet]);
+
   // 获取代币小数位数
   React.useEffect(() => {
     const fetchDecimals = async () => {
       if (!wallet) return;
       
       try {
-        const provider = new ethers.BrowserProvider(wallet.provider, 'any');
+        const provider = new ethers.BrowserProvider(wallet.provider);
+        const network = await provider.getNetwork();
+        
+        if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+          console.log('网络不是 Sepolia，跳过获取 decimals');
+          return;
+        }
+        
         const underlyingContract = new ethers.Contract(
           CONTRACT_ADDRESSES.UnderlyingToken,
           ['function decimals() view returns (uint8)'],
@@ -67,7 +164,15 @@ const ZWToken: React.FC = () => {
     }
     
     try {
-      const provider = new ethers.BrowserProvider(wallet.provider, 'any');
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      
+      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+        console.log('网络不是 Sepolia，跳过刷新余额');
+        setUsdcBalance('0');
+        setZwusdcBalance('0');
+        return;
+      }
       
       // 查询 USDC 余额
       const usdcContract = new ethers.Contract(
@@ -101,13 +206,22 @@ const ZWToken: React.FC = () => {
     return () => clearInterval(interval);
   }, [refreshBalances]);
 
-  // 获取provider和signer
-  const getProvider = () => {
+  // 获取provider和signer，并检查网络
+  const getProvider = async () => {
     if (!wallet) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
       return null;
     }
-    return new ethers.BrowserProvider(wallet.provider, 'any');
+    
+    const provider = new ethers.BrowserProvider(wallet.provider);
+    const network = await provider.getNetwork();
+    
+    if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+      message.error(`当前连接的是 Chain ID ${Number(network.chainId)} 的网络，请切换到 Sepolia 测试网 (Chain ID: 11155111)`, 5);
+      return null;
+    }
+    
+    return provider;
   };
 
   // 从Secret生成Privacy Address
@@ -165,8 +279,11 @@ const ZWToken: React.FC = () => {
 
     setLoading(true);
     try {
-      const provider = getProvider();
-      if (!provider) return;
+      const provider = await getProvider();
+      if (!provider) {
+        setLoading(false);
+        return;
+      }
 
       const signer = await provider.getSigner();
       
@@ -223,8 +340,11 @@ const ZWToken: React.FC = () => {
 
     setLoading(true);
     try {
-      const provider = getProvider();
-      if (!provider) return;
+      const provider = await getProvider();
+      if (!provider) {
+        setLoading(false);
+        return;
+      }
 
       const signer = await provider.getSigner();
       
@@ -265,8 +385,11 @@ const ZWToken: React.FC = () => {
 
     setLoading(true);
     try {
-      const provider = getProvider();
-      if (!provider) return;
+      const provider = await getProvider();
+      if (!provider) {
+        setLoading(false);
+        return;
+      }
 
       const signer = await provider.getSigner();
       
@@ -309,9 +432,10 @@ const ZWToken: React.FC = () => {
     const hideLoading = message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.preparing' }), 0);
     
     try {
-      const provider = getProvider();
+      const provider = await getProvider();
       if (!provider) {
         hideLoading();
+        setLoading(false);
         return;
       }
 
