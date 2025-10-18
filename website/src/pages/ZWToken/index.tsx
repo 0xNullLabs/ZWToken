@@ -860,14 +860,29 @@ const ZWToken: React.FC = () => {
     <PageContainer
       header={{
         title: (
-          <span style={{ 
+          <div style={{ 
             wordBreak: 'break-word',
             whiteSpace: 'normal',
-            display: 'inline-block',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
             maxWidth: '100%'
           }}>
-            {intl.formatMessage({ id: 'pages.zwtoken.title' })}
-          </span>
+            <span>{intl.formatMessage({ id: 'pages.zwtoken.title' })}</span>
+            <a 
+              href="https://github.com/0xNullLabs/ERC-1004-Zero-Knowledge-Token-Wrapper/blob/master/ERCS/erc-1004.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#1890ff',
+                fontSize: '18px',
+                fontWeight: 500,
+                textDecoration: 'none'
+              }}
+            >
+              We propose <span style={{ textDecoration: 'underline' }}>ERC-1004</span>: Zero Knowledge Token Wrapper to achieve our goal.
+            </a>
+          </div>
         ),
       }}
     >
