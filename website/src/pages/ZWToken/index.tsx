@@ -37,6 +37,74 @@ const ZWToken: React.FC = () => {
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
 
+  // 获取代币小数位数的函数
+  const fetchDecimals = React.useCallback(async () => {
+    if (!wallet) return;
+    
+    try {
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      
+      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+        console.log('网络不是 Sepolia，跳过获取 decimals');
+        return;
+      }
+      
+      const underlyingContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingToken,
+        ['function decimals() view returns (uint8)'],
+        provider
+      );
+      const decimals = await underlyingContract.decimals();
+      setTokenDecimals(Number(decimals));
+      console.log('Token decimals:', decimals);
+    } catch (error) {
+      console.error('Failed to fetch token decimals:', error);
+      // 保持默认值 18
+    }
+  }, [wallet]);
+
+  // 刷新余额的函数
+  const refreshBalances = React.useCallback(async () => {
+    if (!wallet || !account) {
+      setUsdcBalance('0');
+      setZwusdcBalance('0');
+      return;
+    }
+    
+    try {
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      
+      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+        console.log('网络不是 Sepolia，跳过刷新余额');
+        setUsdcBalance('0');
+        setZwusdcBalance('0');
+        return;
+      }
+      
+      // 查询 USDC 余额
+      const usdcContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingToken,
+        CONTRACT_ABIS.ERC20,
+        provider
+      );
+      const usdcBal = await usdcContract.balanceOf(account);
+      setUsdcBalance(ethers.formatUnits(usdcBal, tokenDecimals));
+      
+      // 查询 ZWUSDC 余额
+      const zwusdcContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWToken,
+        CONTRACT_ABIS.ZWToken,
+        provider
+      );
+      const zwusdcBal = await zwusdcContract.balanceOf(account);
+      setZwusdcBalance(ethers.formatUnits(zwusdcBal, tokenDecimals));
+    } catch (error) {
+      console.error('Failed to fetch balances:', error);
+    }
+  }, [wallet, account, tokenDecimals]);
+
   // 检查并切换到 Sepolia 网络
   React.useEffect(() => {
     const checkNetwork = async () => {
@@ -105,12 +173,17 @@ const ZWToken: React.FC = () => {
         
         if (decimalChainId !== SEPOLIA_CHAIN_ID) {
           message.warning(`当前网络已切换到 Chain ID ${decimalChainId}，请切换回 Sepolia 测试网 (Chain ID: 11155111)`);
+          // 清空余额显示
+          setUsdcBalance('0');
+          setZwusdcBalance('0');
         } else {
-          message.success('✅ 已连接到 Sepolia 测试网');
+          message.success('✅ 已连接到 Sepolia 测试网，正在刷新数据...');
+          // 刷新数据而不是刷新页面
+          setTimeout(() => {
+            fetchDecimals();
+            refreshBalances();
+          }, 500);
         }
-        
-        // 刷新页面以重新加载数据
-        window.location.reload();
       };
       
       wallet.provider.on('chainChanged', handleChainChanged);
@@ -122,79 +195,12 @@ const ZWToken: React.FC = () => {
         }
       };
     }
-  }, [wallet]);
+  }, [wallet, refreshBalances, fetchDecimals]);
 
-  // 获取代币小数位数
+  // 初始获取代币小数位数
   React.useEffect(() => {
-    const fetchDecimals = async () => {
-      if (!wallet) return;
-      
-      try {
-        const provider = new ethers.BrowserProvider(wallet.provider);
-        const network = await provider.getNetwork();
-        
-        if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
-          console.log('网络不是 Sepolia，跳过获取 decimals');
-          return;
-        }
-        
-        const underlyingContract = new ethers.Contract(
-          CONTRACT_ADDRESSES.UnderlyingToken,
-          ['function decimals() view returns (uint8)'],
-          provider
-        );
-        const decimals = await underlyingContract.decimals();
-        setTokenDecimals(Number(decimals));
-        console.log('Token decimals:', decimals);
-      } catch (error) {
-        console.error('Failed to fetch token decimals:', error);
-        // 保持默认值 18
-      }
-    };
-    
     fetchDecimals();
-  }, [wallet]);
-
-  // 刷新余额的函数
-  const refreshBalances = React.useCallback(async () => {
-    if (!wallet || !account) {
-      setUsdcBalance('0');
-      setZwusdcBalance('0');
-      return;
-    }
-    
-    try {
-      const provider = new ethers.BrowserProvider(wallet.provider);
-      const network = await provider.getNetwork();
-      
-      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
-        console.log('网络不是 Sepolia，跳过刷新余额');
-        setUsdcBalance('0');
-        setZwusdcBalance('0');
-        return;
-      }
-      
-      // 查询 USDC 余额
-      const usdcContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.UnderlyingToken,
-        CONTRACT_ABIS.ERC20,
-        provider
-      );
-      const usdcBal = await usdcContract.balanceOf(account);
-      setUsdcBalance(ethers.formatUnits(usdcBal, tokenDecimals));
-      
-      // 查询 ZWUSDC 余额
-      const zwusdcContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWToken,
-        CONTRACT_ABIS.ZWToken,
-        provider
-      );
-      const zwusdcBal = await zwusdcContract.balanceOf(account);
-      setZwusdcBalance(ethers.formatUnits(zwusdcBal, tokenDecimals));
-    } catch (error) {
-      console.error('Failed to fetch balances:', error);
-    }
-  }, [wallet, account, tokenDecimals]);
+  }, [fetchDecimals]);
 
   // 获取余额
   React.useEffect(() => {
