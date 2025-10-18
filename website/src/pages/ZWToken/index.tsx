@@ -892,7 +892,7 @@ const ZWToken: React.FC = () => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 marginBottom: 8
               }}>
-                USDC 余额
+                {intl.formatMessage({ id: 'pages.zwtoken.balance.usdc' })}
               </div>
               <div style={{ 
                 fontSize: 20, 
@@ -930,7 +930,7 @@ const ZWToken: React.FC = () => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 marginBottom: 8
               }}>
-                ZWUSDC 余额
+                {intl.formatMessage({ id: 'pages.zwtoken.balance.zwusdc' })}
               </div>
               <div style={{ 
                 fontSize: 20, 
@@ -988,7 +988,7 @@ const ZWToken: React.FC = () => {
                     color: '#999', 
                     fontSize: '12px' 
                   }}>
-                    Current Allowance: {parseFloat(allowance).toFixed(6)} USDC
+                    {intl.formatMessage({ id: 'pages.zwtoken.deposit.currentAllowance' })}: {parseFloat(allowance).toFixed(6)} USDC
                   </div>
                 )}
 
@@ -1151,7 +1151,7 @@ const ZWToken: React.FC = () => {
                         onClick={handleClaimGenerateBySeedClick}
                         style={{ padding: 0, height: 'auto' }}
                       >
-                        Generate By Seed
+                        {intl.formatMessage({ id: 'pages.zwtoken.claim.generateBySeed' })}
                       </Button>
                     }
                   />
@@ -1255,7 +1255,7 @@ const ZWToken: React.FC = () => {
                   loading={loading}
                   style={{ padding: 0, height: 'auto' }}
                 >
-                  Generate By Seed
+                  {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.generateBySeed' })}
                 </Button>
               }
             />
@@ -1268,7 +1268,7 @@ const ZWToken: React.FC = () => {
         {/* 显示SecretBySeed列表 */}
         {secretList.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            <h4>通过 Seed 生成的 Secret 列表：</h4>
+            <h4>{intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.title' })}</h4>
             <Table
               dataSource={secretList}
               rowKey="index"
@@ -1277,14 +1277,14 @@ const ZWToken: React.FC = () => {
               scroll={{ y: 300, x: 'max-content' }}
               columns={[
                 {
-                  title: '序号',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.index' }),
                   dataIndex: 'index',
                   key: 'index',
                   width: 80,
                   align: 'center',
                 },
                 {
-                  title: 'Secret By Seed',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
                   width: 300,
@@ -1296,27 +1296,27 @@ const ZWToken: React.FC = () => {
                   ),
                 },
                 {
-                  title: 'Amount',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.amount' }),
                   dataIndex: 'amount',
                   key: 'amount',
                   width: 150,
                   align: 'right',
                   render: (amount: string, record) => {
                     if (record.loading) {
-                      return <span style={{ color: '#999' }}>查询中...</span>;
+                      return <span style={{ color: '#999' }}>{intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.checking' })}</span>;
                     }
                     if (amount === '查询失败') {
-                      return <span style={{ color: '#ff4d4f' }}>{amount}</span>;
+                      return <span style={{ color: '#ff4d4f' }}>{intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.failed' })}</span>;
                     }
                     const amountNum = parseFloat(amount);
                     if (amountNum > 0) {
                       return <span style={{ color: '#faad14', fontWeight: 'bold' }}>{parseFloat(amount).toFixed(6)} ZWUSDC</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC (可用)</span>;
+                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.available' })})</span>;
                   },
                 },
                 {
-                  title: '操作',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.action' }),
                   key: 'action',
                   width: 100,
                   align: 'center',
@@ -1329,9 +1329,9 @@ const ZWToken: React.FC = () => {
                         size="small"
                         onClick={() => handleSelectSecret(record.secret)}
                         disabled={record.loading || hasAmount}
-                        title={hasAmount ? '该地址已有金额，不能再次使用' : '选择此Secret生成Privacy Address'}
+                        title={hasAmount ? intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.hasAmount' }) : intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.select' })}
                       >
-                        选择
+                        {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.select' })}
                       </Button>
                     );
                   },
@@ -1339,7 +1339,7 @@ const ZWToken: React.FC = () => {
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示：已有金额的Privacy Address不能再次使用，请选择金额为0的Secret
+              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.tip' })}
             </p>
           </div>
         )}
@@ -1347,7 +1347,7 @@ const ZWToken: React.FC = () => {
 
       {/* Claim页面的Seed生成Modal */}
       <Modal
-        title="通过 Seed 生成 Secret"
+        title={intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.title' })}
         open={claimSeedModalVisible}
         onCancel={() => {
           setClaimSeedModalVisible(false);
@@ -1355,14 +1355,14 @@ const ZWToken: React.FC = () => {
         }}
         footer={[
           <Button key="close" onClick={() => setClaimSeedModalVisible(false)}>
-            关闭
+            {intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.close' })}
           </Button>
         ]}
         width={1000}
       >
         {claimSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在请求钱包签名...</p>
+            <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.waiting' })}</p>
           </div>
         ) : (
           <div>
@@ -1374,14 +1374,14 @@ const ZWToken: React.FC = () => {
               scroll={{ y: 400, x: 'max-content' }}
               columns={[
                 {
-                  title: '序号',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.index' }),
                   dataIndex: 'index',
                   key: 'index',
                   width: 80,
                   align: 'center',
                 },
                 {
-                  title: 'Secret By Seed',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
                   width: 300,
@@ -1393,17 +1393,17 @@ const ZWToken: React.FC = () => {
                   ),
                 },
                 {
-                  title: 'Amount',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.amount' }),
                   dataIndex: 'amount',
                   key: 'amount',
                   width: 150,
                   align: 'right',
                   render: (amount: string, record) => {
                     if (record.loading) {
-                      return <span style={{ color: '#999' }}>查询中...</span>;
+                      return <span style={{ color: '#999' }}>{intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.checking' })}</span>;
                     }
                     if (amount === '查询失败') {
-                      return <span style={{ color: '#ff4d4f' }}>{amount}</span>;
+                      return <span style={{ color: '#ff4d4f' }}>{intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.failed' })}</span>;
                     }
                     const amountNum = parseFloat(amount);
                     if (amountNum > 0) {
@@ -1413,7 +1413,7 @@ const ZWToken: React.FC = () => {
                   },
                 },
                 {
-                  title: '操作',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.action' }),
                   key: 'action',
                   width: 100,
                   align: 'center',
@@ -1424,7 +1424,7 @@ const ZWToken: React.FC = () => {
                       onClick={() => handleSelectClaimSecret(record.secret)}
                       disabled={record.loading}
                     >
-                      选择
+                      {intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.select' })}
                     </Button>
                   ),
                 },
