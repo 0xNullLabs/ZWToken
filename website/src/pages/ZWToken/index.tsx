@@ -606,8 +606,16 @@ const ZWToken: React.FC = () => {
   return (
     <PageContainer
       header={{
-        title: intl.formatMessage({ id: 'pages.zwtoken.title' }),
-        subTitle: "Zero Knowledge Wrapper USDC",
+        title: (
+          <span style={{ 
+            wordBreak: 'break-word',
+            whiteSpace: 'normal',
+            display: 'inline-block',
+            maxWidth: '100%'
+          }}>
+            {intl.formatMessage({ id: 'pages.zwtoken.title' })}
+          </span>
+        ),
       }}
     >
       <Card>
