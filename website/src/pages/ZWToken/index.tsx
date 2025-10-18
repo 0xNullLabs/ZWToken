@@ -10,7 +10,8 @@ import {
   deriveFromSecret, 
   rebuildMerkleTree, 
   findUserCommitment,
-  prepareCircuitInput 
+  prepareCircuitInput,
+  getLeafRangeInBatches
 } from '@/utils/zkProof';
 // @ts-ignore
 import * as snarkjs from 'snarkjs';
@@ -327,13 +328,13 @@ const ZWToken: React.FC = () => {
         provider
       );
       
-      // 获取链上所有的leafs
+      // 获取链上所有的leafs（分批获取）
       const leafCount = await contract.getStoredLeafCount();
       console.log(`Found ${leafCount} commitment(s)`);
       
       let leaves: any[] = [];
       if (leafCount > 0n) {
-        leaves = await contract.getLeafRange(0, leafCount);
+        leaves = await getLeafRangeInBatches(contract, 0, leafCount, 10);
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
       
@@ -432,13 +433,13 @@ const ZWToken: React.FC = () => {
         provider
       );
       
-      // 获取链上所有的leafs
+      // 获取链上所有的leafs（分批获取）
       const leafCount = await contract.getStoredLeafCount();
       console.log(`Found ${leafCount} commitment(s)`);
       
       let leaves: any[] = [];
       if (leafCount > 0n) {
-        leaves = await contract.getLeafRange(0, leafCount);
+        leaves = await getLeafRangeInBatches(contract, 0, leafCount, 10);
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
       

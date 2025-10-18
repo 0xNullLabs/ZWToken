@@ -151,6 +151,32 @@ export async function deriveFromSecret(secret: string) {
 }
 
 /**
+ * 分批获取链上的leafs
+ * @param contract 合约实例
+ * @param startIndex 起始索引
+ * @param totalCount 总数量
+ * @param batchSize 每批数量（默认10）
+ */
+export async function getLeafRangeInBatches(
+  contract: ethers.Contract,
+  startIndex: number,
+  totalCount: bigint,
+  batchSize: number = 10
+): Promise<any[]> {
+  const allLeaves: any[] = [];
+  const total = Number(totalCount);
+  
+  for (let i = startIndex; i < total; i += batchSize) {
+    const end = Math.min(i + batchSize, total);
+    console.log(`Fetching leaves ${i} to ${end - 1}...`);
+    const batch = await contract.getLeafRange(i, end);
+    allLeaves.push(...batch);
+  }
+  
+  return allLeaves;
+}
+
+/**
  * 从链上重建 Merkle Tree
  * 与 e2e.test.js 逻辑完全一致
  */
@@ -166,8 +192,8 @@ export async function rebuildMerkleTree(
     throw new Error('No commitments found on chain');
   }
   
-  // 获取所有 leafs
-  const leaves = await contract.getLeafRange(0, leafCount);
+  // 分批获取所有 leafs
+  const leaves = await getLeafRangeInBatches(contract, 0, leafCount, 10);
   console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
   
   // 重建 Merkle tree（传入 poseidon 实例）
@@ -195,7 +221,8 @@ export async function findUserCommitment(
     return null;
   }
   
-  const leaves = await contract.getLeafRange(0, leafCount);
+  // 分批获取所有 leafs
+  const leaves = await getLeafRangeInBatches(contract, 0, leafCount, 10);
   
   for (let i = 0; i < leaves.length; i++) {
     const leaf = leaves[i];
