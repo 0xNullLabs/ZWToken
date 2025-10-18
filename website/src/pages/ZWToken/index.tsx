@@ -37,7 +37,9 @@ const ZWToken: React.FC = () => {
   const [depositAmount, setDepositAmount] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [seed, setSeed] = useState<string>('');
-  const [secretList, setSecretList] = useState<Array<{ index: number; secret: string }>>([]);
+  const [secretList, setSecretList] = useState<Array<{ index: number; secret: string; amount: string; loading: boolean }>>([]);
+  const [claimSeedModalVisible, setClaimSeedModalVisible] = useState(false);
+  const [claimSecretList, setClaimSecretList] = useState<Array<{ index: number; secret: string; amount: string; loading: boolean }>>([]);
 
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
@@ -304,7 +306,7 @@ const ZWToken: React.FC = () => {
       setSeed(signature);
       
       // 生成10个SecretBySeed
-      const secrets: Array<{ index: number; secret: string }> = [];
+      const secrets: Array<{ index: number; secret: string; amount: string; loading: boolean }> = [];
       for (let i = 1; i <= 10; i++) {
         // Seed + 序号，做哈希
         const secretBySeed = ethers.keccak256(
@@ -312,11 +314,65 @@ const ZWToken: React.FC = () => {
         );
         // 转换为BigInt格式的字符串（去掉0x前缀）
         const secretBigInt = BigInt(secretBySeed).toString();
-        secrets.push({ index: i, secret: secretBigInt });
+        secrets.push({ index: i, secret: secretBigInt, amount: '-', loading: true });
       }
       
       setSecretList(secrets);
-      message.success('Seed 生成成功！');
+      message.success('Seed 生成成功！正在查询金额...');
+      
+      // 异步查询每个Secret对应的金额
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWToken,
+        CONTRACT_ABIS.ZWToken,
+        provider
+      );
+      
+      // 获取链上所有的leafs
+      const leafCount = await contract.getStoredLeafCount();
+      console.log(`Found ${leafCount} commitment(s)`);
+      
+      let leaves: any[] = [];
+      if (leafCount > 0n) {
+        leaves = await contract.getLeafRange(0, leafCount);
+        console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
+      }
+      
+      // 逐个查询金额
+      for (let i = 0; i < secrets.length; i++) {
+        try {
+          const secret = secrets[i].secret;
+          const privacyAddress = await generatePrivacyAddress(secret);
+          
+          // 在leaves中查找匹配的privacy address
+          let foundAmount = '0';
+          for (const leaf of leaves) {
+            if (leaf.to.toLowerCase() === privacyAddress.toLowerCase()) {
+              foundAmount = ethers.formatUnits(leaf.amount, tokenDecimals);
+              break;
+            }
+          }
+          
+          // 更新状态
+          setSecretList(prev => 
+            prev.map((item, idx) => 
+              idx === i 
+                ? { ...item, amount: foundAmount, loading: false }
+                : item
+            )
+          );
+        } catch (error) {
+          console.error(`查询 Secret ${i + 1} 金额失败:`, error);
+          setSecretList(prev => 
+            prev.map((item, idx) => 
+              idx === i 
+                ? { ...item, amount: '查询失败', loading: false }
+                : item
+            )
+          );
+        }
+      }
+      
+      message.success('金额查询完成！');
     } catch (error: any) {
       console.error('生成Seed失败:', error);
       message.error(`生成Seed失败: ${error.message}`);
@@ -328,6 +384,114 @@ const ZWToken: React.FC = () => {
   // 选择某个SecretBySeed
   const handleSelectSecret = (secret: string) => {
     secretForm.setFieldsValue({ secret });
+    message.success('已选择 Secret');
+  };
+
+  // 点击按钮打开模态框并立即生成Seed
+  const handleClaimGenerateBySeedClick = async () => {
+    if (!wallet || !account) {
+      message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
+      return;
+    }
+
+    // 先打开模态框
+    setClaimSeedModalVisible(true);
+    setClaimSecretList([]);
+
+    try {
+      setLoading(true);
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      const signer = await provider.getSigner();
+
+      // 构造签名消息
+      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWToken}, chainId: ${network.chainId}`;
+      
+      // 请求签名
+      const signature = await signer.signMessage(signMessage);
+      
+      // 生成10个SecretBySeed
+      const secrets: Array<{ index: number; secret: string; amount: string; loading: boolean }> = [];
+      for (let i = 1; i <= 10; i++) {
+        // Seed + 序号，做哈希
+        const secretBySeed = ethers.keccak256(
+          ethers.toUtf8Bytes(signature + i.toString())
+        );
+        // 转换为BigInt格式的字符串（去掉0x前缀）
+        const secretBigInt = BigInt(secretBySeed).toString();
+        secrets.push({ index: i, secret: secretBigInt, amount: '-', loading: true });
+      }
+      
+      setClaimSecretList(secrets);
+      message.success('Seed 生成成功！正在查询金额...');
+      
+      // 异步查询每个Secret对应的金额
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWToken,
+        CONTRACT_ABIS.ZWToken,
+        provider
+      );
+      
+      // 获取链上所有的leafs
+      const leafCount = await contract.getStoredLeafCount();
+      console.log(`Found ${leafCount} commitment(s)`);
+      
+      let leaves: any[] = [];
+      if (leafCount > 0n) {
+        leaves = await contract.getLeafRange(0, leafCount);
+        console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
+      }
+      
+      // 逐个查询金额
+      for (let i = 0; i < secrets.length; i++) {
+        try {
+          const secret = secrets[i].secret;
+          const privacyAddress = await generatePrivacyAddress(secret);
+          
+          // 在leaves中查找匹配的privacy address
+          let foundAmount = '0';
+          for (const leaf of leaves) {
+            if (leaf.to.toLowerCase() === privacyAddress.toLowerCase()) {
+              foundAmount = ethers.formatUnits(leaf.amount, tokenDecimals);
+              break;
+            }
+          }
+          
+          // 更新状态
+          setClaimSecretList(prev => 
+            prev.map((item, idx) => 
+              idx === i 
+                ? { ...item, amount: foundAmount, loading: false }
+                : item
+            )
+          );
+        } catch (error) {
+          console.error(`查询 Secret ${i + 1} 金额失败:`, error);
+          setClaimSecretList(prev => 
+            prev.map((item, idx) => 
+              idx === i 
+                ? { ...item, amount: '查询失败', loading: false }
+                : item
+            )
+          );
+        }
+      }
+      
+      message.success('金额查询完成！');
+    } catch (error: any) {
+      console.error('生成Seed失败:', error);
+      message.error(`生成Seed失败: ${error.message}`);
+      // 如果失败，关闭模态框
+      setClaimSeedModalVisible(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 选择Claim页面的SecretBySeed
+  const handleSelectClaimSecret = (secret: string) => {
+    claimForm.setFieldsValue({ secret });
+    setClaimSeedModalVisible(false);
     message.success('已选择 Secret');
   };
 
@@ -980,6 +1144,15 @@ const ZWToken: React.FC = () => {
                 >
                   <Input.Password
                     placeholder={intl.formatMessage({ id: 'pages.zwtoken.claim.secret.placeholder' })}
+                    addonAfter={
+                      <Button 
+                        type="link" 
+                        onClick={handleClaimGenerateBySeedClick}
+                        style={{ padding: 0, height: 'auto' }}
+                      >
+                        Generate By Seed
+                      </Button>
+                    }
                   />
                 </Form.Item>
 
@@ -1061,7 +1234,7 @@ const ZWToken: React.FC = () => {
         }}
         okText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.ok' })}
         cancelText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.cancel' })}
-        width={800}
+        width={900}
       >
         <Form form={secretForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
@@ -1100,7 +1273,7 @@ const ZWToken: React.FC = () => {
               rowKey="index"
               pagination={false}
               size="small"
-              scroll={{ y: 300 }}
+              scroll={{ y: 300, x: 'max-content' }}
               columns={[
                 {
                   title: '序号',
@@ -1113,12 +1286,130 @@ const ZWToken: React.FC = () => {
                   title: 'Secret By Seed',
                   dataIndex: 'secret',
                   key: 'secret',
+                  width: 300,
                   ellipsis: true,
                   render: (text: string) => (
                     <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                      {text}
+                      {text.substring(0, 20)}...{text.substring(text.length - 20)}
                     </span>
                   ),
+                },
+                {
+                  title: 'Amount',
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 150,
+                  align: 'right',
+                  render: (amount: string, record) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>查询中...</span>;
+                    }
+                    if (amount === '查询失败') {
+                      return <span style={{ color: '#ff4d4f' }}>{amount}</span>;
+                    }
+                    const amountNum = parseFloat(amount);
+                    if (amountNum > 0) {
+                      return <span style={{ color: '#faad14', fontWeight: 'bold' }}>{parseFloat(amount).toFixed(6)} ZWUSDC</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC (可用)</span>;
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => {
+                    const amountNum = parseFloat(record.amount);
+                    const hasAmount = !record.loading && record.amount !== '查询失败' && amountNum > 0;
+                    return (
+                      <Button 
+                        type={hasAmount ? 'default' : 'primary'}
+                        size="small"
+                        onClick={() => handleSelectSecret(record.secret)}
+                        disabled={record.loading || hasAmount}
+                        title={hasAmount ? '该地址已有金额，不能再次使用' : '选择此Secret生成Privacy Address'}
+                      >
+                        选择
+                      </Button>
+                    );
+                  },
+                },
+              ]}
+            />
+            <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              提示：已有金额的Privacy Address不能再次使用，请选择金额为0的Secret
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Claim页面的Seed生成Modal */}
+      <Modal
+        title="通过 Seed 生成 Secret"
+        open={claimSeedModalVisible}
+        onCancel={() => {
+          setClaimSeedModalVisible(false);
+          setClaimSecretList([]);
+        }}
+        footer={[
+          <Button key="close" onClick={() => setClaimSeedModalVisible(false)}>
+            关闭
+          </Button>
+        ]}
+        width={1000}
+      >
+        {claimSecretList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <p>正在请求钱包签名...</p>
+          </div>
+        ) : (
+          <div>
+            <Table
+              dataSource={claimSecretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 400, x: 'max-content' }}
+              columns={[
+                {
+                  title: '序号',
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: 'Secret By Seed',
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 300,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+                      {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                    </span>
+                  ),
+                },
+                {
+                  title: 'Amount',
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 150,
+                  align: 'right',
+                  render: (amount: string, record) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>查询中...</span>;
+                    }
+                    if (amount === '查询失败') {
+                      return <span style={{ color: '#ff4d4f' }}>{amount}</span>;
+                    }
+                    const amountNum = parseFloat(amount);
+                    if (amountNum > 0) {
+                      return <span style={{ color: '#52c41a', fontWeight: 'bold' }}>{parseFloat(amount).toFixed(6)} ZWUSDC</span>;
+                    }
+                    return <span style={{ color: '#999' }}>0 ZWUSDC</span>;
+                  },
                 },
                 {
                   title: '操作',
@@ -1129,7 +1420,8 @@ const ZWToken: React.FC = () => {
                     <Button 
                       type="primary" 
                       size="small"
-                      onClick={() => handleSelectSecret(record.secret)}
+                      onClick={() => handleSelectClaimSecret(record.secret)}
+                      disabled={record.loading}
                     >
                       选择
                     </Button>
