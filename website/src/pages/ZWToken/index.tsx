@@ -33,9 +33,22 @@ const ZWToken: React.FC = () => {
   const [tokenDecimals, setTokenDecimals] = useState<number>(18); // 默认 18 位，实际会动态查询
   const [usdcBalance, setUsdcBalance] = useState<string>('0');
   const [zwusdcBalance, setZwusdcBalance] = useState<string>('0');
+  const [isMobile, setIsMobile] = useState(false);
 
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
+
+  // 监听窗口大小变化
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 576);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 获取代币小数位数的函数
   const fetchDecimals = React.useCallback(async () => {
@@ -623,15 +636,17 @@ const ZWToken: React.FC = () => {
         {account && (
           <div style={{ 
             marginBottom: 24, 
-            padding: '16px 24px',
+            padding: '16px',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             borderRadius: 8,
             display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
             justifyContent: 'space-around',
             alignItems: 'center',
-            gap: 24
+            gap: 16
           }}>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
               <div style={{ 
                 fontSize: 14, 
                 color: 'rgba(255, 255, 255, 0.8)',
@@ -640,9 +655,10 @@ const ZWToken: React.FC = () => {
                 USDC 余额
               </div>
               <div style={{ 
-                fontSize: 24, 
+                fontSize: 20, 
                 fontWeight: 'bold',
-                color: '#fff'
+                color: '#fff',
+                wordBreak: 'break-all'
               }}>
                 {parseFloat(usdcBalance).toFixed(6)}{' '}
                 <a 
@@ -660,13 +676,15 @@ const ZWToken: React.FC = () => {
               </div>
             </div>
             
-            <div style={{ 
-              width: 1, 
-              height: 60, 
-              background: 'rgba(255, 255, 255, 0.2)' 
-            }} />
+            {!isMobile && (
+              <div style={{ 
+                width: 1, 
+                height: 60, 
+                background: 'rgba(255, 255, 255, 0.2)'
+              }} />
+            )}
             
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
               <div style={{ 
                 fontSize: 14, 
                 color: 'rgba(255, 255, 255, 0.8)',
@@ -675,9 +693,10 @@ const ZWToken: React.FC = () => {
                 ZWUSDC 余额
               </div>
               <div style={{ 
-                fontSize: 24, 
+                fontSize: 20, 
                 fontWeight: 'bold',
-                color: '#fff'
+                color: '#fff',
+                wordBreak: 'break-all'
               }}>
                 {parseFloat(zwusdcBalance).toFixed(6)}{' '}
                 <a 
