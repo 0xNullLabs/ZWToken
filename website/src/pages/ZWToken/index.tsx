@@ -33,6 +33,8 @@ const ZWToken: React.FC = () => {
   const [tokenDecimals, setTokenDecimals] = useState<number>(18); // 默认 18 位，实际会动态查询
   const [usdcBalance, setUsdcBalance] = useState<string>('0');
   const [zwusdcBalance, setZwusdcBalance] = useState<string>('0');
+  const [allowance, setAllowance] = useState<string>('0');
+  const [depositAmount, setDepositAmount] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   // 获取当前账户
@@ -82,6 +84,7 @@ const ZWToken: React.FC = () => {
     if (!wallet || !account) {
       setUsdcBalance('0');
       setZwusdcBalance('0');
+      setAllowance('0');
       return;
     }
     
@@ -93,6 +96,7 @@ const ZWToken: React.FC = () => {
         console.log('网络不是 Sepolia，跳过刷新余额');
         setUsdcBalance('0');
         setZwusdcBalance('0');
+        setAllowance('0');
         return;
       }
       
@@ -104,6 +108,10 @@ const ZWToken: React.FC = () => {
       );
       const usdcBal = await usdcContract.balanceOf(account);
       setUsdcBalance(ethers.formatUnits(usdcBal, tokenDecimals));
+      
+      // 查询 Allowance
+      const allowanceBigInt = await usdcContract.allowance(account, CONTRACT_ADDRESSES.ZWToken);
+      setAllowance(ethers.formatUnits(allowanceBigInt, tokenDecimals));
       
       // 查询 ZWUSDC 余额
       const zwusdcContract = new ethers.Contract(
@@ -289,6 +297,12 @@ const ZWToken: React.FC = () => {
     }
   };
 
+  // 判断是否需要 approve
+  const needsApproval = React.useMemo(() => {
+    if (!depositAmount || depositAmount <= 0) return false;
+    return parseFloat(allowance) < depositAmount;
+  }, [depositAmount, allowance]);
+
   // Deposit操作
   const handleDeposit = async (values: { amount: number }) => {
     if (!account) {
@@ -314,17 +328,22 @@ const ZWToken: React.FC = () => {
       );
       
       // 使用正确的小数位数
-      const depositAmount = ethers.parseUnits(values.amount.toString(), tokenDecimals);
-      console.log(`Deposit amount: ${values.amount} tokens = ${depositAmount.toString()} units (${tokenDecimals} decimals)`);
+      const depositAmountBigInt = ethers.parseUnits(values.amount.toString(), tokenDecimals);
+      console.log(`Deposit amount: ${values.amount} tokens = ${depositAmountBigInt.toString()} units (${tokenDecimals} decimals)`);
       
       const currentAllowance = await underlyingContract.allowance(account, CONTRACT_ADDRESSES.ZWToken);
       
-      // 如果授权不足，先授权
-      if (currentAllowance < depositAmount) {
+      // 如果授权不足，只执行授权
+      if (currentAllowance < depositAmountBigInt) {
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.approving' }), 0);
-        const approveTx = await underlyingContract.approve(CONTRACT_ADDRESSES.ZWToken, depositAmount);
+        const approveTx = await underlyingContract.approve(CONTRACT_ADDRESSES.ZWToken, depositAmountBigInt);
         await approveTx.wait();
         message.destroy();
+        message.success('Approve 成功！现在可以 Deposit 了');
+        // 刷新余额和 allowance
+        refreshBalances();
+        setLoading(false);
+        return;
       }
       
       // 执行 deposit
@@ -333,13 +352,14 @@ const ZWToken: React.FC = () => {
         CONTRACT_ABIS.ZWToken,
         signer
       );
-      const tx = await zwTokenContract.deposit(depositAmount);
+      const tx = await zwTokenContract.deposit(depositAmountBigInt);
       
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
       await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
       depositForm.resetFields();
+      setDepositAmount(null);
       // 刷新余额
       refreshBalances();
     } catch (error: any) {
@@ -737,15 +757,30 @@ const ZWToken: React.FC = () => {
                     placeholder={intl.formatMessage({ id: 'pages.zwtoken.deposit.amount.placeholder' })}
                     precision={6}
                     min={0}
+                    onChange={(value) => setDepositAmount(value)}
                   />
                 </Form.Item>
+                
+                {account && (
+                  <div style={{ 
+                    marginTop: -16, 
+                    marginBottom: 16, 
+                    color: '#999', 
+                    fontSize: '12px' 
+                  }}>
+                    Current Allowance: {parseFloat(allowance).toFixed(6)} USDC
+                  </div>
+                )}
 
                 <Form.Item>
                   <Space>
                     <Button type="primary" htmlType="submit" loading={loading}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.deposit.button' })}
+                      {needsApproval ? 'Approve' : intl.formatMessage({ id: 'pages.zwtoken.deposit.button' })}
                     </Button>
-                    <Button onClick={() => depositForm.resetFields()}>
+                    <Button onClick={() => {
+                      depositForm.resetFields();
+                      setDepositAmount(null);
+                    }}>
                       {intl.formatMessage({ id: 'pages.zwtoken.deposit.reset' })}
                     </Button>
                   </Space>
