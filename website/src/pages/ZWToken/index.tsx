@@ -1,4 +1,4 @@
-import { Card, Tabs, Form, InputNumber, Input, Button, message, Space, Modal } from 'antd';
+import { Card, Tabs, Form, InputNumber, Input, Button, message, Space, Modal, Table } from 'antd';
 import { PageContainer } from '@ant-design/pro-components';
 import { useConnectWallet } from '@web3-onboard/react';
 import { useIntl } from '@umijs/max';
@@ -36,6 +36,8 @@ const ZWToken: React.FC = () => {
   const [allowance, setAllowance] = useState<string>('0');
   const [depositAmount, setDepositAmount] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [seed, setSeed] = useState<string>('');
+  const [secretList, setSecretList] = useState<Array<{ index: number; secret: string }>>([]);
 
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
@@ -274,6 +276,59 @@ const ZWToken: React.FC = () => {
   // 处理Burn按钮点击 - 打开Secret输入框
   const handleBurnClick = () => {
     setSecretModalVisible(true);
+    // 重置状态
+    setSeed('');
+    setSecretList([]);
+  };
+
+  // 通过钱包签名生成Seed
+  const handleGenerateBySeed = async () => {
+    if (!wallet || !account) {
+      message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      const signer = await provider.getSigner();
+
+      // 构造签名消息
+      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWToken}, chainId: ${network.chainId}`;
+      
+      // 请求签名
+      const signature = await signer.signMessage(signMessage);
+      
+      // 签名结果作为Seed
+      setSeed(signature);
+      
+      // 生成10个SecretBySeed
+      const secrets: Array<{ index: number; secret: string }> = [];
+      for (let i = 1; i <= 10; i++) {
+        // Seed + 序号，做哈希
+        const secretBySeed = ethers.keccak256(
+          ethers.toUtf8Bytes(signature + i.toString())
+        );
+        // 转换为BigInt格式的字符串（去掉0x前缀）
+        const secretBigInt = BigInt(secretBySeed).toString();
+        secrets.push({ index: i, secret: secretBigInt });
+      }
+      
+      setSecretList(secrets);
+      message.success('Seed 生成成功！');
+    } catch (error: any) {
+      console.error('生成Seed失败:', error);
+      message.error(`生成Seed失败: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 选择某个SecretBySeed
+  const handleSelectSecret = (secret: string) => {
+    secretForm.setFieldsValue({ secret });
+    message.success('已选择 Secret');
   };
 
   // 处理Secret确认 - 生成Privacy Address
@@ -1001,9 +1056,12 @@ const ZWToken: React.FC = () => {
         onCancel={() => {
           setSecretModalVisible(false);
           secretForm.resetFields();
+          setSeed('');
+          setSecretList([]);
         }}
         okText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.ok' })}
         cancelText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.cancel' })}
+        width={800}
       >
         <Form form={secretForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
@@ -1016,12 +1074,71 @@ const ZWToken: React.FC = () => {
           >
             <Input
               placeholder={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.secret.placeholder' })}
+              addonAfter={
+                <Button 
+                  type="link" 
+                  onClick={handleGenerateBySeed}
+                  loading={loading}
+                  style={{ padding: 0, height: 'auto' }}
+                >
+                  Generate By Seed
+                </Button>
+              }
             />
           </Form.Item>
           <p style={{ color: '#666', fontSize: '12px' }}>
             {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.tip' })}
           </p>
         </Form>
+
+        {/* 显示SecretBySeed列表 */}
+        {secretList.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <h4>通过 Seed 生成的 Secret 列表：</h4>
+            <Table
+              dataSource={secretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 300 }}
+              columns={[
+                {
+                  title: '序号',
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: 'Secret By Seed',
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+                      {text}
+                    </span>
+                  ),
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => (
+                    <Button 
+                      type="primary" 
+                      size="small"
+                      onClick={() => handleSelectSecret(record.secret)}
+                    >
+                      选择
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        )}
       </Modal>
     </PageContainer>
   );
