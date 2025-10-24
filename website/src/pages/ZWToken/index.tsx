@@ -39,11 +39,11 @@ const ZWToken: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [seed, setSeed] = useState<string>('');
   const [secretList, setSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean }>
+    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   const [claimSeedModalVisible, setClaimSeedModalVisible] = useState(false);
   const [claimSecretList, setClaimSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean }>
+    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
 
   // 获取当前账户
@@ -323,18 +323,18 @@ const ZWToken: React.FC = () => {
       setSeed(signature);
 
       // 生成10个SecretBySeed
-      const secrets: Array<{ index: number; secret: string; amount: string; loading: boolean }> =
+      const secrets: Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }> =
         [];
       for (let i = 1; i <= 10; i++) {
         // Seed + 序号，做哈希
         const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
         // 转换为BigInt格式的字符串（去掉0x前缀）
         const secretBigInt = BigInt(secretBySeed).toString();
-        secrets.push({ index: i, secret: secretBigInt, amount: '-', loading: true });
+        secrets.push({ index: i, secret: secretBigInt, amount: '-', loading: true, isClaimed: false });
       }
 
       setSecretList(secrets);
-      message.success('Seed 生成成功！正在查询金额...');
+      message.success('Seed 生成成功！正在查询金额和状态...');
 
       // 异步查询每个Secret对应的金额
       const contract = new ethers.Contract(
@@ -353,11 +353,11 @@ const ZWToken: React.FC = () => {
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
 
-      // 逐个查询金额
+      // 逐个查询金额和 IsClaimed 状态
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
-          const privacyAddress = await generatePrivacyAddress(secret);
+          const { privacyAddress, nullifier } = await deriveFromSecret(secret);
 
           // 在leaves中查找匹配的privacy address
           let foundAmount = '0';
@@ -368,23 +368,27 @@ const ZWToken: React.FC = () => {
             }
           }
 
+          // 检查 nullifier 是否已使用
+          const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+          const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+
           // 更新状态
           setSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: foundAmount, loading: false } : item,
+              idx === i ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed } : item,
             ),
           );
         } catch (error) {
           console.error(`查询 Secret ${i + 1} 金额失败:`, error);
           setSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: '查询失败', loading: false } : item,
+              idx === i ? { ...item, amount: '查询失败', loading: false, isClaimed: false } : item,
             ),
           );
         }
       }
 
-      message.success('金额查询完成！');
+      message.success('金额和状态查询完成！');
     } catch (error: any) {
       console.error('生成Seed失败:', error);
       message.error(`生成Seed失败: ${error.message}`);
@@ -423,18 +427,18 @@ const ZWToken: React.FC = () => {
       const signature = await signer.signMessage(signMessage);
 
       // 生成10个SecretBySeed
-      const secrets: Array<{ index: number; secret: string; amount: string; loading: boolean }> =
+      const secrets: Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }> =
         [];
       for (let i = 1; i <= 10; i++) {
         // Seed + 序号，做哈希
         const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
         // 转换为BigInt格式的字符串（去掉0x前缀）
         const secretBigInt = BigInt(secretBySeed).toString();
-        secrets.push({ index: i, secret: secretBigInt, amount: '-', loading: true });
+        secrets.push({ index: i, secret: secretBigInt, amount: '-', loading: true, isClaimed: false });
       }
 
       setClaimSecretList(secrets);
-      message.success('Seed 生成成功！正在查询金额...');
+      message.success('Seed 生成成功！正在查询金额和状态...');
 
       // 异步查询每个Secret对应的金额
       const contract = new ethers.Contract(
@@ -453,11 +457,11 @@ const ZWToken: React.FC = () => {
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
 
-      // 逐个查询金额
+      // 逐个查询金额和 IsClaimed 状态
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
-          const privacyAddress = await generatePrivacyAddress(secret);
+          const { privacyAddress, nullifier } = await deriveFromSecret(secret);
 
           // 在leaves中查找匹配的privacy address
           let foundAmount = '0';
@@ -468,23 +472,27 @@ const ZWToken: React.FC = () => {
             }
           }
 
+          // 检查 nullifier 是否已使用
+          const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+          const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+
           // 更新状态
           setClaimSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: foundAmount, loading: false } : item,
+              idx === i ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed } : item,
             ),
           );
         } catch (error) {
           console.error(`查询 Secret ${i + 1} 金额失败:`, error);
           setClaimSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: '查询失败', loading: false } : item,
+              idx === i ? { ...item, amount: '查询失败', loading: false, isClaimed: false } : item,
             ),
           );
         }
       }
 
-      message.success('金额查询完成！');
+      message.success('金额和状态查询完成！');
     } catch (error: any) {
       console.error('生成Seed失败:', error);
       message.error(`生成Seed失败: ${error.message}`);
@@ -1483,6 +1491,30 @@ const ZWToken: React.FC = () => {
                   },
                 },
                 {
+                  title: 'IsClaimed',
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
+                  width: 100,
+                  align: 'center',
+                  render: (isClaimed: boolean, record) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return (
+                        <span style={{ color: '#999', fontWeight: 'bold' }}>
+                          Claimed
+                        </span>
+                      );
+                    }
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        Available
+                      </span>
+                    );
+                  },
+                },
+                {
                   title: intl.formatMessage({
                     id: 'pages.zwtoken.transfer.secretModal.seedList.action',
                   }),
@@ -1602,6 +1634,30 @@ const ZWToken: React.FC = () => {
                       );
                     }
                     return <span style={{ color: '#999' }}>0 ZWUSDC</span>;
+                  },
+                },
+                {
+                  title: 'IsClaimed',
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
+                  width: 100,
+                  align: 'center',
+                  render: (isClaimed: boolean, record) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return (
+                        <span style={{ color: '#999', fontWeight: 'bold' }}>
+                          Claimed
+                        </span>
+                      );
+                    }
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        Available
+                      </span>
+                    );
                   },
                 },
                 {
