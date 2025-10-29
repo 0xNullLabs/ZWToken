@@ -925,7 +925,7 @@ const ZWToken: React.FC = () => {
           >
             <span>{intl.formatMessage({ id: 'pages.zwtoken.title' })}</span>
             <a
-              href="https://github.com/0xNullLabs/ERC-1004-Zero-Knowledge-Token-Wrapper/blob/master/ERCS/erc-1004.md"
+              href="https://ethereum-magicians.org/t/erc-8065-zero-knowledge-token-wrapper/26006"
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -935,7 +935,7 @@ const ZWToken: React.FC = () => {
                 textDecoration: 'none',
               }}
             >
-              We propose <span style={{ textDecoration: 'underline' }}>ERC-1004</span>: Zero
+              We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero
               Knowledge Token Wrapper to achieve our goal.
             </a>
           </div>
