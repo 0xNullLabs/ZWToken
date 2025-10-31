@@ -80,11 +80,14 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     }
 
     // 4. 部署 ZWToken (使用完全限定名避免歧义)
-    const ZWToken = await ethers.getContractFactory("contracts/ZWToken.sol:ZWToken", {
-      libraries: {
-        PoseidonT3: await poseidonT3.getAddress(),
-      },
-    });
+    const ZWToken = await ethers.getContractFactory(
+      "contracts/ZWToken.sol:ZWToken",
+      {
+        libraries: {
+          PoseidonT3: await poseidonT3.getAddress(),
+        },
+      }
+    );
     const underlyingDecimals = await underlying.decimals();
     zwToken = await ZWToken.deploy(
       "ZK Wrapper Token",
