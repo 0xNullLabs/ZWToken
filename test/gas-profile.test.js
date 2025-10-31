@@ -60,15 +60,17 @@ describe("Gas Profile Comparison", function () {
     const MockVerifier = await ethers.getContractFactory("MockVerifier");
     mockVerifier = await MockVerifier.deploy();
 
-    // Deploy ZWToken with linked PoseidonT3 library
-    const ZWToken = await ethers.getContractFactory("ZWToken", {
+    // Deploy ZWToken with linked PoseidonT3 library (使用完全限定名避免歧义)
+    const ZWToken = await ethers.getContractFactory("contracts/ZWToken.sol:ZWToken", {
       libraries: {
         PoseidonT3: await poseidonT3.getAddress(),
       },
     });
+    const underlyingDecimals = await underlyingToken.decimals();
     zwToken = await ZWToken.deploy(
       "Zero Knowledge Wrapper",
       "ZWK",
+      underlyingDecimals, // 从 underlying token 获取 decimals
       await underlyingToken.getAddress(),
       await mockVerifier.getAddress()
     );

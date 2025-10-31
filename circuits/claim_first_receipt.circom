@@ -72,7 +72,13 @@ template Selector() {
  * 2. 该地址首次接收了 firstAmount 个 ZWToken
  * 3. commitment = Poseidon(addr20, firstAmount) 在 Merkle tree 中
  * 4. claimAmount <= firstAmount
- * 5. nullifier 正确（防双花）
+ * 5. nullifier = Poseidon(addr20, secret) 正确（防双花且保护隐私）
+ * 
+ * 隐私保护：
+ * - nullifier 使用 (addr20, secret) 两个输入计算
+ * - 避免 nullifier == addrScalar 导致的隐私泄漏
+ * - 观察者即使知道 addr20，不知道 secret 也无法计算 nullifier
+ * - 观察者无法从 nullifier 反推出 addr20 或 secret
  */
 template ClaimFirstReceipt(TREE_DEPTH, TWO160) {
     // ========== PUBLIC INPUTS ==========
@@ -138,10 +144,12 @@ template ClaimFirstReceipt(TREE_DEPTH, TWO160) {
     
     // ========== 5. 验证 Nullifier ==========
     
-    // nullifier = Poseidon(addr20)
-    // 注意：每个地址只能 claim 一次（通过 nullifier 防双花）
-    component nullifierHasher = Poseidon(1);
+    // nullifier = Poseidon(addr20, secret)
+    // 注意：每个 (addr20, secret) 组合只能 claim 一次
+    // 使用两个输入，防止 nullifier == addrScalar 导致的隐私泄漏
+    component nullifierHasher = Poseidon(2);
     nullifierHasher.inputs[0] <== addr20;
+    nullifierHasher.inputs[1] <== secret;
     
     nullifier === nullifierHasher.out;
 }

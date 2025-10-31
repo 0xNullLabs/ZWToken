@@ -335,7 +335,7 @@ class BrowserClaimFlow {
     console.log("\n📌 步骤 3: 生成 ZK proof");
     console.log("   ⏳ Generating proof (10-30 seconds)...");
 
-    const nullifier = poseidon([addr20]);
+    const nullifier = poseidon([addr20, secret]);
     const circuitInput = {
       root: merklePath.root,
       nullifier: nullifier,

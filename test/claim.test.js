@@ -42,15 +42,17 @@ describe("ZWToken - E2E Claim Test", function () {
     await verifier.setResult(true); // 设置总是返回 true
     console.log("✅ Verifier deployed:", await verifier.getAddress());
 
-    // 4. 部署 ZWToken
-    const ZWToken = await ethers.getContractFactory("ZWToken", {
+    // 4. 部署 ZWToken (使用完全限定名避免歧义)
+    const ZWToken = await ethers.getContractFactory("contracts/ZWToken.sol:ZWToken", {
       libraries: {
         PoseidonT3: await poseidonT3.getAddress(),
       },
     });
+    const underlyingDecimals = await underlying.decimals();
     zwToken = await ZWToken.deploy(
       "ZK Wrapper Token",
       "ZWT",
+      underlyingDecimals, // 从 underlying token 获取 decimals
       await underlying.getAddress(),
       await verifier.getAddress()
     );
@@ -139,8 +141,8 @@ describe("ZWToken - E2E Claim Test", function () {
     const root = await zwToken.root();
     console.log(`   Current root: ${root}`);
 
-    // 计算 nullifier
-    const nullifier = poseidon([addr20]);
+    // 计算 nullifier = Poseidon(addr20, secret)
+    const nullifier = poseidon([addr20, SECRET]);
     const nullifierHex = "0x" + nullifier.toString(16).padStart(64, "0");
     console.log(`   Nullifier: ${nullifierHex}`);
 

@@ -28,15 +28,17 @@ describe("ZWToken - Commitment Recording", function () {
     const MockVerifier = await ethers.getContractFactory("MockVerifier");
     verifier = await MockVerifier.deploy();
 
-    // Deploy ZWToken with linked library
-    const ZWToken = await ethers.getContractFactory("ZWToken", {
+    // Deploy ZWToken with linked library (使用完全限定名避免歧义)
+    const ZWToken = await ethers.getContractFactory("contracts/ZWToken.sol:ZWToken", {
       libraries: {
         PoseidonT3: await poseidonT3.getAddress(),
       },
     });
+    const underlyingDecimals = await underlying.decimals();
     zwToken = await ZWToken.deploy(
       "ZK Wrapper Token",
       "ZWT",
+      underlyingDecimals, // 从 underlying token 获取 decimals
       await underlying.getAddress(),
       await verifier.getAddress()
     );

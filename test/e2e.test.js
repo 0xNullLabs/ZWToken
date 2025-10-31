@@ -79,15 +79,17 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
       );
     }
 
-    // 4. 部署 ZWToken
-    const ZWToken = await ethers.getContractFactory("ZWToken", {
+    // 4. 部署 ZWToken (使用完全限定名避免歧义)
+    const ZWToken = await ethers.getContractFactory("contracts/ZWToken.sol:ZWToken", {
       libraries: {
         PoseidonT3: await poseidonT3.getAddress(),
       },
     });
+    const underlyingDecimals = await underlying.decimals();
     zwToken = await ZWToken.deploy(
       "ZK Wrapper Token",
       "ZWT",
+      underlyingDecimals, // 从 underlying token 获取 decimals
       await underlying.getAddress(),
       await verifier.getAddress()
     );
@@ -198,7 +200,7 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     // ========== 阶段 5: 准备电路输入 ==========
     console.log("\n📌 阶段 5: 准备 ZK 电路输入");
 
-    const nullifier = poseidon([addr20]);
+    const nullifier = poseidon([addr20, SECRET]);
     const nullifierHex = "0x" + nullifier.toString(16).padStart(64, "0");
 
     const claimAmount = ethers.parseEther("300");
