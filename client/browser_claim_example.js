@@ -443,7 +443,7 @@ async function exampleUsage() {
   const claimFlow = new BrowserClaimFlow(
     provider,
     signer,
-    "0x...", // ZWToken 地址
+    "0x...", // ZWERC20 地址
     "/path/to/claim_first_receipt.wasm",
     "/path/to/claim_first_receipt_final.zkey"
   );

@@ -2,26 +2,28 @@
 export const CONTRACT_CONFIG = {
   // TODO: 部署后替换为实际的合约地址
   address: '0x0000000000000000000000000000000000000000',
-  
-  // ZWToken 合约 ABI
+
+  // ZWToken 合约 ABI (IERC8065)
   abi: [
-    // Deposit 函数
-    'function deposit(uint256 amount) external',
-    
+    // IERC8065 核心函数
+    'function depositTo(address to, uint256 id, uint256 amount) external payable',
+    'function withdraw(address to, uint256 id, uint256 amount) external',
+    'function remint(bytes calldata proof, bytes32 commitment, bytes32 nullifier, address to, uint256 id, uint256 amount, bool withdrawUnderlying, uint256 relayerFee) external',
+
     // Transfer 函数
     'function transfer(address to, uint256 amount) external returns (bool)',
-    
-    // Claim 函数
-    'function claim(uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256 root, uint256 nullifier, address recipient, uint256 claimAmount) external',
-    
+
     // 查询函数
     'function balanceOf(address account) external view returns (uint256)',
-    'function getCommitmentCount() external view returns (uint256)',
-    'function root() external view returns (uint256)',
-    
+    'function getCommitLeafCount(uint256 id) external view returns (uint256)',
+    'function getCommitLeaves(uint256 id, uint256 startIndex, uint256 length) external view returns (bytes32[] memory commitHashes, address[] memory recipients, uint256[] memory amounts)',
+    'function getLatestCommitment(uint256 id) external view returns (bytes32)',
+
     // 事件
-    'event CommitmentAdded(uint256 indexed commitment, uint256 index)',
-    'event Claimed(address indexed recipient, uint256 amount, uint256 nullifier)',
+    'event CommitmentUpdated(uint256 indexed id, bytes32 indexed commitment, address indexed to, uint256 amount)',
+    'event Deposited(address indexed from, address indexed to, uint256 indexed id, uint256 amount)',
+    'event Withdrawn(address indexed from, address indexed to, uint256 indexed id, uint256 amount)',
+    'event Reminted(address indexed from, address indexed to, uint256 indexed id, uint256 amount, bool withdrawUnderlying)',
   ],
 };
 
@@ -31,4 +33,3 @@ export const RPC_CONFIG = {
   sepolia: 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY',
   localhost: 'http://localhost:8545',
 };
-

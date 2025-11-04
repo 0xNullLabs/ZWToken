@@ -244,7 +244,7 @@ ZWToken 使用 20 层 Poseidon Merkle 树：
 - 📄 **测试脚本：** `test/gas-profile.test.js`
 - 📊 **原始数据：** `gas-report.json`
 - 📝 **英文详细报告：** `GAS_PROFILE_REPORT.md`
-- 💻 **合约代码：** `contracts/ZWToken.sol`
+- 💻 **合约代码：** `contracts/ZWERC20.sol`
 
 ---
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 /**
  * @title MockVerifier
- * @notice Mock Groth16 verifier for testing
+ * @notice Mock Groth16 verifier for testing (IERC8065 version with 7 public inputs)
  */
 contract MockVerifier {
     bool public result = true;
@@ -16,7 +16,7 @@ contract MockVerifier {
         uint256[2] calldata,
         uint256[2][2] calldata,
         uint256[2] calldata,
-        uint256[4] calldata
+        uint256[7] calldata
     ) external view returns (bool) {
         return result;
     }

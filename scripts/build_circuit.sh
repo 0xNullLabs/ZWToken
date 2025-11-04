@@ -10,7 +10,7 @@ echo "=================================="
 echo ""
 
 # Configuration
-CIRCUIT_NAME="claim_first_receipt"
+CIRCUIT_NAME="remint"
 CIRCUIT_FILE="circuits/${CIRCUIT_NAME}.circom"
 OUT_DIR="circuits/out"
 PTAU_FILE="powersOfTau28_hez_final_15.ptau"  # 22MB, 支持 32K 约束 (本电路 ~12K)
@@ -59,10 +59,13 @@ cat > "${OUT_DIR}/input_test.json" << EOF
     "root": "0",
     "nullifier": "0",
     "to": "0",
-    "claimAmount": "0",
+    "remintAmount": "0",
+    "id": "0",
+    "withdrawUnderlying": "0",
+    "relayerFee": "0",
     "secret": "123456789",
     "addr20": "0",
-    "firstAmount": "0",
+    "commitAmount": "0",
     "q": "0",
     "pathElements": ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],
     "pathIndices": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
@@ -174,7 +177,7 @@ echo "🎉 Build complete!"
 echo ""
 echo "Next steps:"
 echo "1. Deploy Groth16Verifier.sol"
-echo "2. Deploy ZWToken.sol with verifier address"
+echo "2. Deploy ZWERC20.sol with verifier address"
 echo "3. Test with client/merkle_proof_frontend.js"
 echo ""
 echo "For testing:"

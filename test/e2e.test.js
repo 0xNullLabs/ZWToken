@@ -7,7 +7,18 @@ const fs = require("fs");
 const { IncrementalMerkleTree } = require("../utils/merkle-tree-utils");
 
 /**
- * ZWToken E2E 测试 - 真实 ZK Proof
+ * Helper: 将 Groth16 proof 编码为 bytes
+ */
+function encodeProof(a, b, c) {
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+  return abiCoder.encode(
+    ["uint256[2]", "uint256[2][2]", "uint256[2]"],
+    [a, b, c]
+  );
+}
+
+/**
+ * ZWERC20 E2E 测试 - 真实 ZK Proof
  *
  * 新架构要点：
  * 1. 基于 Poseidon Merkle tree（不再使用 state proof）
@@ -15,7 +26,7 @@ const { IncrementalMerkleTree } = require("../utils/merkle-tree-utils");
  * 3. 生成 Merkle proof + ZK proof
  * 4. 电路：claim_first_receipt.circom（12K 约束）
  */
-describe("ZWToken - E2E with Real ZK Proof", function () {
+describe("ZWERC20 - E2E with Real ZK Proof", function () {
   let zwToken, underlying, verifier, poseidonT3;
   let deployer, alice, bob;
 
@@ -23,14 +34,8 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
 
   // 路径配置
   const projectRoot = path.join(__dirname, "..");
-  const wasmPath = path.join(
-    projectRoot,
-    "circuits/out/claim_first_receipt_js/claim_first_receipt.wasm"
-  );
-  const zkeyPath = path.join(
-    projectRoot,
-    "circuits/out/claim_first_receipt_final.zkey"
-  );
+  const wasmPath = path.join(projectRoot, "circuits/out/remint_js/remint.wasm");
+  const zkeyPath = path.join(projectRoot, "circuits/out/remint_final.zkey");
 
   before(async function () {
     [deployer, alice, bob] = await ethers.getSigners();
@@ -79,9 +84,9 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
       );
     }
 
-    // 4. 部署 ZWToken (使用完全限定名避免歧义)
-    const ZWToken = await ethers.getContractFactory(
-      "contracts/ZWToken.sol:ZWToken",
+    // 3. 部署 ZWERC20 (使用完全限定名避免歧义)
+    const ZWERC20 = await ethers.getContractFactory(
+      "contracts/ZWERC20.sol:ZWERC20",
       {
         libraries: {
           PoseidonT3: await poseidonT3.getAddress(),
@@ -89,15 +94,20 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
       }
     );
     const underlyingDecimals = await underlying.decimals();
-    zwToken = await ZWToken.deploy(
+    zwToken = await ZWERC20.deploy(
       "ZK Wrapper Token",
       "ZWT",
       underlyingDecimals, // 从 underlying token 获取 decimals
       await underlying.getAddress(),
-      await verifier.getAddress()
+      await verifier.getAddress(),
+      deployer.address, // feeCollector
+      10000, // feeDenominator
+      0, // depositFee (0%)
+      0, // remintFee (0%)
+      0 // withdrawFee (0%)
     );
     await zwToken.waitForDeployment();
-    console.log("✅ ZWToken:", await zwToken.getAddress());
+    console.log("✅ ZWERC20:", await zwToken.getAddress());
 
     // 5. 分配 underlying token
     await underlying.transfer(alice.address, ethers.parseEther("2000"));
@@ -119,7 +129,7 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     await underlying
       .connect(alice)
       .approve(await zwToken.getAddress(), depositAmount);
-    await zwToken.connect(alice).deposit(depositAmount);
+    await zwToken.connect(alice).depositTo(alice.address, 0, depositAmount);
 
     const aliceBalance = await zwToken.balanceOf(alice.address);
     console.log(`   Alice ZWT balance: ${ethers.formatEther(aliceBalance)}`);
@@ -128,8 +138,9 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     // ========== 阶段 2: 推导隐私地址并转账 ==========
     console.log("\n📌 阶段 2: 推导隐私地址并转账");
 
-    // 从 secret 推导隐私地址
-    const addrScalar = poseidon([SECRET]);
+    // 从 secret 推导隐私地址：Poseidon(8065, tokenId, secret)
+    const tokenId = 0n; // ERC-20 固定为 0
+    const addrScalar = poseidon([8065n, tokenId, SECRET]);
     const addr20 = addrScalar & ((1n << 160n) - 1n);
     const q = (addrScalar - addr20) / (1n << 160n);
     const privacyAddress = ethers.getAddress(
@@ -141,19 +152,19 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     console.log(`   q (quotient): ${q}`);
 
     // Alice 转账到隐私地址
-    const firstAmount = ethers.parseEther("500");
+    const commitAmount = ethers.parseEther("500");
     const transferTx = await zwToken
       .connect(alice)
-      .transfer(privacyAddress, firstAmount);
+      .transfer(privacyAddress, commitAmount);
     await transferTx.wait();
 
-    console.log(`   Transferred ${ethers.formatEther(firstAmount)} ZWT`);
+    console.log(`   Transferred ${ethers.formatEther(commitAmount)} ZWT`);
 
     // 验证余额和 commitment
     const privacyBalance = await zwToken.balanceOf(privacyAddress);
-    expect(privacyBalance).to.equal(firstAmount);
+    expect(privacyBalance).to.equal(commitAmount);
 
-    const commitmentCount = await zwToken.getCommitmentCount();
+    const commitmentCount = await zwToken.getCommitLeafCount(0);
     console.log(`   Commitment count: ${commitmentCount}`);
     expect(commitmentCount).to.equal(1);
 
@@ -161,17 +172,22 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     console.log("\n📌 阶段 3: 从链上重建 Merkle tree（模拟前端）");
 
     // 获取所有 commitments 从存储
-    const leafCount = await zwToken.getStoredLeafCount();
+    const leafCount = await zwToken.getCommitLeafCount(0);
     console.log(`   Found ${leafCount} commitment(s)`);
 
-    const leaves = await zwToken.getLeafRange(0, leafCount);
-    console.log(`   Retrieved ${leaves.length} leaf(s) from storage`);
+    const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(
+      0,
+      0,
+      leafCount
+    );
+    console.log(`   Retrieved ${recipients.length} leaf(s) from storage`);
 
     // 重建 Merkle tree（使用共享工具）
     const tree = new IncrementalMerkleTree(20);
-    for (const leaf of leaves) {
+    for (let i = 0; i < recipients.length; i++) {
       // 计算 commitment = Poseidon(address, amount)
-      const commitment = poseidon([BigInt(leaf.to), BigInt(leaf.amount)]);
+      // Note: address 已从 Poseidon(8065, id, secret) 推导，隐式包含 id
+      const commitment = poseidon([BigInt(recipients[i]), BigInt(amounts[i])]);
       tree.insert(commitment);
     }
 
@@ -185,7 +201,7 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     // ========== 阶段 4: 生成 Merkle proof ==========
     console.log("\n📌 阶段 4: 生成 Merkle proof");
 
-    const commitment = poseidon([addr20, BigInt(firstAmount)]);
+    const commitment = poseidon([addr20, BigInt(commitAmount)]);
     const commitmentHex = "0x" + commitment.toString(16).padStart(64, "0");
     console.log(`   Commitment: ${commitmentHex}`);
 
@@ -203,26 +219,30 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     // ========== 阶段 5: 准备电路输入 ==========
     console.log("\n📌 阶段 5: 准备 ZK 电路输入");
 
+    // nullifier = Poseidon(addr20, secret)
     const nullifier = poseidon([addr20, SECRET]);
     const nullifierHex = "0x" + nullifier.toString(16).padStart(64, "0");
 
-    const claimAmount = ethers.parseEther("300");
-    console.log(`   Claim amount: ${ethers.formatEther(claimAmount)}`);
-    console.log(`   First amount: ${ethers.formatEther(firstAmount)}`);
+    const remintAmountValue = ethers.parseEther("300");
+    console.log(`   Remint amount: ${ethers.formatEther(remintAmountValue)}`);
+    console.log(`   Commit amount: ${ethers.formatEther(commitAmount)}`);
     console.log(`   To (Bob): ${bob.address}`);
     console.log(`   Nullifier: ${nullifierHex}`);
 
     const circuitInput = {
-      // Public inputs
+      // Public inputs (7 for IERC8065)
       root: tree.root,
       nullifier: nullifier,
       to: BigInt(bob.address),
-      claimAmount: BigInt(claimAmount),
+      remintAmount: BigInt(remintAmountValue),
+      id: tokenId, // Token ID (0 for ERC-20)
+      withdrawUnderlying: 0n, // 0 = mint ZWERC20, 1 = withdraw underlying
+      relayerFee: 0n, // No relayer fee
 
       // Private inputs
       secret: SECRET,
       addr20: addr20,
-      firstAmount: BigInt(firstAmount),
+      commitAmount: BigInt(commitAmount),
       q: q,
       pathElements: merkleProof.pathElements.map((e) => BigInt(e)),
       pathIndices: merkleProof.pathIndices,
@@ -261,7 +281,7 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     console.log(`      [0] root: ${publicSignals[0]}`);
     console.log(`      [1] nullifier: ${publicSignals[1]}`);
     console.log(`      [2] to: ${publicSignals[2]}`);
-    console.log(`      [3] claimAmount: ${publicSignals[3]}`);
+    console.log(`      [3] remintAmount: ${publicSignals[3]}`);
 
     // 格式化为 Solidity calldata
     const calldata = await snarkjs.groth16.exportSolidityCallData(
@@ -285,14 +305,20 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
       )}`
     );
 
-    const claimTx = await zwToken.claim(
+    const proofBytes = encodeProof(
       solidityProof.a,
       solidityProof.b,
-      solidityProof.c,
+      solidityProof.c
+    );
+    const claimTx = await zwToken.remint(
+      proofBytes,
       localRoot,
       nullifierHex,
       bob.address,
-      claimAmount
+      0, // id
+      remintAmountValue,
+      false, // withdrawUnderlying
+      0 // relayerFee
     );
 
     const receipt = await claimTx.wait();
@@ -300,16 +326,16 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
 
     // 验证事件
     await expect(claimTx)
-      .to.emit(zwToken, "Claimed")
-      .withArgs(nullifierHex, bob.address, claimAmount);
-    console.log("   ✅ Claimed event emitted");
+      .to.emit(zwToken, "Reminted")
+      .withArgs(deployer.address, bob.address, 0, remintAmountValue, false);
+    console.log("   ✅ Reminted event emitted");
 
-    // 验证 Bob 收到 ZWToken（且触发了 commitment，因为是首次接收）
+    // 验证 Bob 收到 ZWERC20（且触发了 commitment，因为是首次接收）
     const bobBalance = await zwToken.balanceOf(bob.address);
     console.log(`   Bob balance after: ${ethers.formatEther(bobBalance)}`);
-    expect(bobBalance).to.equal(claimAmount);
+    expect(bobBalance).to.equal(remintAmountValue);
 
-    const commitmentCount2 = await zwToken.getCommitmentCount();
+    const commitmentCount2 = await zwToken.getCommitLeafCount(0);
     console.log(`   Commitment count: ${commitmentCount2}`);
     expect(commitmentCount2).to.equal(2); // privacy address + bob
 
@@ -317,14 +343,15 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     console.log("\n📌 阶段 8: 测试防重放");
 
     await expect(
-      zwToken.claim(
-        solidityProof.a,
-        solidityProof.b,
-        solidityProof.c,
+      zwToken.remint(
+        proofBytes,
         localRoot,
         nullifierHex,
         bob.address,
-        claimAmount
+        0, // id
+        remintAmountValue,
+        false, // withdrawUnderlying
+        0 // relayerFee
       )
     ).to.be.revertedWithCustomError(zwToken, "NullifierUsed");
 
@@ -333,13 +360,13 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
     // ========== 阶段 9: Bob withdraw ==========
     console.log("\n📌 阶段 9: Bob withdraw underlying token");
 
-    await zwToken.connect(bob).withdraw(claimAmount);
+    await zwToken.connect(bob).withdraw(bob.address, 0, remintAmountValue); // (to, id, amount)
 
     const bobUnderlyingBalance = await underlying.balanceOf(bob.address);
     console.log(
       `   Bob underlying balance: ${ethers.formatEther(bobUnderlyingBalance)}`
     );
-    expect(bobUnderlyingBalance).to.equal(claimAmount);
+    expect(bobUnderlyingBalance).to.equal(remintAmountValue);
 
     const bobZWTBalance = await zwToken.balanceOf(bob.address);
     expect(bobZWTBalance).to.equal(0);
@@ -351,8 +378,8 @@ describe("ZWToken - E2E with Real ZK Proof", function () {
 
     console.log("\n📊 Summary:");
     console.log(`   Privacy address: ${privacyAddress}`);
-    console.log(`   First amount: ${ethers.formatEther(firstAmount)}`);
-    console.log(`   Claimed amount: ${ethers.formatEther(claimAmount)}`);
+    console.log(`   First amount: ${ethers.formatEther(commitAmount)}`);
+    console.log(`   Claimed amount: ${ethers.formatEther(remintAmountValue)}`);
     console.log(
       `   Bob final balance: ${ethers.formatEther(
         bobUnderlyingBalance

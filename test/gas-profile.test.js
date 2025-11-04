@@ -1,6 +1,17 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const fs = require("fs");
+
+/**
+ * Helper: 将 Groth16 proof 编码为 bytes
+ */
+function encodeProof(a, b, c) {
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+  return abiCoder.encode(
+    ["uint256[2]", "uint256[2][2]", "uint256[2]"],
+    [a, b, c]
+  );
+}
 const path = require("path");
 
 // Gas price constants
@@ -48,6 +59,13 @@ describe("Gas Profile Comparison", function () {
     poseidonT3 = await PoseidonT3.deploy();
     await poseidonT3.waitForDeployment();
 
+    // Deploy PoseidonT4 library
+    const PoseidonT4 = await ethers.getContractFactory(
+      "poseidon-solidity/PoseidonT4.sol:PoseidonT4"
+    );
+    poseidonT4 = await PoseidonT4.deploy();
+    await poseidonT4.waitForDeployment();
+
     // Deploy ERC20Mock as underlying token
     const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
     const underlyingToken = await ERC20Mock.deploy(
@@ -60,9 +78,9 @@ describe("Gas Profile Comparison", function () {
     const MockVerifier = await ethers.getContractFactory("MockVerifier");
     mockVerifier = await MockVerifier.deploy();
 
-    // Deploy ZWToken with linked PoseidonT3 library (使用完全限定名避免歧义)
-    const ZWToken = await ethers.getContractFactory(
-      "contracts/ZWToken.sol:ZWToken",
+    // Deploy ZWERC20 with linked PoseidonT3 library (使用完全限定名避免歧义)
+    const ZWERC20 = await ethers.getContractFactory(
+      "contracts/ZWERC20.sol:ZWERC20",
       {
         libraries: {
           PoseidonT3: await poseidonT3.getAddress(),
@@ -70,12 +88,17 @@ describe("Gas Profile Comparison", function () {
       }
     );
     const underlyingDecimals = await underlyingToken.decimals();
-    zwToken = await ZWToken.deploy(
+    zwToken = await ZWERC20.deploy(
       "Zero Knowledge Wrapper",
       "ZWK",
       underlyingDecimals, // 从 underlying token 获取 decimals
       await underlyingToken.getAddress(),
-      await mockVerifier.getAddress()
+      await mockVerifier.getAddress(),
+      owner.address, // feeCollector
+      10000, // feeDenominator
+      0, // depositFee (0%)
+      0, // remintFee (0%)
+      0 // withdrawFee (0%)
     );
 
     // Deploy plain ERC20Mock for comparison (like USDT)
@@ -95,7 +118,7 @@ describe("Gas Profile Comparison", function () {
     await erc20Mock.transfer(bob.address, ethers.parseEther("10000"));
     await erc20Mock.transfer(charlie.address, ethers.parseEther("10000"));
 
-    // Approve ZWToken to spend underlying
+    // Approve ZWERC20 to spend underlying
     await underlyingToken
       .connect(alice)
       .approve(await zwToken.getAddress(), ethers.MaxUint256);
@@ -148,53 +171,61 @@ describe("Gas Profile Comparison", function () {
     });
   });
 
-  describe("📊 ZWToken Operations", function () {
+  describe("📊 ZWERC20 Operations", function () {
     describe("Deposit & Withdraw", function () {
       it("Deposit (first time)", async function () {
         const amount = ethers.parseEther("100");
-        const tx = await zwToken.connect(alice).deposit(amount);
+        const tx = await zwToken
+          .connect(alice)
+          .depositTo(alice.address, 0, amount);
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
-        gasReport.push(formatGasReport("ZWToken: deposit (first time)", cost));
+        gasReport.push(formatGasReport("ZWERC20: deposit (first time)", cost));
 
         console.log(
-          `\n✅ ZWToken Deposit (first time): ${receipt.gasUsed} gas ($${cost.costUSD})`
+          `\n✅ ZWERC20 Deposit (first time): ${receipt.gasUsed} gas ($${cost.costUSD})`
         );
       });
 
       it("Deposit (subsequent)", async function () {
         const amount = ethers.parseEther("50");
-        const tx = await zwToken.connect(alice).deposit(amount);
+        const tx = await zwToken
+          .connect(alice)
+          .depositTo(alice.address, 0, amount);
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
-        gasReport.push(formatGasReport("ZWToken: deposit (subsequent)", cost));
+        gasReport.push(formatGasReport("ZWERC20: deposit (subsequent)", cost));
 
         console.log(
-          `✅ ZWToken Deposit (subsequent): ${receipt.gasUsed} gas ($${cost.costUSD})`
+          `✅ ZWERC20 Deposit (subsequent): ${receipt.gasUsed} gas ($${cost.costUSD})`
         );
       });
 
       it("Withdraw (first time)", async function () {
         const amount = ethers.parseEther("50");
-        const tx = await zwToken.connect(alice).withdraw(amount);
+        const tx = await zwToken
+          .connect(alice)
+          .withdraw(alice.address, 0, amount);
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
-        gasReport.push(formatGasReport("ZWToken: withdraw (first time)", cost));
+        gasReport.push(formatGasReport("ZWERC20: withdraw (first time)", cost));
 
         console.log(
-          `✅ ZWToken Withdraw (first time): ${receipt.gasUsed} gas ($${cost.costUSD})`
+          `✅ ZWERC20 Withdraw (first time): ${receipt.gasUsed} gas ($${cost.costUSD})`
         );
       });
 
       it("Withdraw (subsequent)", async function () {
         const amount = ethers.parseEther("20");
-        const tx = await zwToken.connect(alice).withdraw(amount);
+        const tx = await zwToken
+          .connect(alice)
+          .withdraw(alice.address, 0, amount);
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
-        gasReport.push(formatGasReport("ZWToken: withdraw (subsequent)", cost));
+        gasReport.push(formatGasReport("ZWERC20: withdraw (subsequent)", cost));
 
         console.log(
-          `✅ ZWToken Withdraw (subsequent): ${receipt.gasUsed} gas ($${cost.costUSD})`
+          `✅ ZWERC20 Withdraw (subsequent): ${receipt.gasUsed} gas ($${cost.costUSD})`
         );
       });
     });
@@ -202,7 +233,9 @@ describe("Gas Profile Comparison", function () {
     describe("Transfer Operations", function () {
       it("Transfer (first receipt - records commitment)", async function () {
         // Bob deposits first
-        await zwToken.connect(bob).deposit(ethers.parseEther("200"));
+        await zwToken
+          .connect(bob)
+          .depositTo(bob.address, 0, ethers.parseEther("200"));
 
         // Bob transfers to Charlie (Charlie's first receipt - will record commitment)
         const amount = ethers.parseEther("100");
@@ -211,13 +244,13 @@ describe("Gas Profile Comparison", function () {
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(
           formatGasReport(
-            "ZWToken: transfer (first receipt, records commitment)",
+            "ZWERC20: transfer (first receipt, records commitment)",
             cost
           )
         );
 
         console.log(
-          `\n✅ ZWToken Transfer (first receipt): ${receipt.gasUsed} gas ($${cost.costUSD})`
+          `\n✅ ZWERC20 Transfer (first receipt): ${receipt.gasUsed} gas ($${cost.costUSD})`
         );
         console.log(
           `   ⚠️  This includes Poseidon hash + Merkle tree insertion`
@@ -231,11 +264,11 @@ describe("Gas Profile Comparison", function () {
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(
-          formatGasReport("ZWToken: transfer (subsequent, no commitment)", cost)
+          formatGasReport("ZWERC20: transfer (subsequent, no commitment)", cost)
         );
 
         console.log(
-          `✅ ZWToken Transfer (subsequent): ${receipt.gasUsed} gas ($${cost.costUSD})`
+          `✅ ZWERC20 Transfer (subsequent): ${receipt.gasUsed} gas ($${cost.costUSD})`
         );
       });
     });
@@ -264,21 +297,25 @@ describe("Gas Profile Comparison", function () {
         // Claim to a new address (Dave) - will record commitment
         const dave = ethers.Wallet.createRandom();
 
-        const tx = await zwToken.claim(
-          proof.a,
-          proof.b,
-          proof.c,
+        const proofBytes = encodeProof(proof.a, proof.b, proof.c);
+        const tx = await zwToken.remint(
+          proofBytes,
           root,
           nullifier,
           dave.address,
-          amount
+          0, // id
+          amount,
+          false, // withdrawUnderlying
+          0 // relayerFee
         );
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
-        gasReport.push(formatGasReport("ZWToken: claim (with ZK proof)", cost));
+        gasReport.push(
+          formatGasReport("ZWERC20: remint (with ZK proof)", cost)
+        );
 
         console.log(
-          `\n✅ ZWToken Claim (with ZK proof): ${receipt.gasUsed} gas ($${cost.costUSD})`
+          `\n✅ ZWERC20 Claim (with ZK proof): ${receipt.gasUsed} gas ($${cost.costUSD})`
         );
         console.log(
           `   ⚠️  This includes: proof verification + minting + commitment recording`
@@ -306,26 +343,28 @@ describe("Gas Profile Comparison", function () {
         };
 
         // Claim to Charlie again (already has commitment)
-        const tx = await zwToken.claim(
-          proof.a,
-          proof.b,
-          proof.c,
+        const proofBytes2 = encodeProof(proof.a, proof.b, proof.c);
+        const tx = await zwToken.remint(
+          proofBytes2,
           root,
           nullifier,
           charlie.address,
-          amount
+          0, // id
+          amount,
+          false, // withdrawUnderlying
+          0 // relayerFee
         );
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(
           formatGasReport(
-            "ZWToken: claim (subsequent, no new commitment)",
+            "ZWERC20: remint (subsequent, no new commitment)",
             cost
           )
         );
 
         console.log(
-          `✅ ZWToken Claim (subsequent): ${receipt.gasUsed} gas ($${cost.costUSD})`
+          `✅ ZWERC20 Claim (subsequent): ${receipt.gasUsed} gas ($${cost.costUSD})`
         );
       });
     });
@@ -367,8 +406,8 @@ describe("Gas Profile Comparison", function () {
       });
       console.log("\n");
 
-      // Print ZWToken Deposit/Withdraw
-      console.log("🏦 ZWToken Deposit & Withdraw");
+      // Print ZWERC20 Deposit/Withdraw
+      console.log("🏦 ZWERC20 Deposit & Withdraw");
       console.log("-".repeat(80));
       zwDepositWithdraw.forEach((r) => {
         console.log(
@@ -379,8 +418,8 @@ describe("Gas Profile Comparison", function () {
       });
       console.log("\n");
 
-      // Print ZWToken Transfer
-      console.log("🔄 ZWToken Transfer");
+      // Print ZWERC20 Transfer
+      console.log("🔄 ZWERC20 Transfer");
       console.log("-".repeat(80));
       zwTransfer.forEach((r) => {
         console.log(
@@ -391,8 +430,8 @@ describe("Gas Profile Comparison", function () {
       });
       console.log("\n");
 
-      // Print ZWToken Claim
-      console.log("🎯 ZWToken Claim (ZK Proof)");
+      // Print ZWERC20 Claim
+      console.log("🎯 ZWERC20 Claim (ZK Proof)");
       console.log("-".repeat(80));
       zwClaim.forEach((r) => {
         console.log(
@@ -428,7 +467,7 @@ describe("Gas Profile Comparison", function () {
             .padStart(10)} gas  ${erc20Transfer.costUSD}`
         );
         console.log(
-          `2️⃣  ZWToken Transfer (first receipt):    ${zwFirstGas
+          `2️⃣  ZWERC20 Transfer (first receipt):    ${zwFirstGas
             .toLocaleString()
             .padStart(10)} gas  ${zwTransferFirst.costUSD}`
         );
@@ -442,7 +481,7 @@ describe("Gas Profile Comparison", function () {
         console.log(`    └─ Includes: Poseidon hash + Merkle tree insertion\n`);
 
         console.log(
-          `3️⃣  ZWToken Transfer (subsequent):      ${zwSubseqGas
+          `3️⃣  ZWERC20 Transfer (subsequent):      ${zwSubseqGas
             .toLocaleString()
             .padStart(10)} gas  ${zwTransferSubseq.costUSD}`
         );
@@ -461,7 +500,7 @@ describe("Gas Profile Comparison", function () {
       );
       if (claimFirst) {
         console.log(
-          `4️⃣  ZWToken Claim (with ZK proof):      ${parseInt(
+          `4️⃣  ZWERC20 Claim (with ZK proof):      ${parseInt(
             claimFirst.gasUsed
           )
             .toLocaleString()
@@ -475,7 +514,7 @@ describe("Gas Profile Comparison", function () {
       console.log("=".repeat(80));
       console.log("\n💡 Analysis:");
       console.log(
-        "  • ZWToken transfers add ~25-50K gas for first receipt (Poseidon + Merkle)"
+        "  • ZWERC20 transfers add ~25-50K gas for first receipt (Poseidon + Merkle)"
       );
       console.log(
         "  • Subsequent transfers to same address have minimal overhead"

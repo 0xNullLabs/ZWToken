@@ -7,7 +7,7 @@ ZK Wrapper Token - 基于零知识证明的隐私代币包装器
 ```
 ZWToken/
 ├── contracts/                      # Solidity 智能合约
-│   ├── ZWToken.sol                # 主合约
+│   ├── ZWERC20.sol                # 主合约
 │   ├── Groth16Verifier.sol       # ZK proof 验证器（自动生成）
 │   ├── interfaces/                # 接口定义
 │   │   └── ISnarkVerifier.sol    # Verifier 接口
@@ -53,7 +53,7 @@ ZWToken/
 
 **主合约**:
 
-- `ZWToken.sol`: 核心业务逻辑
+- `ZWERC20.sol`: 核心业务逻辑
   - Deposit/Withdraw: 包装/解包装代币
   - Transfer: 标准 ERC20 转账 + commitment 记录
   - Claim: ZK proof 验证的隐私转账

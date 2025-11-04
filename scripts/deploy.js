@@ -2,22 +2,29 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 /**
- * ZWToken 生产环境部署脚本
+ * ZWERC20 生产环境部署脚本
  *
  * 部署顺序：
  * 1. PoseidonT3 库（ZK 友好的哈希函数）
  * 2. 使用现有的底层 ERC20 代币
  * 3. Groth16Verifier (ZK proof 验证器)
- * 4. ZWToken (主合约，链接 PoseidonT3)
+ * 4. ZWERC20 (主合约，链接 PoseidonT3)
  *
  * 环境变量要求：
- * - UNDERLYING_TOKEN_ADDRESS: 底层 ERC20 代币地址
- * - PRIVATE_KEY: 部署账户私钥
- * - SEPOLIA_RPC_URL (或其他网络): RPC URL
+ * - UNDERLYING_TOKEN_ADDRESS: 底层 ERC20 代币地址（必需）
+ * - PRIVATE_KEY: 部署账户私钥（必需）
+ * - SEPOLIA_RPC_URL (或其他网络): RPC URL（必需）
+ *
+ * 可选环境变量（费用配置）：
+ * - FEE_COLLECTOR: 费用收集器地址（默认：deployer.address）
+ * - FEE_DENOMINATOR: 费用分母，10000 = 100%（默认：10000，提供 0.01% 精度）
+ * - DEPOSIT_FEE: 存款费率，单位 basis points，基于 FEE_DENOMINATOR（默认：0）
+ * - REMINT_FEE: Remint 费率，单位 basis points，基于 FEE_DENOMINATOR（默认：0）
+ * - WITHDRAW_FEE: 提款费率，单位 basis points，基于 FEE_DENOMINATOR（默认：0）
  */
 async function main() {
   console.log("\n" + "=".repeat(80));
-  console.log("🚀 开始部署 ZWToken 合约");
+  console.log("🚀 开始部署 ZWERC20 合约");
   console.log("=".repeat(80));
 
   const [deployer] = await ethers.getSigners();
@@ -90,12 +97,12 @@ async function main() {
   console.log("✅ Groth16Verifier 已部署至:", verifierAddress);
   console.log("   类型: 真实 ZK Proof 验证器");
 
-  // ========== 4. 部署 ZWToken ==========
+  // ========== 4. 部署 ZWERC20 ==========
   console.log("\n" + "─".repeat(80));
-  console.log("📦 步骤 4/4: 部署 ZWToken (主合约)");
+  console.log("📦 步骤 4/4: 部署 ZWERC20 (主合约)");
   console.log("─".repeat(80));
 
-  const ZWToken = await ethers.getContractFactory("ZWToken", {
+  const ZWERC20 = await ethers.getContractFactory("ZWERC20", {
     libraries: {
       PoseidonT3: poseidonT3Address,
     },
@@ -104,22 +111,64 @@ async function main() {
   const zwTokenName = "Zero Knowledge Wrapper " + underlyingName;
   const zwTokenSymbol = "ZW" + underlyingSymbol;
   const underlyingDecimals = await underlying.decimals();
-  const zwToken = await ZWToken.deploy(
+
+  // 费用配置（可通过环境变量设置，默认为 0）
+  const feeCollector = process.env.FEE_COLLECTOR || deployer.address;
+  const feeDenominator = process.env.FEE_DENOMINATOR || 10000; // 10000 = 100%, 0.01% precision
+  const depositFee = process.env.DEPOSIT_FEE || 0; // 0 = 0%
+  const remintFee = process.env.REMINT_FEE || 0; // 0 = 0%
+  const withdrawFee = process.env.WITHDRAW_FEE || 0; // 0 = 0%
+
+  const zwToken = await ZWERC20.deploy(
     zwTokenName,
     zwTokenSymbol,
     underlyingDecimals,
     underlyingAddress,
-    verifierAddress
+    verifierAddress,
+    feeCollector, // feeCollector
+    feeDenominator, // feeDenominator (10000 = 100%)
+    depositFee, // depositFee (0 = 0%)
+    remintFee, // remintFee (0 = 0%)
+    withdrawFee // withdrawFee (0 = 0%)
   );
   await zwToken.waitForDeployment();
   const zwTokenAddress = await zwToken.getAddress();
 
-  console.log("✅ ZWToken 已部署至:", zwTokenAddress);
+  console.log("✅ ZWERC20 已部署至:", zwTokenAddress);
   console.log("   名称:", zwTokenName);
   console.log("   符号:", zwTokenSymbol);
   console.log("   小数位数:", underlyingDecimals);
   console.log("   底层代币:", underlyingAddress);
   console.log("   验证器:", verifierAddress);
+  console.log("   费用收集器:", feeCollector);
+  console.log(
+    "   费用分母:",
+    feeDenominator,
+    "(",
+    (100 / feeDenominator) * 100,
+    "% precision)"
+  );
+  console.log(
+    "   存款费率:",
+    depositFee,
+    "bp (",
+    (depositFee * 100) / feeDenominator,
+    "%)"
+  );
+  console.log(
+    "   Remint 费率:",
+    remintFee,
+    "bp (",
+    (remintFee * 100) / feeDenominator,
+    "%)"
+  );
+  console.log(
+    "   提款费率:",
+    withdrawFee,
+    "bp (",
+    (withdrawFee * 100) / feeDenominator,
+    "%)"
+  );
 
   // ========== 部署总结 ==========
   console.log("\n" + "=".repeat(80));
@@ -131,7 +180,7 @@ async function main() {
   console.log("PoseidonT3:        ", poseidonT3Address);
   console.log("Underlying Token:  ", underlyingAddress);
   console.log("Verifier:          ", verifierAddress);
-  console.log("ZWToken:           ", zwTokenAddress);
+  console.log("ZWERC20:           ", zwTokenAddress);
   console.log("─".repeat(80));
 
   // 返回部署的合约地址供测试使用

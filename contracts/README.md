@@ -6,7 +6,7 @@
 
 ```
 contracts/
-├── ZWToken.sol                    # 主合约：ZK Wrapper Token
+├── ZWERC20.sol                    # 主合约：ZK Wrapper Token
 ├── Groth16Verifier.sol           # ZK proof 验证器（由 snarkjs 生成）
 ├── interfaces/                    # 接口定义
 │   └── ISnarkVerifier.sol        # ZK proof 验证器接口
@@ -21,7 +21,7 @@ contracts/
 
 ### 主合约
 
-#### `ZWToken.sol`
+#### `ZWERC20.sol`
 
 ZK Wrapper Token 主合约，提供以下功能：
 

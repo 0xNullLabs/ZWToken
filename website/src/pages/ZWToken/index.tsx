@@ -11,7 +11,7 @@ import {
   rebuildMerkleTree,
   findUserCommitment,
   prepareCircuitInput,
-  getLeafRangeInBatches,
+  getCommitLeavesInBatches,
 } from '@/utils/zkProof';
 // @ts-ignore
 import * as snarkjs from 'snarkjs';
@@ -119,13 +119,13 @@ const ZWToken: React.FC = () => {
       setUsdcBalance(ethers.formatUnits(usdcBal, tokenDecimals));
 
       // 查询 Allowance
-      const allowanceBigInt = await usdcContract.allowance(account, CONTRACT_ADDRESSES.ZWToken);
+      const allowanceBigInt = await usdcContract.allowance(account, CONTRACT_ADDRESSES.ZWERC20);
       setAllowance(ethers.formatUnits(allowanceBigInt, tokenDecimals));
 
       // 查询 ZWUSDC 余额
       const zwusdcContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWToken,
-        CONTRACT_ABIS.ZWToken,
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
         provider,
       );
       const zwusdcBal = await zwusdcContract.balanceOf(account);
@@ -314,7 +314,7 @@ const ZWToken: React.FC = () => {
       const signer = await provider.getSigner();
 
       // 构造签名消息
-      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWToken}, chainId: ${network.chainId}`;
+      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC20}, chainId: ${network.chainId}`;
 
       // 请求签名
       const signature = await signer.signMessage(signMessage);
@@ -323,14 +323,25 @@ const ZWToken: React.FC = () => {
       setSeed(signature);
 
       // 生成10个SecretBySeed
-      const secrets: Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }> =
-        [];
+      const secrets: Array<{
+        index: number;
+        secret: string;
+        amount: string;
+        loading: boolean;
+        isClaimed: boolean;
+      }> = [];
       for (let i = 1; i <= 10; i++) {
         // Seed + 序号，做哈希
         const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
         // 转换为BigInt格式的字符串（去掉0x前缀）
         const secretBigInt = BigInt(secretBySeed).toString();
-        secrets.push({ index: i, secret: secretBigInt, amount: '-', loading: true, isClaimed: false });
+        secrets.push({
+          index: i,
+          secret: secretBigInt,
+          amount: '-',
+          loading: true,
+          isClaimed: false,
+        });
       }
 
       setSecretList(secrets);
@@ -338,18 +349,18 @@ const ZWToken: React.FC = () => {
 
       // 异步查询每个Secret对应的金额
       const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWToken,
-        CONTRACT_ABIS.ZWToken,
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
         provider,
       );
 
       // 获取链上所有的leafs（分批获取）
-      const leafCount = await contract.getStoredLeafCount();
+      const leafCount = await contract.getCommitLeafCount(0);
       console.log(`Found ${leafCount} commitment(s)`);
 
       let leaves: any[] = [];
       if (leafCount > 0n) {
-        leaves = await getLeafRangeInBatches(contract, 0, leafCount, 100);
+        leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
 
@@ -375,7 +386,9 @@ const ZWToken: React.FC = () => {
           // 更新状态
           setSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed } : item,
+              idx === i
+                ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed }
+                : item,
             ),
           );
         } catch (error) {
@@ -421,20 +434,31 @@ const ZWToken: React.FC = () => {
       const signer = await provider.getSigner();
 
       // 构造签名消息
-      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWToken}, chainId: ${network.chainId}`;
+      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC20}, chainId: ${network.chainId}`;
 
       // 请求签名
       const signature = await signer.signMessage(signMessage);
 
       // 生成10个SecretBySeed
-      const secrets: Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }> =
-        [];
+      const secrets: Array<{
+        index: number;
+        secret: string;
+        amount: string;
+        loading: boolean;
+        isClaimed: boolean;
+      }> = [];
       for (let i = 1; i <= 10; i++) {
         // Seed + 序号，做哈希
         const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
         // 转换为BigInt格式的字符串（去掉0x前缀）
         const secretBigInt = BigInt(secretBySeed).toString();
-        secrets.push({ index: i, secret: secretBigInt, amount: '-', loading: true, isClaimed: false });
+        secrets.push({
+          index: i,
+          secret: secretBigInt,
+          amount: '-',
+          loading: true,
+          isClaimed: false,
+        });
       }
 
       setClaimSecretList(secrets);
@@ -442,18 +466,18 @@ const ZWToken: React.FC = () => {
 
       // 异步查询每个Secret对应的金额
       const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWToken,
-        CONTRACT_ABIS.ZWToken,
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
         provider,
       );
 
       // 获取链上所有的leafs（分批获取）
-      const leafCount = await contract.getStoredLeafCount();
+      const leafCount = await contract.getCommitLeafCount(0);
       console.log(`Found ${leafCount} commitment(s)`);
 
       let leaves: any[] = [];
       if (leafCount > 0n) {
-        leaves = await getLeafRangeInBatches(contract, 0, leafCount, 100);
+        leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
 
@@ -479,7 +503,9 @@ const ZWToken: React.FC = () => {
           // 更新状态
           setClaimSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed } : item,
+              idx === i
+                ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed }
+                : item,
             ),
           );
         } catch (error) {
@@ -573,14 +599,14 @@ const ZWToken: React.FC = () => {
 
       const currentAllowance = await underlyingContract.allowance(
         account,
-        CONTRACT_ADDRESSES.ZWToken,
+        CONTRACT_ADDRESSES.ZWERC20,
       );
 
       // 如果授权不足，只执行授权
       if (currentAllowance < depositAmountBigInt) {
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.approving' }), 0);
         const approveTx = await underlyingContract.approve(
-          CONTRACT_ADDRESSES.ZWToken,
+          CONTRACT_ADDRESSES.ZWERC20,
           depositAmountBigInt,
         );
         await approveTx.wait();
@@ -594,8 +620,8 @@ const ZWToken: React.FC = () => {
 
       // 执行 deposit
       const zwTokenContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWToken,
-        CONTRACT_ABIS.ZWToken,
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
         signer,
       );
       const tx = await zwTokenContract.deposit(depositAmountBigInt);
@@ -637,8 +663,8 @@ const ZWToken: React.FC = () => {
 
       // 使用配置文件中的合约地址
       const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWToken,
-        CONTRACT_ABIS.ZWToken,
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
         signer,
       );
 
@@ -688,8 +714,8 @@ const ZWToken: React.FC = () => {
 
       // 使用配置文件中的合约地址
       const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWToken,
-        CONTRACT_ABIS.ZWToken,
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
         signer,
       );
 
@@ -745,8 +771,8 @@ const ZWToken: React.FC = () => {
 
       // 使用配置文件中的合约地址
       const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWToken,
-        CONTRACT_ABIS.ZWToken,
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
         signer,
       );
 
@@ -1023,7 +1049,7 @@ const ZWToken: React.FC = () => {
               >
                 {parseFloat(zwusdcBalance).toFixed(6)}{' '}
                 <a
-                  href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ZWToken}`}
+                  href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ZWERC20}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -1501,17 +1527,9 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return (
-                        <span style={{ color: '#999', fontWeight: 'bold' }}>
-                          Claimed
-                        </span>
-                      );
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>Claimed</span>;
                     }
-                    return (
-                      <span style={{ color: '#52c41a' }}>
-                        Available
-                      </span>
-                    );
+                    return <span style={{ color: '#52c41a' }}>Available</span>;
                   },
                 },
                 {
@@ -1647,17 +1665,9 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return (
-                        <span style={{ color: '#999', fontWeight: 'bold' }}>
-                          Claimed
-                        </span>
-                      );
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>Claimed</span>;
                     }
-                    return (
-                      <span style={{ color: '#52c41a' }}>
-                        Available
-                      </span>
-                    );
+                    return <span style={{ color: '#52c41a' }}>Available</span>;
                   },
                 },
                 {

@@ -2,7 +2,7 @@
  * Merkle Tree 工具类
  *
  * 提供 Incremental Poseidon Merkle Tree 的实现，
- * 用于 ZWToken 的 commitment 管理和 proof 生成
+ * 用于 ZWERC20 的 commitment 管理和 proof 生成
  */
 
 const { poseidon } = require("circomlibjs");

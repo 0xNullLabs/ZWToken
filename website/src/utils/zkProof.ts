@@ -124,20 +124,21 @@ export class IncrementalMerkleTree {
 
 /**
  * 从 Secret 生成隐私地址和相关参数
+ * @param secret 用户秘密
+ * @param tokenId Token ID (0 for ERC-20)
  */
-export async function deriveFromSecret(secret: string) {
+export async function deriveFromSecret(secret: string, tokenId: bigint = 0n) {
   const poseidon = await buildPoseidon();
   const secretBigInt = BigInt(secret);
 
-  // 推导隐私地址 (参考 e2e.test.js)
-  const addrScalar = poseidon.F.toString(poseidon([secretBigInt]));
+  // 推导隐私地址：addrScalar = Poseidon(8065, tokenId, secret)
+  const addrScalar = poseidon.F.toString(poseidon([8065n, tokenId, secretBigInt]));
   const addr20 = BigInt(addrScalar) & ((1n << 160n) - 1n);
   const q = (BigInt(addrScalar) - addr20) / (1n << 160n);
 
   const privacyAddress = ethers.getAddress('0x' + addr20.toString(16).padStart(40, '0'));
 
   // 生成 nullifier = Poseidon(addr20, secret)
-  // 使用两个输入，避免 nullifier == addrScalar 的隐私泄漏
   const nullifier = poseidon.F.toString(poseidon([addr20, secretBigInt]));
 
   return {
@@ -146,30 +147,41 @@ export async function deriveFromSecret(secret: string) {
     q,
     nullifier: BigInt(nullifier),
     secret: secretBigInt,
+    tokenId,
   };
 }
 
 /**
- * 分批获取链上的leafs
+ * 分批获取链上的leafs（使用 getCommitLeaves API）
  * @param contract 合约实例
+ * @param tokenId Token ID (ERC-20 固定为 0)
  * @param startIndex 起始索引
  * @param totalCount 总数量
- * @param batchSize 每批数量（默认10）
+ * @param batchSize 每批数量（默认100）
+ * @returns Array of {to, amount} objects
  */
-export async function getLeafRangeInBatches(
+export async function getCommitLeavesInBatches(
   contract: ethers.Contract,
+  tokenId: number,
   startIndex: number,
   totalCount: bigint,
-  batchSize: number = 10,
-): Promise<any[]> {
-  const allLeaves: any[] = [];
+  batchSize: number = 100,
+): Promise<Array<{ to: string; amount: bigint }>> {
+  const allLeaves: Array<{ to: string; amount: bigint }> = [];
   const total = Number(totalCount);
 
   for (let i = startIndex; i < total; i += batchSize) {
-    const end = Math.min(i + batchSize, total);
-    console.log(`Fetching leaves ${i} to ${end - 1}...`);
-    const batch = await contract.getLeafRange(i, end);
-    allLeaves.push(...batch);
+    const length = Math.min(batchSize, total - i);
+    console.log(`Fetching leaves ${i} to ${i + length - 1}...`);
+    const [commitHashes, recipients, amounts] = await contract.getCommitLeaves(tokenId, i, length);
+    
+    // Reconstruct leaf objects from three arrays
+    for (let j = 0; j < recipients.length; j++) {
+      allLeaves.push({
+        to: recipients[j],
+        amount: amounts[j],
+      });
+    }
   }
 
   return allLeaves;
@@ -182,9 +194,10 @@ export async function getLeafRangeInBatches(
 export async function rebuildMerkleTree(
   contract: ethers.Contract,
   poseidon: any,
+  tokenId: number = 0,
 ): Promise<IncrementalMerkleTree> {
   // 获取 leaf 数量
-  const leafCount = await contract.getStoredLeafCount();
+  const leafCount = await contract.getCommitLeafCount(0);
   console.log(`Found ${leafCount} commitment(s)`);
 
   if (leafCount === 0n) {
@@ -192,7 +205,7 @@ export async function rebuildMerkleTree(
   }
 
   // 分批获取所有 leafs
-  const leaves = await getLeafRangeInBatches(contract, 0, leafCount, 100);
+  const leaves = await getCommitLeavesInBatches(contract, 0, leafCount, 100);
   console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
 
   // 重建 Merkle tree（传入 poseidon 实例）
@@ -215,13 +228,13 @@ export async function findUserCommitment(
   privacyAddress: string,
   poseidon: any,
 ): Promise<{ commitment: bigint; amount: bigint; index: number } | null> {
-  const leafCount = await contract.getStoredLeafCount();
+  const leafCount = await contract.getCommitLeafCount(0);
   if (leafCount === 0n) {
     return null;
   }
 
   // 分批获取所有 leafs
-  const leaves = await getLeafRangeInBatches(contract, 0, leafCount, 100);
+  const leaves = await getCommitLeavesInBatches(contract, 0, leafCount, 100);
 
   for (let i = 0; i < leaves.length; i++) {
     const leaf = leaves[i];
@@ -239,31 +252,37 @@ export async function findUserCommitment(
 }
 
 /**
- * 准备电路输入
- * 参考 e2e.test.js 的 circuitInput
+ * 准备电路输入 (IERC8065 版本)
+ * 参考 IERC8065 规范和更新后的电路
  */
 export function prepareCircuitInput(params: {
   root: bigint;
   nullifier: bigint;
   recipient: string;
-  claimAmount: bigint;
+  remintAmount: bigint;
+  id?: bigint; // Token ID (default 0 for ERC-20)
+  withdrawUnderlying?: boolean; // Default false
+  relayerFee?: bigint; // Default 0
   secret: bigint;
   addr20: bigint;
-  firstAmount: bigint;
+  commitAmount: bigint;
   q: bigint;
   merkleProof: { pathElements: bigint[]; pathIndices: number[] };
 }) {
   return {
-    // Public inputs
+    // Public inputs (7 total for IERC8065)
     root: params.root,
     nullifier: params.nullifier,
     to: BigInt(params.recipient),
-    claimAmount: params.claimAmount,
+    remintAmount: params.remintAmount,
+    id: params.id ?? 0n, // Default to 0 for ERC-20
+    withdrawUnderlying: params.withdrawUnderlying ? 1n : 0n, // Convert boolean to 0/1
+    relayerFee: params.relayerFee ?? 0n, // Default to 0
 
     // Private inputs
     secret: params.secret,
     addr20: params.addr20,
-    firstAmount: params.firstAmount,
+    commitAmount: params.commitAmount,
     q: params.q,
     pathElements: params.merkleProof.pathElements,
     pathIndices: params.merkleProof.pathIndices,

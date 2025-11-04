@@ -3,17 +3,17 @@ export default {
   'pages.zwtoken.title': 'ZWToken - Make privacy a native feature of every token',
   'pages.zwtoken.subtitle': '基于零知识证明的隐私转账系统',
   'pages.zwtoken.connectWallet': '请先点击右上角的 "Connect Wallet" 按钮连接您的钱包',
-  
+
   // Balance
   'pages.zwtoken.balance.usdc': 'USDC 余额',
   'pages.zwtoken.balance.zwusdc': 'ZWUSDC 余额',
-  
+
   // Tabs
   'pages.zwtoken.tab.deposit': '💰 存款',
   'pages.zwtoken.tab.withdraw': '💳 取款',
   'pages.zwtoken.tab.transfer': '🔄 转账',
   'pages.zwtoken.tab.claim': '🎁 提现',
-  
+
   // Deposit
   'pages.zwtoken.deposit.amount': '存款金额',
   'pages.zwtoken.deposit.amount.placeholder': '请输入存款金额',
@@ -30,7 +30,7 @@ export default {
   'pages.zwtoken.deposit.submitting': '交易提交中...',
   'pages.zwtoken.deposit.success': '存款成功！',
   'pages.zwtoken.deposit.failed': '存款失败',
-  
+
   // Withdraw
   'pages.zwtoken.withdraw.amount': '取款金额',
   'pages.zwtoken.withdraw.amount.placeholder': '请输入取款金额',
@@ -45,7 +45,7 @@ export default {
   'pages.zwtoken.withdraw.submitting': '交易提交中...',
   'pages.zwtoken.withdraw.success': '取款成功！',
   'pages.zwtoken.withdraw.failed': '取款失败',
-  
+
   // Transfer
   'pages.zwtoken.transfer.targetAddress': '目标地址',
   'pages.zwtoken.transfer.targetAddress.placeholder': '0x... 或点击Burn按钮生成',
@@ -73,7 +73,8 @@ export default {
   'pages.zwtoken.transfer.secretModal.secret.placeholder': '请输入数字Secret（如：123456789）',
   'pages.zwtoken.transfer.secretModal.secret.required': '请输入Secret',
   'pages.zwtoken.transfer.secretModal.secret.invalid': 'Secret必须是纯数字',
-  'pages.zwtoken.transfer.secretModal.tip': '💡 通过Poseidon哈希从Secret生成隐私地址，请妥善保管您的Secret',
+  'pages.zwtoken.transfer.secretModal.tip':
+    '💡 通过Poseidon哈希从Secret生成隐私地址，请妥善保管您的Secret',
   'pages.zwtoken.transfer.secretModal.ok': '生成',
   'pages.zwtoken.transfer.secretModal.cancel': '取消',
   'pages.zwtoken.transfer.secretModal.generateBySeed': 'Generate By Seed',
@@ -87,8 +88,9 @@ export default {
   'pages.zwtoken.transfer.secretModal.seedList.failed': '查询失败',
   'pages.zwtoken.transfer.secretModal.seedList.available': '可用',
   'pages.zwtoken.transfer.secretModal.seedList.hasAmount': '该地址已有金额，不能再次使用',
-  'pages.zwtoken.transfer.secretModal.seedList.tip': '提示：已有金额的Privacy Address不能再次使用，请选择金额为0的Secret',
-  
+  'pages.zwtoken.transfer.secretModal.seedList.tip':
+    '提示：已有金额的Privacy Address不能再次使用，请选择金额为0的Secret',
+
   // Claim
   'pages.zwtoken.claim.secret': 'Secret',
   'pages.zwtoken.claim.secret.placeholder': '请输入您的Secret',
@@ -134,10 +136,10 @@ export default {
   'pages.zwtoken.claim.seedModal.select': '选择',
   'pages.zwtoken.claim.seedModal.checking': '查询中...',
   'pages.zwtoken.claim.seedModal.failed': '查询失败',
-  
+
   // Common
   'pages.zwtoken.error.connectWallet': '请先连接钱包',
-  
+
   'pages.layouts.userLayout.title': 'Ant Design 是西湖区最具影响力的 Web 设计规范',
   'pages.login.accountLogin.tab': '账户密码登录',
   'pages.login.accountLogin.errorMessage': '错误的用户名和密码(admin/ant.design)',
