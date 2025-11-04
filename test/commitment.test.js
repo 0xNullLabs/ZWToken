@@ -142,7 +142,11 @@ describe("ZWERC20 - Commitment Recording", function () {
       expect(leafCount).to.equal(1);
 
       // Verify the commitment data
-      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(0, 0, 1);
+      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(
+        0,
+        0,
+        1
+      );
       expect(recipients[0]).to.equal(bob.address);
       expect(amounts[0]).to.equal(amount);
     });
@@ -153,7 +157,11 @@ describe("ZWERC20 - Commitment Recording", function () {
       await zwToken.connect(alice).transfer(bob.address, amount);
 
       // Verify the commitment data matches expected values
-      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(0, 0, 1);
+      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(
+        0,
+        0,
+        1
+      );
       expect(recipients[0]).to.equal(bob.address);
       expect(amounts[0]).to.equal(amount);
 
@@ -233,7 +241,11 @@ describe("ZWERC20 - Commitment Recording", function () {
       expect(leafCount).to.equal(1);
 
       // Verify the commitment data
-      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(0, 0, 1);
+      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(
+        0,
+        0,
+        1
+      );
       expect(recipients[0]).to.equal(charlie.address);
       expect(amounts[0]).to.equal(ethers.parseEther("50"));
     });
@@ -312,7 +324,11 @@ describe("ZWERC20 - Commitment Recording", function () {
       expect(leafCount).to.equal(2); // 1 from privacy address transfer + 1 from claim
 
       // Verify the latest commitment data
-      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(0, 1, 1);
+      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(
+        0,
+        1,
+        1
+      );
       expect(recipients[0]).to.equal(bob.address);
       expect(amounts[0]).to.equal(amount);
     });
@@ -436,7 +452,11 @@ describe("ZWERC20 - Commitment Recording", function () {
       expect(count).to.equal(2);
 
       // Verify commitments are stored in correct order
-      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(0, 0, 2);
+      const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(
+        0,
+        0,
+        2
+      );
 
       // First commitment (Bob)
       expect(recipients[0]).to.equal(bob.address);

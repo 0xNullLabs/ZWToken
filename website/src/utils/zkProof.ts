@@ -174,7 +174,7 @@ export async function getCommitLeavesInBatches(
     const length = Math.min(batchSize, total - i);
     console.log(`Fetching leaves ${i} to ${i + length - 1}...`);
     const [commitHashes, recipients, amounts] = await contract.getCommitLeaves(tokenId, i, length);
-    
+
     // Reconstruct leaf objects from three arrays
     for (let j = 0; j < recipients.length; j++) {
       allLeaves.push({
