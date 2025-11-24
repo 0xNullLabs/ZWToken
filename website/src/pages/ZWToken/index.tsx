@@ -1,4 +1,4 @@
-import { Card, Tabs, Form, InputNumber, Input, Button, message, Space, Modal, Table } from 'antd';
+import { Card, Tabs, Form, InputNumber, Input, Button, message, Space, Modal, Table, Checkbox } from 'antd';
 import { PageContainer } from '@ant-design/pro-components';
 import { useConnectWallet } from '@web3-onboard/react';
 import { useIntl } from '@umijs/max';
@@ -43,6 +43,14 @@ const ZWToken: React.FC = () => {
   >([]);
   const [claimSeedModalVisible, setClaimSeedModalVisible] = useState(false);
   const [claimSecretList, setClaimSecretList] = useState<
+    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+  >([]);
+  
+  // Deposit Directly Burn related states
+  const [directBurn, setDirectBurn] = useState(false);
+  const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
+  const [depositSecretForm] = Form.useForm();
+  const [depositSecretList, setDepositSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
 
@@ -274,7 +282,7 @@ const ZWToken: React.FC = () => {
     return provider;
   };
 
-  // 从Secret生成Privacy Address
+  // Generate Privacy Address from Secret
   const generatePrivacyAddress = async (secret: string) => {
     try {
       const poseidon = await buildPoseidon();
@@ -292,15 +300,52 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // 处理Burn按钮点击 - 打开Secret输入框
+  // Handle Burn button click - Open Secret input modal (Transfer page)
   const handleBurnClick = () => {
     setSecretModalVisible(true);
-    // 重置状态
+    // Reset state
     setSeed('');
     setSecretList([]);
   };
 
-  // 通过钱包签名生成Seed
+  // Handle Deposit Directly Burn button click
+  const handleDepositBurnClick = () => {
+    setDepositSecretModalVisible(true);
+    // Reset state
+    setSeed('');
+    setDepositSecretList([]);
+  };
+
+  // Handle Deposit Secret confirmation - Generate Privacy Address
+  const handleDepositSecretConfirm = async () => {
+    try {
+      const values = await depositSecretForm.validateFields();
+      const privacyAddress = await generatePrivacyAddress(values.secret);
+
+      // Set to Deposit form targetAddress field
+      depositForm.setFieldsValue({ targetAddress: privacyAddress });
+
+      message.success('Privacy Address generated and filled');
+      setDepositSecretModalVisible(false);
+      depositSecretForm.resetFields();
+    } catch (error: any) {
+      if (error.errorFields) {
+        // Form validation error, do nothing
+        return;
+      }
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
+      );
+    }
+  };
+
+  // Select Secret for Deposit page
+  const handleSelectDepositSecret = (secret: string) => {
+    depositSecretForm.setFieldsValue({ secret });
+    message.success('Secret selected');
+  };
+
+  // Generate Seed through wallet signature
   const handleGenerateBySeed = async () => {
     if (!wallet || !account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
@@ -344,8 +389,13 @@ const ZWToken: React.FC = () => {
         });
       }
 
+      // Update the corresponding list based on which modal is open
+      if (depositSecretModalVisible) {
+        setDepositSecretList(secrets);
+      } else {
       setSecretList(secrets);
-      message.success('Seed 生成成功！正在查询金额和状态...');
+      }
+      message.success('Seed generated successfully! Querying amounts and status...');
 
       // 异步查询每个Secret对应的金额
       const contract = new ethers.Contract(
@@ -383,7 +433,16 @@ const ZWToken: React.FC = () => {
           const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
           const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
 
-          // 更新状态
+          // Update the corresponding list based on which modal is open
+          if (depositSecretModalVisible) {
+            setDepositSecretList((prev) =>
+              prev.map((item, idx) =>
+                idx === i
+                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed }
+                  : item,
+              ),
+            );
+          } else {
           setSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
@@ -391,17 +450,26 @@ const ZWToken: React.FC = () => {
                 : item,
             ),
           );
+          }
         } catch (error) {
-          console.error(`查询 Secret ${i + 1} 金额失败:`, error);
+          console.error(`Failed to query Secret ${i + 1} amount:`, error);
+          if (depositSecretModalVisible) {
+            setDepositSecretList((prev) =>
+              prev.map((item, idx) =>
+                idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+              ),
+            );
+          } else {
           setSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: '查询失败', loading: false, isClaimed: false } : item,
+                idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
             ),
           );
+          }
         }
       }
 
-      message.success('金额和状态查询完成！');
+      message.success('Amount and status query completed!');
     } catch (error: any) {
       console.error('生成Seed失败:', error);
       message.error(`生成Seed失败: ${error.message}`);
@@ -410,13 +478,13 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // 选择某个SecretBySeed
+  // Select a SecretBySeed
   const handleSelectSecret = (secret: string) => {
     secretForm.setFieldsValue({ secret });
-    message.success('已选择 Secret');
+    message.success('Secret selected');
   };
 
-  // 点击按钮打开模态框并立即生成Seed
+  // Click button to open modal and generate Seed immediately
   const handleClaimGenerateBySeedClick = async () => {
     if (!wallet || !account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
@@ -509,10 +577,10 @@ const ZWToken: React.FC = () => {
             ),
           );
         } catch (error) {
-          console.error(`查询 Secret ${i + 1} 金额失败:`, error);
+          console.error(`Failed to query Secret ${i + 1} amount:`, error);
           setClaimSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: '查询失败', loading: false, isClaimed: false } : item,
+              idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
             ),
           );
         }
@@ -529,20 +597,20 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // 选择Claim页面的SecretBySeed
+  // Select SecretBySeed for Claim page
   const handleSelectClaimSecret = (secret: string) => {
     claimForm.setFieldsValue({ secret });
     setClaimSeedModalVisible(false);
-    message.success('已选择 Secret');
+    message.success('Secret selected');
   };
 
-  // 处理Secret确认 - 生成Privacy Address
+  // Handle Secret confirmation - Generate Privacy Address
   const handleSecretConfirm = async () => {
     try {
       const values = await secretForm.validateFields();
       const privacyAddress = await generatePrivacyAddress(values.secret);
 
-      // 设置到Transfer表单的targetAddress字段
+      // Set to Transfer form targetAddress field
       transferForm.setFieldsValue({ targetAddress: privacyAddress });
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.generateSuccess' }));
@@ -566,9 +634,15 @@ const ZWToken: React.FC = () => {
   }, [depositAmount, allowance]);
 
   // Deposit操作
-  const handleDeposit = async (values: { amount: number }) => {
+  const handleDeposit = async (values: { amount: number; targetAddress?: string }) => {
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
+      return;
+    }
+
+    // If Directly Burn is enabled, check if targetAddress exists
+    if (directBurn && !values.targetAddress) {
+      message.error('Please generate or enter Target Address first');
       return;
     }
 
@@ -618,13 +692,16 @@ const ZWToken: React.FC = () => {
         return;
       }
 
-      // 执行 deposit
+      // Execute depositTo
       const zwTokenContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC20,
         CONTRACT_ABIS.ZWERC20,
         signer,
       );
-      const tx = await zwTokenContract.deposit(depositAmountBigInt);
+      
+      // Determine to address based on directBurn status
+      const toAddress = directBurn && values.targetAddress ? values.targetAddress : account;
+      const tx = await zwTokenContract.depositTo(toAddress, 0, depositAmountBigInt);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
       await tx.wait();
@@ -632,7 +709,8 @@ const ZWToken: React.FC = () => {
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
       depositForm.resetFields();
       setDepositAmount(null);
-      // 刷新余额
+      setDirectBurn(false);
+      // Refresh balances
       refreshBalances();
     } catch (error: any) {
       message.destroy();
@@ -1110,6 +1188,51 @@ const ZWToken: React.FC = () => {
                 )}
 
                 <Form.Item>
+                  <Checkbox
+                    checked={directBurn}
+                    onChange={(e) => {
+                      setDirectBurn(e.target.checked);
+                      if (!e.target.checked) {
+                        depositForm.setFieldsValue({ targetAddress: undefined });
+                      }
+                    }}
+                  >
+                    Directly Burn (Deposit to provably burnable address)
+                  </Checkbox>
+                </Form.Item>
+
+                {directBurn && (
+                  <Form.Item
+                    label="Target Address"
+                    name="targetAddress"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Please enter or generate Target Address',
+                      },
+                      {
+                        pattern: /^0x[a-fA-F0-9]{40}$/,
+                        message: 'Please enter a valid Ethereum address',
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="Enter address or click button to generate Privacy Address"
+                      maxLength={42}
+                      addonAfter={
+                        <Button
+                          type="link"
+                          onClick={handleDepositBurnClick}
+                          style={{ padding: 0, height: 'auto' }}
+                        >
+                          Generate By Seed
+                        </Button>
+                      }
+                    />
+                  </Form.Item>
+                )}
+
+                <Form.Item>
                   <Space>
                     <Button type="primary" htmlType="submit" loading={loading}>
                       {needsApproval
@@ -1120,6 +1243,7 @@ const ZWToken: React.FC = () => {
                       onClick={() => {
                         depositForm.resetFields();
                         setDepositAmount(null);
+                        setDirectBurn(false);
                       }}
                     >
                       {intl.formatMessage({ id: 'pages.zwtoken.deposit.reset' })}
@@ -1133,6 +1257,11 @@ const ZWToken: React.FC = () => {
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.1' })}</p>
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.2' })}</p>
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.3' })}</p>
+                {directBurn && (
+                  <p style={{ color: '#faad14', fontWeight: 'bold' }}>
+                    Note: When Directly Burn is enabled, tokens will be deposited to the specified Privacy Address. Only the holder of the corresponding Secret can Claim them.
+                  </p>
+                )}
               </div>
             </div>
           </TabPane>
@@ -1379,7 +1508,203 @@ const ZWToken: React.FC = () => {
         </Card>
       )}
 
-      {/* Secret Modal - 生成Privacy Address */}
+      {/* Deposit Directly Burn Secret Modal - Generate Privacy Address */}
+      <Modal
+        title="Generate Privacy Address (Deposit Directly Burn)"
+        open={depositSecretModalVisible}
+        onOk={handleDepositSecretConfirm}
+        onCancel={() => {
+          setDepositSecretModalVisible(false);
+          depositSecretForm.resetFields();
+          setSeed('');
+          setDepositSecretList([]);
+        }}
+        okText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.ok' })}
+        cancelText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.cancel' })}
+        width={900}
+      >
+        <Form form={depositSecretForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item
+            label={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.secret' })}
+            name="secret"
+            rules={[
+              {
+                required: true,
+                message: intl.formatMessage({
+                  id: 'pages.zwtoken.transfer.secretModal.secret.required',
+                }),
+              },
+              {
+                pattern: /^\d+$/,
+                message: intl.formatMessage({
+                  id: 'pages.zwtoken.transfer.secretModal.secret.invalid',
+                }),
+              },
+            ]}
+          >
+            <Input
+              placeholder={intl.formatMessage({
+                id: 'pages.zwtoken.transfer.secretModal.secret.placeholder',
+              })}
+              addonAfter={
+                <Button
+                  type="link"
+                  onClick={handleGenerateBySeed}
+                  loading={loading}
+                  style={{ padding: 0, height: 'auto' }}
+                >
+                  {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.generateBySeed' })}
+                </Button>
+              }
+            />
+          </Form.Item>
+          <p style={{ color: '#666', fontSize: '12px' }}>
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.tip' })}
+          </p>
+        </Form>
+
+        {/* 显示SecretBySeed列表 */}
+        {depositSecretList.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <h4>
+              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.title' })}
+            </h4>
+            <Table
+              dataSource={depositSecretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 300, x: 'max-content' }}
+              columns={[
+                {
+                  title: intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.seedList.index',
+                  }),
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.seedList.secret',
+                  }),
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 300,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+                      {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                    </span>
+                  ),
+                },
+                {
+                  title: intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.seedList.amount',
+                  }),
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 150,
+                  align: 'right',
+                  render: (amount: string, record) => {
+                    if (record.loading) {
+                      return (
+                        <span style={{ color: '#999' }}>
+                          {intl.formatMessage({
+                            id: 'pages.zwtoken.transfer.secretModal.seedList.checking',
+                          })}
+                        </span>
+                      );
+                    }
+                    if (amount === 'Query failed') {
+                      return (
+                        <span style={{ color: '#ff4d4f' }}>
+                          {intl.formatMessage({
+                            id: 'pages.zwtoken.transfer.secretModal.seedList.failed',
+                          })}
+                        </span>
+                      );
+                    }
+                    const amountNum = parseFloat(amount);
+                    if (amountNum > 0) {
+                      return (
+                        <span style={{ color: '#faad14', fontWeight: 'bold' }}>
+                          {parseFloat(amount).toFixed(6)} ZWUSDC
+                        </span>
+                      );
+                    }
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        0 ZWUSDC (
+                        {intl.formatMessage({
+                          id: 'pages.zwtoken.transfer.secretModal.seedList.available',
+                        })}
+                        )
+                      </span>
+                    );
+                  },
+                },
+                {
+                  title: 'IsClaimed',
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
+                  width: 100,
+                  align: 'center',
+                  render: (isClaimed: boolean, record) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>Claimed</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>Available</span>;
+                  },
+                },
+                {
+                  title: intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.seedList.action',
+                  }),
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => {
+                    const amountNum = parseFloat(record.amount);
+                    const hasAmount =
+                      !record.loading && record.amount !== 'Query failed' && amountNum > 0;
+                    return (
+                      <Button
+                        type={hasAmount ? 'default' : 'primary'}
+                        size="small"
+                        onClick={() => handleSelectDepositSecret(record.secret)}
+                        disabled={record.loading || hasAmount}
+                        title={
+                          hasAmount
+                            ? intl.formatMessage({
+                                id: 'pages.zwtoken.transfer.secretModal.seedList.hasAmount',
+                              })
+                            : intl.formatMessage({
+                                id: 'pages.zwtoken.transfer.secretModal.seedList.select',
+                              })
+                        }
+                      >
+                        {intl.formatMessage({
+                          id: 'pages.zwtoken.transfer.secretModal.seedList.select',
+                        })}
+                      </Button>
+                    );
+                  },
+                },
+              ]}
+            />
+            <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.tip' })}
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Secret Modal - Generate Privacy Address (Transfer) */}
       <Modal
         title={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.title' })}
         open={secretModalVisible}
@@ -1488,7 +1813,7 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
-                    if (amount === '查询失败') {
+                    if (amount === 'Query failed') {
                       return (
                         <span style={{ color: '#ff4d4f' }}>
                           {intl.formatMessage({
@@ -1542,7 +1867,7 @@ const ZWToken: React.FC = () => {
                   render: (_, record) => {
                     const amountNum = parseFloat(record.amount);
                     const hasAmount =
-                      !record.loading && record.amount !== '查询失败' && amountNum > 0;
+                      !record.loading && record.amount !== 'Query failed' && amountNum > 0;
                     return (
                       <Button
                         type={hasAmount ? 'default' : 'primary'}
@@ -1636,7 +1961,7 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
-                    if (amount === '查询失败') {
+                    if (amount === 'Query failed') {
                       return (
                         <span style={{ color: '#ff4d4f' }}>
                           {intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.failed' })}
