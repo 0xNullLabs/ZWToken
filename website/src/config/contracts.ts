@@ -37,6 +37,7 @@ export const CONTRACT_ABIS = {
     'function remint(bytes calldata proof, bytes32 commitment, bytes32 nullifier, address to, uint256 id, uint256 amount, bool withdrawUnderlying, uint256 relayerFee) external',
     'function transfer(address to, uint256 amount) external returns (bool)',
     'function balanceOf(address account) external view returns (uint256)',
+    'function root() external view returns (bytes32)',
     'function getCommitLeafCount(uint256 id) external view returns (uint256)',
     'function getCommitLeaves(uint256 id, uint256 startIndex, uint256 length) external view returns (bytes32[] memory commitHashes, address[] memory recipients, uint256[] memory amounts)',
     'function getLatestCommitment(uint256 id) external view returns (bytes32)',

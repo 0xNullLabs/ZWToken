@@ -858,8 +858,8 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Claim操作
-  const handleClaim = async (values: any) => {
+  // Remint操作
+  const handleRemint = async (values: any) => {
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
       return;
@@ -947,15 +947,15 @@ const ZWToken: React.FC = () => {
       console.log(`Found commitment at index ${userCommitment.index}`);
       console.log(`First amount: ${ethers.formatUnits(userCommitment.amount, tokenDecimals)}`);
 
-      // 验证 claim amount 不超过 first amount
-      const claimAmount = ethers.parseUnits(values.claimAmount.toString(), tokenDecimals);
+      // 验证 remint amount 不超过 first amount
+      const remintAmount = ethers.parseUnits(values.remintAmount.toString(), tokenDecimals);
       console.log(
-        `Claim amount: ${
-          values.claimAmount
-        } tokens = ${claimAmount.toString()} units (${tokenDecimals} decimals)`,
+        `Remint amount: ${
+          values.remintAmount
+        } tokens = ${remintAmount.toString()} units (${tokenDecimals} decimals)`,
       );
 
-      if (claimAmount > userCommitment.amount) {
+      if (remintAmount > userCommitment.amount) {
         message.destroy();
         message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.amountExceeded' }));
         return;
@@ -970,11 +970,17 @@ const ZWToken: React.FC = () => {
       console.log(`Merkle proof generated (${merkleProof.pathElements.length} elements)`);
 
       // === 步骤 5: 准备电路输入 ===
+      const withdrawUnderlying = values.withdrawUnderlying || false;
+      const relayerFee = values.relayerFee || 0;
+      
       const circuitInput = prepareCircuitInput({
         root: tree.root,
         nullifier,
         recipient: values.recipient,
-        remintAmount: BigInt(claimAmount),
+        remintAmount: remintAmount, // Already BigInt
+        id: 0n,
+        withdrawUnderlying: withdrawUnderlying,
+        relayerFee: BigInt(relayerFee), // 转换为 BigInt
         secret,
         addr20,
         commitAmount: userCommitment.amount,
@@ -993,8 +999,8 @@ const ZWToken: React.FC = () => {
         // 生成真实的 ZK proof
         const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
           circuitInput,
-          '/circuits/claim_first_receipt.wasm',
-          '/circuits/claim_first_receipt_final.zkey',
+          '/circuits/remint.wasm',
+          '/circuits/remint_final.zkey',
         );
 
         console.log('✅ ZK proof generated!');
@@ -1012,19 +1018,27 @@ const ZWToken: React.FC = () => {
 
         console.log('✅ Proof formatted for Solidity');
 
-        // === 步骤 7: 提交 claim 交易 ===
+        // Encode proof bytes
+        const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+        const proofBytes = abiCoder.encode(
+          ['uint256[2]', 'uint256[2][2]', 'uint256[2]'],
+          [solidityProof.a, solidityProof.b, solidityProof.c]
+        );
+
+        // === 步骤 7: 提交 remint 交易 ===
         message.destroy();
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.submitting' }), 0);
-        console.log('Step 7: Submitting claim transaction...');
+        console.log('Step 7: Submitting remint transaction...');
 
-        const tx = await contract.claim(
-          solidityProof.a,
-          solidityProof.b,
-          solidityProof.c,
+        const tx = await contract.remint(
+          proofBytes,
           localRoot,
           nullifierHex,
           values.recipient,
-          claimAmount,
+          0, // id (ERC-20 固定为 0)
+          remintAmount, // BigInt from parseUnits
+          withdrawUnderlying, // boolean
+          relayerFee // relayerFee 已经是 number 类型
         );
 
         console.log('Transaction submitted, waiting for confirmation...');
@@ -1032,21 +1046,21 @@ const ZWToken: React.FC = () => {
 
         message.destroy();
         message.success(intl.formatMessage({ id: 'pages.zwtoken.claim.success' }));
-        console.log(`✅ Claim succeeded! Gas used: ${receipt.gasUsed}`);
+        console.log(`✅ Remint succeeded! Gas used: ${receipt.gasUsed}`);
 
         claimForm.resetFields();
         // 刷新余额
         refreshBalances();
       } catch (proofError: any) {
         message.destroy();
-        console.error('ZK proof generation or claim error:', proofError);
+        console.error('ZK proof generation or remint error:', proofError);
         message.error(
           `${intl.formatMessage({ id: 'pages.zwtoken.claim.failed' })}: ${proofError.message}`,
         );
       }
     } catch (error: any) {
       message.destroy();
-      console.error('Claim error:', error);
+      console.error('Remint error:', error);
       message.error(
         `${intl.formatMessage({ id: 'pages.zwtoken.claim.failed' })}: ${error.message}`,
       );
@@ -1444,7 +1458,7 @@ const ZWToken: React.FC = () => {
 
           <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.claim' })} key="claim">
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-              <Form form={claimForm} layout="vertical" onFinish={handleClaim}>
+              <Form form={claimForm} layout="vertical" onFinish={handleRemint}>
                 <Form.Item
                   label={intl.formatMessage({ id: 'pages.zwtoken.claim.secret' })}
                   name="secret"
@@ -1494,8 +1508,8 @@ const ZWToken: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.claim.amount' })}
-                  name="claimAmount"
+                  label="Remint Amount"
+                  name="remintAmount"
                   rules={[
                     {
                       required: true,
@@ -1518,6 +1532,36 @@ const ZWToken: React.FC = () => {
                   />
                 </Form.Item>
 
+                <Form.Item
+                  label="Relayer Fee (basis points)"
+                  name="relayerFee"
+                  initialValue={0}
+                  rules={[
+                    {
+                      type: 'number',
+                      min: 0,
+                      message: 'Relayer fee must be greater than or equal to 0',
+                    },
+                  ]}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    placeholder="Enter relayer fee (default: 0)"
+                    precision={0}
+                    min={0}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="withdrawUnderlying"
+                  valuePropName="checked"
+                  initialValue={false}
+                >
+                  <Checkbox>
+                    Withdraw Underlying (withdraw underlying token instead of minting ZWERC20)
+                  </Checkbox>
+                </Form.Item>
+
                 <Form.Item>
                   <Space>
                     <Button type="primary" htmlType="submit" loading={loading}>
@@ -1536,6 +1580,11 @@ const ZWToken: React.FC = () => {
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.tip.2' })}</p>
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.tip.3' })}</p>
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.tip.4' })}</p>
+                <p style={{ color: '#1890ff', marginTop: 12 }}>
+                  <strong>Remint Parameters:</strong><br />
+                  - Relayer Fee: Fee paid to the transaction relayer (in basis points, 10000 = 100%)<br />
+                  - Withdraw Underlying: If checked, directly withdraw underlying token; otherwise mint ZWERC20
+                </p>
               </div>
             </div>
           </TabPane>

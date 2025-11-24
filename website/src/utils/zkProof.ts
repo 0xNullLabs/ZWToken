@@ -205,7 +205,7 @@ export async function rebuildMerkleTree(
   }
 
   // 分批获取所有 leafs
-  const leaves = await getCommitLeavesInBatches(contract, 0, leafCount, 100);
+  const leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
   console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
 
   // 重建 Merkle tree（传入 poseidon 实例）
@@ -234,7 +234,7 @@ export async function findUserCommitment(
   }
 
   // 分批获取所有 leafs
-  const leaves = await getCommitLeavesInBatches(contract, 0, leafCount, 100);
+  const leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
 
   for (let i = 0; i < leaves.length; i++) {
     const leaf = leaves[i];
