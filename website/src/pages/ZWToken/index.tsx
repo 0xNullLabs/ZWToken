@@ -287,9 +287,11 @@ const ZWToken: React.FC = () => {
     try {
       const poseidon = await buildPoseidon();
       const secretBigInt = BigInt(secret);
+      const tokenId = 0n; // ERC-20 固定为 0
 
-      // 参考 e2e.test.js 中的逻辑
-      const addrScalar = poseidon.F.toString(poseidon([secretBigInt]));
+      // 参考 e2e.test.js 和 zkProof.ts 中的逻辑
+      // addrScalar = Poseidon(8065, tokenId, secret)
+      const addrScalar = poseidon.F.toString(poseidon([8065n, tokenId, secretBigInt]));
       const addr20 = BigInt(addrScalar) & ((1n << 160n) - 1n);
       const privacyAddress = ethers.getAddress('0x' + addr20.toString(16).padStart(40, '0'));
 
@@ -393,7 +395,7 @@ const ZWToken: React.FC = () => {
       if (depositSecretModalVisible) {
         setDepositSecretList(secrets);
       } else {
-      setSecretList(secrets);
+        setSecretList(secrets);
       }
       message.success('Seed generated successfully! Querying amounts and status...');
 
@@ -420,7 +422,7 @@ const ZWToken: React.FC = () => {
           const secret = secrets[i].secret;
           const { privacyAddress, nullifier } = await deriveFromSecret(secret);
 
-          // 在leaves中查找匹配的privacy address
+          // Find matching privacy address in leaves to get first receipt amount
           let foundAmount = '0';
           for (const leaf of leaves) {
             if (leaf.to.toLowerCase() === privacyAddress.toLowerCase()) {
@@ -429,16 +431,32 @@ const ZWToken: React.FC = () => {
             }
           }
 
-          // 检查 nullifier 是否已使用
-          const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-          const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+          // Check if this address has ever received tokens
+          const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
+          
+          let isClaimed = false;
+          
+          if (hasFirstReceipt) {
+            // Address has received tokens before, check if claimed
+            const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+            const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+            
+            // Check current balance of privacy address
+            const currentBalance = await contract.balanceOf(privacyAddress);
+            
+            // Claimed if nullifier used OR balance is 0
+            isClaimed = isNullifierUsed || currentBalance === 0n;
+          } else {
+            // Address has never received tokens, so it's available (not claimed)
+            isClaimed = false;
+          }
 
           // Update the corresponding list based on which modal is open
           if (depositSecretModalVisible) {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed }
+                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
                   : item,
               ),
             );
@@ -446,13 +464,13 @@ const ZWToken: React.FC = () => {
           setSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed }
+                ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
                 : item,
             ),
           );
           }
         } catch (error) {
-          console.error(`Failed to query Secret ${i + 1} amount:`, error);
+          console.error(`Failed to query Secret ${i + 1}:`, error);
           if (depositSecretModalVisible) {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
@@ -555,7 +573,7 @@ const ZWToken: React.FC = () => {
           const secret = secrets[i].secret;
           const { privacyAddress, nullifier } = await deriveFromSecret(secret);
 
-          // 在leaves中查找匹配的privacy address
+          // Find matching privacy address in leaves to get first receipt amount
           let foundAmount = '0';
           for (const leaf of leaves) {
             if (leaf.to.toLowerCase() === privacyAddress.toLowerCase()) {
@@ -564,15 +582,31 @@ const ZWToken: React.FC = () => {
             }
           }
 
-          // 检查 nullifier 是否已使用
-          const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-          const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+          // Check if this address has ever received tokens
+          const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
+          
+          let isClaimed = false;
+          
+          if (hasFirstReceipt) {
+            // Address has received tokens before, check if claimed
+            const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+            const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+            
+            // Check current balance of privacy address
+            const currentBalance = await contract.balanceOf(privacyAddress);
+            
+            // Claimed if nullifier used OR balance is 0
+            isClaimed = isNullifierUsed || currentBalance === 0n;
+          } else {
+            // Address has never received tokens, so it's available (not claimed)
+            isClaimed = false;
+          }
 
-          // 更新状态
+          // Update state
           setClaimSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: foundAmount, loading: false, isClaimed: isNullifierUsed }
+                ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
                 : item,
             ),
           );
@@ -862,12 +896,20 @@ const ZWToken: React.FC = () => {
       console.log(`Privacy address: ${privacyAddress}`);
       console.log(`Nullifier: 0x${nullifier.toString(16)}`);
 
-      // 检查 nullifier 是否已使用
+      // Check if nullifier is already used
       const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
       const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
       if (isNullifierUsed) {
         hideLoading();
         message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.nullifierUsed' }));
+        return;
+      }
+
+      // Check if privacy address still has balance
+      const currentBalance = await contract.balanceOf(privacyAddress);
+      if (currentBalance === 0n) {
+        hideLoading();
+        message.error('Privacy Address has zero balance. Tokens may have been transferred already.');
         return;
       }
 
@@ -932,10 +974,10 @@ const ZWToken: React.FC = () => {
         root: tree.root,
         nullifier,
         recipient: values.recipient,
-        claimAmount: BigInt(claimAmount),
+        remintAmount: BigInt(claimAmount),
         secret,
         addr20,
-        firstAmount: userCommitment.amount,
+        commitAmount: userCommitment.amount,
         q,
         merkleProof,
       });
@@ -1634,6 +1676,10 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
+                    // Show different message based on isClaimed status
+                    if (record.isClaimed) {
+                      return <span style={{ color: '#999' }}>0 ZWUSDC (Claimed)</span>;
+                    }
                     return (
                       <span style={{ color: '#52c41a' }}>
                         0 ZWUSDC (
@@ -1830,6 +1876,10 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
+                    // Show different message based on isClaimed status
+                    if (record.isClaimed) {
+                      return <span style={{ color: '#999' }}>0 ZWUSDC (Claimed)</span>;
+                    }
                     return (
                       <span style={{ color: '#52c41a' }}>
                         0 ZWUSDC (
@@ -1976,7 +2026,11 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
-                    return <span style={{ color: '#999' }}>0 ZWUSDC</span>;
+                    // Show different message based on isClaimed status
+                    if (record.isClaimed) {
+                      return <span style={{ color: '#999' }}>0 ZWUSDC (Claimed)</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC (Available)</span>;
                   },
                 },
                 {
