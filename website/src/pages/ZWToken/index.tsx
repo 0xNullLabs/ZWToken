@@ -27,7 +27,7 @@ const ZWToken: React.FC = () => {
   const [depositForm] = Form.useForm();
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
-  const [claimForm] = Form.useForm();
+  const [remintForm] = Form.useForm();
   const [secretForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [secretModalVisible, setSecretModalVisible] = useState(false);
@@ -41,8 +41,8 @@ const ZWToken: React.FC = () => {
   const [secretList, setSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
-  const [claimSeedModalVisible, setClaimSeedModalVisible] = useState(false);
-  const [claimSecretList, setClaimSecretList] = useState<
+  const [remintSeedModalVisible, setRemintSeedModalVisible] = useState(false);
+  const [remintSecretList, setRemintSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   
@@ -503,15 +503,15 @@ const ZWToken: React.FC = () => {
   };
 
   // Click button to open modal and generate Seed immediately
-  const handleClaimGenerateBySeedClick = async () => {
+  const handleRemintGenerateBySeedClick = async () => {
     if (!wallet || !account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
       return;
     }
 
     // 先打开模态框
-    setClaimSeedModalVisible(true);
-    setClaimSecretList([]);
+    setRemintSeedModalVisible(true);
+    setRemintSecretList([]);
 
     try {
       setLoading(true);
@@ -547,7 +547,7 @@ const ZWToken: React.FC = () => {
         });
       }
 
-      setClaimSecretList(secrets);
+      setRemintSecretList(secrets);
       message.success('Seed 生成成功！正在查询金额和状态...');
 
       // 异步查询每个Secret对应的金额
@@ -603,7 +603,7 @@ const ZWToken: React.FC = () => {
           }
 
           // Update state
-          setClaimSecretList((prev) =>
+          setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
                 ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
@@ -612,7 +612,7 @@ const ZWToken: React.FC = () => {
           );
         } catch (error) {
           console.error(`Failed to query Secret ${i + 1} amount:`, error);
-          setClaimSecretList((prev) =>
+          setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
             ),
@@ -625,16 +625,16 @@ const ZWToken: React.FC = () => {
       console.error('生成Seed失败:', error);
       message.error(`生成Seed失败: ${error.message}`);
       // 如果失败，关闭模态框
-      setClaimSeedModalVisible(false);
+      setRemintSeedModalVisible(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // Select SecretBySeed for Claim page
-  const handleSelectClaimSecret = (secret: string) => {
-    claimForm.setFieldsValue({ secret });
-    setClaimSeedModalVisible(false);
+  // Select SecretBySeed for Remint page
+  const handleSelectRemintSecret = (secret: string) => {
+    remintForm.setFieldsValue({ secret });
+    setRemintSeedModalVisible(false);
     message.success('Secret selected');
   };
 
@@ -867,7 +867,7 @@ const ZWToken: React.FC = () => {
 
     setLoading(true);
     const hideLoading = message.loading(
-      intl.formatMessage({ id: 'pages.zwtoken.claim.preparing' }),
+      intl.formatMessage({ id: 'pages.zwtoken.remint.preparing' }),
       0,
     );
 
@@ -901,7 +901,7 @@ const ZWToken: React.FC = () => {
       const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
       if (isNullifierUsed) {
         hideLoading();
-        message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.nullifierUsed' }));
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.remint.nullifierUsed' }));
         return;
       }
 
@@ -915,7 +915,7 @@ const ZWToken: React.FC = () => {
 
       // === 步骤 2: 从链上重建 Merkle tree ===
       hideLoading();
-      message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.rebuildingTree' }), 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.rebuildingTree' }), 0);
       console.log('Step 2: Rebuilding Merkle tree from chain...');
 
       const poseidon = await buildPoseidon();
@@ -928,19 +928,19 @@ const ZWToken: React.FC = () => {
 
       if (localRoot !== onchainRoot) {
         message.destroy();
-        message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.rootMismatch' }));
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.remint.rootMismatch' }));
         return;
       }
 
       // === 步骤 3: 查找用户的 commitment ===
       message.destroy();
-      message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.findingCommitment' }), 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.findingCommitment' }), 0);
       console.log('Step 3: Finding user commitment...');
 
       const userCommitment = await findUserCommitment(contract, privacyAddress, poseidon);
       if (!userCommitment) {
         message.destroy();
-        message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.commitmentNotFound' }));
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.remint.commitmentNotFound' }));
         return;
       }
 
@@ -957,13 +957,13 @@ const ZWToken: React.FC = () => {
 
       if (remintAmount > userCommitment.amount) {
         message.destroy();
-        message.error(intl.formatMessage({ id: 'pages.zwtoken.claim.amountExceeded' }));
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.remint.amountExceeded' }));
         return;
       }
 
       // === 步骤 4: 生成 Merkle proof ===
       message.destroy();
-      message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.generatingProof' }), 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.generatingProof' }), 0);
       console.log('Step 4: Generating Merkle proof...');
 
       const merkleProof = tree.getProof(userCommitment.index);
@@ -992,7 +992,7 @@ const ZWToken: React.FC = () => {
 
       // === 步骤 6: 生成 ZK proof ===
       message.destroy();
-      message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.generatingZKProof' }), 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.generatingZKProof' }), 0);
       console.log('Step 6: Generating ZK proof (this may take 10-30 seconds)...');
 
       try {
@@ -1027,7 +1027,7 @@ const ZWToken: React.FC = () => {
 
         // === 步骤 7: 提交 remint 交易 ===
         message.destroy();
-        message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.submitting' }), 0);
+        message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.submitting' }), 0);
         console.log('Step 7: Submitting remint transaction...');
 
         const tx = await contract.remint(
@@ -1045,24 +1045,24 @@ const ZWToken: React.FC = () => {
         const receipt = await tx.wait();
 
         message.destroy();
-        message.success(intl.formatMessage({ id: 'pages.zwtoken.claim.success' }));
+        message.success(intl.formatMessage({ id: 'pages.zwtoken.remint.success' }));
         console.log(`✅ Remint succeeded! Gas used: ${receipt.gasUsed}`);
 
-        claimForm.resetFields();
+        remintForm.resetFields();
         // 刷新余额
         refreshBalances();
       } catch (proofError: any) {
         message.destroy();
         console.error('ZK proof generation or remint error:', proofError);
         message.error(
-          `${intl.formatMessage({ id: 'pages.zwtoken.claim.failed' })}: ${proofError.message}`,
+          `${intl.formatMessage({ id: 'pages.zwtoken.remint.failed' })}: ${proofError.message}`,
         );
       }
     } catch (error: any) {
       message.destroy();
       console.error('Remint error:', error);
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.claim.failed' })}: ${error.message}`,
+        `${intl.formatMessage({ id: 'pages.zwtoken.remint.failed' })}: ${error.message}`,
       );
     } finally {
       setLoading(false);
@@ -1315,7 +1315,7 @@ const ZWToken: React.FC = () => {
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.3' })}</p>
                 {directBurn && (
                   <p style={{ color: '#faad14', fontWeight: 'bold' }}>
-                    Note: When Directly Burn is enabled, tokens will be deposited to the specified Privacy Address. Only the holder of the corresponding Secret can Claim them.
+                    Note: When Directly Burn is enabled, tokens will be deposited to the specified Privacy Address. Only the holder of the corresponding Secret can Remint them.
                   </p>
                 )}
               </div>
@@ -1456,52 +1456,52 @@ const ZWToken: React.FC = () => {
             </div>
           </TabPane>
 
-          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.claim' })} key="claim">
+          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.remint' })} key="remint">
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-              <Form form={claimForm} layout="vertical" onFinish={handleRemint}>
+              <Form form={remintForm} layout="vertical" onFinish={handleRemint}>
                 <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.claim.secret' })}
+                  label={intl.formatMessage({ id: 'pages.zwtoken.remint.secret' })}
                   name="secret"
                   rules={[
                     {
                       required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.claim.secret.required' }),
+                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.secret.required' }),
                     },
                   ]}
                 >
                   <Input.Password
                     placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.claim.secret.placeholder',
+                      id: 'pages.zwtoken.remint.secret.placeholder',
                     })}
                     addonAfter={
                       <Button
                         type="link"
-                        onClick={handleClaimGenerateBySeedClick}
+                        onClick={handleRemintGenerateBySeedClick}
                         style={{ padding: 0, height: 'auto' }}
                       >
-                        {intl.formatMessage({ id: 'pages.zwtoken.claim.generateBySeed' })}
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.generateBySeed' })}
                       </Button>
                     }
                   />
                 </Form.Item>
 
                 <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.claim.recipient' })}
+                  label={intl.formatMessage({ id: 'pages.zwtoken.remint.recipient' })}
                   name="recipient"
                   rules={[
                     {
                       required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.claim.recipient.required' }),
+                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.recipient.required' }),
                     },
                     {
                       pattern: /^0x[a-fA-F0-9]{40}$/,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.claim.recipient.invalid' }),
+                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.recipient.invalid' }),
                     },
                   ]}
                 >
                   <Input
                     placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.claim.recipient.placeholder',
+                      id: 'pages.zwtoken.remint.recipient.placeholder',
                     })}
                     maxLength={42}
                   />
@@ -1513,19 +1513,19 @@ const ZWToken: React.FC = () => {
                   rules={[
                     {
                       required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.claim.amount.required' }),
+                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.amount.required' }),
                     },
                     {
                       type: 'number',
                       min: 0.000001,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.claim.amount.min' }),
+                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.amount.min' }),
                     },
                   ]}
                 >
                   <InputNumber
                     style={{ width: '100%' }}
                     placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.claim.amount.placeholder',
+                      id: 'pages.zwtoken.remint.amount.placeholder',
                     })}
                     precision={6}
                     min={0}
@@ -1533,23 +1533,11 @@ const ZWToken: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item
-                  label="Relayer Fee (basis points)"
                   name="relayerFee"
                   initialValue={0}
-                  rules={[
-                    {
-                      type: 'number',
-                      min: 0,
-                      message: 'Relayer fee must be greater than or equal to 0',
-                    },
-                  ]}
+                  hidden
                 >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder="Enter relayer fee (default: 0)"
-                    precision={0}
-                    min={0}
-                  />
+                  <InputNumber />
                 </Form.Item>
 
                 <Form.Item
@@ -1565,24 +1553,23 @@ const ZWToken: React.FC = () => {
                 <Form.Item>
                   <Space>
                     <Button type="primary" htmlType="submit" loading={loading}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.claim.button' })}
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
                     </Button>
-                    <Button onClick={() => claimForm.resetFields()}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.claim.reset' })}
+                    <Button onClick={() => remintForm.resetFields()}>
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.reset' })}
                     </Button>
                   </Space>
                 </Form.Item>
               </Form>
 
               <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                <h4>{intl.formatMessage({ id: 'pages.zwtoken.claim.tip.title' })}</h4>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.tip.1' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.tip.2' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.tip.3' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.tip.4' })}</p>
+                <h4>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.title' })}</h4>
+                <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.1' })}</p>
+                <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.2' })}</p>
+                <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.3' })}</p>
+                <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.4' })}</p>
                 <p style={{ color: '#1890ff', marginTop: 12 }}>
                   <strong>Remint Parameters:</strong><br />
-                  - Relayer Fee: Fee paid to the transaction relayer (in basis points, 10000 = 100%)<br />
                   - Withdraw Underlying: If checked, directly withdraw underlying token; otherwise mint ZWERC20
                 </p>
               </div>
@@ -1999,43 +1986,43 @@ const ZWToken: React.FC = () => {
         )}
       </Modal>
 
-      {/* Claim页面的Seed生成Modal */}
+      {/* Remint页面的Seed生成Modal */}
       <Modal
-        title={intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.title' })}
-        open={claimSeedModalVisible}
+        title={intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.title' })}
+        open={remintSeedModalVisible}
         onCancel={() => {
-          setClaimSeedModalVisible(false);
-          setClaimSecretList([]);
+          setRemintSeedModalVisible(false);
+          setRemintSecretList([]);
         }}
         footer={[
-          <Button key="close" onClick={() => setClaimSeedModalVisible(false)}>
-            {intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.close' })}
+          <Button key="close" onClick={() => setRemintSeedModalVisible(false)}>
+            {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.close' })}
           </Button>,
         ]}
         width={1000}
       >
-        {claimSecretList.length === 0 ? (
+        {remintSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>{intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.waiting' })}</p>
+            <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.waiting' })}</p>
           </div>
         ) : (
           <div>
             <Table
-              dataSource={claimSecretList}
+              dataSource={remintSecretList}
               rowKey="index"
               pagination={false}
               size="small"
               scroll={{ y: 400, x: 'max-content' }}
               columns={[
                 {
-                  title: intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.index' }),
+                  title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.index' }),
                   dataIndex: 'index',
                   key: 'index',
                   width: 80,
                   align: 'center',
                 },
                 {
-                  title: intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.secret' }),
+                  title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
                   width: 300,
@@ -2047,7 +2034,7 @@ const ZWToken: React.FC = () => {
                   ),
                 },
                 {
-                  title: intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.amount' }),
+                  title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.amount' }),
                   dataIndex: 'amount',
                   key: 'amount',
                   width: 150,
@@ -2056,14 +2043,14 @@ const ZWToken: React.FC = () => {
                     if (record.loading) {
                       return (
                         <span style={{ color: '#999' }}>
-                          {intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.checking' })}
+                          {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.checking' })}
                         </span>
                       );
                     }
                     if (amount === 'Query failed') {
                       return (
                         <span style={{ color: '#ff4d4f' }}>
-                          {intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.failed' })}
+                          {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.failed' })}
                         </span>
                       );
                     }
@@ -2077,13 +2064,13 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC (Claimed)</span>;
+                      return <span style={{ color: '#999' }}>0 ZWUSDC (Reminted)</span>;
                     }
                     return <span style={{ color: '#52c41a' }}>0 ZWUSDC (Available)</span>;
                   },
                 },
                 {
-                  title: 'IsClaimed',
+                  title: 'IsReminted',
                   dataIndex: 'isClaimed',
                   key: 'isClaimed',
                   width: 100,
@@ -2093,13 +2080,13 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>Claimed</span>;
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>Reminted</span>;
                     }
                     return <span style={{ color: '#52c41a' }}>Available</span>;
                   },
                 },
                 {
-                  title: intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.action' }),
+                  title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.action' }),
                   key: 'action',
                   width: 100,
                   align: 'center',
@@ -2107,10 +2094,10 @@ const ZWToken: React.FC = () => {
                     <Button
                       type="primary"
                       size="small"
-                      onClick={() => handleSelectClaimSecret(record.secret)}
+                      onClick={() => handleSelectRemintSecret(record.secret)}
                       disabled={record.loading}
                     >
-                      {intl.formatMessage({ id: 'pages.zwtoken.claim.seedModal.select' })}
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.select' })}
                     </Button>
                   ),
                 },
