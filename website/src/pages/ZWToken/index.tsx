@@ -327,7 +327,7 @@ const ZWToken: React.FC = () => {
       // Set to Deposit form targetAddress field
       depositForm.setFieldsValue({ targetAddress: privacyAddress });
 
-      message.success('Privacy Address generated and filled');
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setDepositSecretModalVisible(false);
       depositSecretForm.resetFields();
     } catch (error: any) {
@@ -344,7 +344,7 @@ const ZWToken: React.FC = () => {
   // Select Secret for Deposit page
   const handleSelectDepositSecret = (secret: string) => {
     depositSecretForm.setFieldsValue({ secret });
-    message.success('Secret selected');
+    message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.secretSelected' }));
   };
 
   // Generate Seed through wallet signature
@@ -397,7 +397,7 @@ const ZWToken: React.FC = () => {
       } else {
         setSecretList(secrets);
       }
-      message.success('Seed generated successfully! Querying amounts and status...');
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
       // 异步查询每个Secret对应的金额
       const contract = new ethers.Contract(
@@ -487,7 +487,7 @@ const ZWToken: React.FC = () => {
         }
       }
 
-      message.success('Amount and status query completed!');
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.message.queryCompleted' }));
     } catch (error: any) {
       console.error('生成Seed失败:', error);
       message.error(`生成Seed失败: ${error.message}`);
@@ -499,7 +499,7 @@ const ZWToken: React.FC = () => {
   // Select a SecretBySeed
   const handleSelectSecret = (secret: string) => {
     secretForm.setFieldsValue({ secret });
-    message.success('Secret selected');
+    message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
   };
 
   // Click button to open modal and generate Seed immediately
@@ -548,7 +548,7 @@ const ZWToken: React.FC = () => {
       }
 
       setRemintSecretList(secrets);
-      message.success('Seed 生成成功！正在查询金额和状态...');
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
       // 异步查询每个Secret对应的金额
       const contract = new ethers.Contract(
@@ -620,7 +620,7 @@ const ZWToken: React.FC = () => {
         }
       }
 
-      message.success('金额和状态查询完成！');
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.message.queryCompleted' }));
     } catch (error: any) {
       console.error('生成Seed失败:', error);
       message.error(`生成Seed失败: ${error.message}`);
@@ -635,7 +635,7 @@ const ZWToken: React.FC = () => {
   const handleSelectRemintSecret = (secret: string) => {
     remintForm.setFieldsValue({ secret });
     setRemintSeedModalVisible(false);
-    message.success('Secret selected');
+    message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
   };
 
   // Handle Secret confirmation - Generate Privacy Address
@@ -676,7 +676,7 @@ const ZWToken: React.FC = () => {
 
     // If Directly Burn is enabled, check if targetAddress exists
     if (directBurn && !values.targetAddress) {
-      message.error('Please generate or enter Target Address first');
+      message.error(intl.formatMessage({ id: 'pages.zwtoken.error.targetAddressRequired' }));
       return;
     }
 
@@ -719,7 +719,7 @@ const ZWToken: React.FC = () => {
         );
         await approveTx.wait();
         message.destroy();
-        message.success('Approve 成功！现在可以 Deposit 了');
+        message.success(intl.formatMessage({ id: 'pages.zwtoken.message.approveSuccess' }));
         // 刷新余额和 allowance
         refreshBalances();
         setLoading(false);
@@ -909,7 +909,7 @@ const ZWToken: React.FC = () => {
       const currentBalance = await contract.balanceOf(privacyAddress);
       if (currentBalance === 0n) {
         hideLoading();
-        message.error('Privacy Address has zero balance. Tokens may have been transferred already.');
+        message.error(intl.formatMessage({ id: 'pages.zwtoken.message.privacyAddressZeroBalance' }));
         return;
       }
 
@@ -1253,27 +1253,31 @@ const ZWToken: React.FC = () => {
                       }
                     }}
                   >
-                    Directly Burn (Deposit to provably burnable address)
+                    {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurn' })}
                   </Checkbox>
                 </Form.Item>
 
                 {directBurn && (
                   <Form.Item
-                    label="Target Address"
+                    label={intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress' })}
                     name="targetAddress"
                     rules={[
                       {
                         required: true,
-                        message: 'Please enter or generate Target Address',
+                        message: intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress.required' }),
                       },
                       {
                         pattern: /^0x[a-fA-F0-9]{40}$/,
-                        message: 'Please enter a valid Ethereum address',
+                        message: intl.formatMessage({
+                          id: 'pages.zwtoken.transfer.targetAddress.invalid',
+                        }),
                       },
                     ]}
                   >
                     <Input
-                      placeholder="Enter address or click button to generate Privacy Address"
+                      placeholder={intl.formatMessage({
+                        id: 'pages.zwtoken.deposit.targetAddress.placeholder',
+                      })}
                       maxLength={42}
                       addonAfter={
                         <Button
@@ -1281,7 +1285,7 @@ const ZWToken: React.FC = () => {
                           onClick={handleDepositBurnClick}
                           style={{ padding: 0, height: 'auto' }}
                         >
-                          Generate By Seed
+                          {intl.formatMessage({ id: 'pages.zwtoken.deposit.generateBySeed' })}
                         </Button>
                       }
                     />
@@ -1315,7 +1319,7 @@ const ZWToken: React.FC = () => {
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.3' })}</p>
                 {directBurn && (
                   <p style={{ color: '#faad14', fontWeight: 'bold' }}>
-                    Note: When Directly Burn is enabled, tokens will be deposited to the specified Privacy Address. Only the holder of the corresponding Secret can Remint them.
+                    {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurnNote' })}
                   </p>
                 )}
               </div>
@@ -1508,7 +1512,7 @@ const ZWToken: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item
-                  label="Remint Amount"
+                  label={intl.formatMessage({ id: 'pages.zwtoken.remint.amount' })}
                   name="remintAmount"
                   rules={[
                     {
@@ -1546,7 +1550,7 @@ const ZWToken: React.FC = () => {
                   initialValue={false}
                 >
                   <Checkbox>
-                    Withdraw Underlying (withdraw underlying token instead of minting ZWERC20)
+                    {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlying' })}
                   </Checkbox>
                 </Form.Item>
 
@@ -1569,8 +1573,8 @@ const ZWToken: React.FC = () => {
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.3' })}</p>
                 <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.4' })}</p>
                 <p style={{ color: '#1890ff', marginTop: 12 }}>
-                  <strong>Remint Parameters:</strong><br />
-                  - Withdraw Underlying: If checked, directly withdraw underlying token; otherwise mint ZWERC20
+                  <strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.parameters' })}</strong><br />
+                  {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlyingDesc' })}
                 </p>
               </div>
             </div>
@@ -1588,7 +1592,7 @@ const ZWToken: React.FC = () => {
 
       {/* Deposit Directly Burn Secret Modal - Generate Privacy Address */}
       <Modal
-        title="Generate Privacy Address (Deposit Directly Burn)"
+        title={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.title' })}
         open={depositSecretModalVisible}
         onOk={handleDepositSecretConfirm}
         onCancel={() => {
@@ -1714,7 +1718,7 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC (Claimed)</span>;
+                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})</span>;
                     }
                     return (
                       <span style={{ color: '#52c41a' }}>
@@ -1728,7 +1732,7 @@ const ZWToken: React.FC = () => {
                   },
                 },
                 {
-                  title: 'IsClaimed',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.table.isClaimed' }),
                   dataIndex: 'isClaimed',
                   key: 'isClaimed',
                   width: 100,
@@ -1738,9 +1742,9 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>Claimed</span>;
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>Available</span>;
+                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
                   },
                 },
                 {
@@ -1914,7 +1918,7 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC (Claimed)</span>;
+                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})</span>;
                     }
                     return (
                       <span style={{ color: '#52c41a' }}>
@@ -1928,7 +1932,7 @@ const ZWToken: React.FC = () => {
                   },
                 },
                 {
-                  title: 'IsClaimed',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.table.isClaimed' }),
                   dataIndex: 'isClaimed',
                   key: 'isClaimed',
                   width: 100,
@@ -1938,9 +1942,9 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>Claimed</span>;
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>Available</span>;
+                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
                   },
                 },
                 {
@@ -2064,13 +2068,13 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC (Reminted)</span>;
+                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC (Available)</span>;
+                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.available' })})</span>;
                   },
                 },
                 {
-                  title: 'IsReminted',
+                  title: intl.formatMessage({ id: 'pages.zwtoken.table.isReminted' }),
                   dataIndex: 'isClaimed',
                   key: 'isClaimed',
                   width: 100,
@@ -2080,9 +2084,9 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>Reminted</span>;
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })}</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>Available</span>;
+                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
                   },
                 },
                 {
