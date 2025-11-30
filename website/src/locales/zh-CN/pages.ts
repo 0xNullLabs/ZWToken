@@ -127,6 +127,7 @@ export default {
   'pages.zwtoken.remint.amountExceeded': '重铸金额超过首次接收金额',
   'pages.zwtoken.remint.zkProofNeeded': '✅ 准备工作完成！需要集成snarkjs生成ZK proof才能完成重铸',
   'pages.zwtoken.remint.generateBySeed': '通过种子生成',
+  'pages.zwtoken.remint.selectSecretBySeed': '通过种子选择Secret',
   'pages.zwtoken.remint.seedModal.title': '通过 Seed 生成 Secret',
   'pages.zwtoken.remint.seedModal.waiting': '正在请求钱包签名...',
   'pages.zwtoken.remint.seedModal.close': '关闭',
@@ -181,6 +182,17 @@ export default {
   // Remint parameters
   'pages.zwtoken.remint.parameters': '重铸参数：',
   'pages.zwtoken.remint.withdrawUnderlyingDesc': '- 提取底层代币：如果勾选，直接提取底层代币；否则铸造ZWERC20',
+  
+  // Simple Mode Remint Tips
+  'pages.zwtoken.remint.simpleMode.tip.title': '💡 使用提示',
+  'pages.zwtoken.remint.simpleMode.tip.what': '什么是简易模式重铸？',
+  'pages.zwtoken.remint.simpleMode.tip.whatDesc': '简易模式重铸会使用您的 secret 重铸 ZW 代币，并自动将其解包为底层代币（USDC）。接收地址将直接收到 USDC。',
+  'pages.zwtoken.remint.simpleMode.tip.how': '如何使用：',
+  'pages.zwtoken.remint.simpleMode.tip.step1': '1. 输入您销毁代币时使用的 secret。这可以证明所有权而不会暴露您的身份。',
+  'pages.zwtoken.remint.simpleMode.tip.step2': '2. 接收地址（默认：您的当前钱包）将直接收到解包后的底层代币（USDC）。',
+  'pages.zwtoken.remint.simpleMode.tip.step3': '3. 您可以重铸不超过承诺中记录的首次接收金额的任何金额。',
+  'pages.zwtoken.remint.simpleMode.tip.note': '注意：',
+  'pages.zwtoken.remint.simpleMode.tip.noteDesc': '在简易模式下，"提取底层代币"选项自动启用，因此您将直接收到 USDC 而不是 ZWUSDC。这提供了无缝体验。',
 
   // Common
   'pages.zwtoken.error.connectWallet': '请先连接钱包',

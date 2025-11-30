@@ -1424,7 +1424,7 @@ const ZWToken: React.FC = () => {
                     <Form.Item>
                       <Space>
                         <Button type="primary" htmlType="submit" loading={loading}>
-                          {needsApproval ? 'Approve' : 'Burn'}
+                          {needsApproval ? 'Approve' : intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
                         </Button>
                         <Button
                           onClick={() => {
@@ -1439,13 +1439,13 @@ const ZWToken: React.FC = () => {
                   </Form>
 
                   <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                    <h4>Usage Tips</h4>
-                    <p><strong>What is Simple Mode Burn?</strong></p>
-                    <p>Simple Mode Burn will wrap your underlying token (USDC) and automatically burn the wrapped ZW token to a privacy address (black hole address). This provides maximum privacy protection.</p>
-                    <p><strong>How to use:</strong></p>
-                    <p>1. Generate a Burn Address using your secret (or create one manually). Keep your secret safe - you'll need it to remint later.</p>
-                    <p>2. The burned tokens can only be reminted using the correct secret that was used to generate the burn address.</p>
-                    <p>3. Your tokens are now in a privacy-protected state and can be reminted anonymously at any time.</p>
+                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.title' })}</h4>
+                    <p><strong>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.what' })}</strong></p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.whatDesc' })}</p>
+                    <p><strong>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.how' })}</strong></p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.step1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.step2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.step3' })}</p>
                   </div>
                 </div>
               </TabPane>
@@ -1481,7 +1481,7 @@ const ZWToken: React.FC = () => {
                             onClick={handleRemintGenerateBySeedClick}
                             style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                           >
-                            Select Secret By Seed
+                            {intl.formatMessage({ id: 'pages.zwtoken.remint.selectSecretBySeed' })}
                           </Button>
                         }
                       />
@@ -1566,15 +1566,15 @@ const ZWToken: React.FC = () => {
                   </Form>
 
                   <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                    <h4>Usage Tips</h4>
-                    <p><strong>What is Simple Mode Remint?</strong></p>
-                    <p>Simple Mode Remint will remint your ZW tokens using your secret and automatically unwrap them to the underlying token (USDC). The recipient will receive USDC directly.</p>
-                    <p><strong>How to use:</strong></p>
-                    <p>1. Enter the secret that you used when burning the tokens. This proves ownership without revealing your identity.</p>
-                    <p>2. The recipient address (default: your current wallet) will receive the unwrapped underlying tokens (USDC) directly.</p>
-                    <p>3. You can remint any amount up to the first receipt amount recorded in the commitment.</p>
+                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.title' })}</h4>
+                    <p><strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.what' })}</strong></p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.whatDesc' })}</p>
+                    <p><strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.how' })}</strong></p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.step1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.step2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.step3' })}</p>
                     <p style={{ color: '#1890ff', marginTop: 12 }}>
-                      <strong>Note:</strong> In Simple Mode, the "Withdraw Underlying" option is automatically enabled, so you will receive USDC directly instead of ZWUSDC. This provides a seamless experience.
+                      <strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.note' })}</strong> {intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.noteDesc' })}
                     </p>
                   </div>
                 </div>

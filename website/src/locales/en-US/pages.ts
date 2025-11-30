@@ -125,6 +125,7 @@ export default {
   'pages.zwtoken.remint.amountExceeded': 'Remint amount exceeds first receipt amount',
   'pages.zwtoken.remint.zkProofNeeded': '✅ Preparation completed! snarkjs integration needed to complete remint',
   'pages.zwtoken.remint.generateBySeed': 'Generate By Seed',
+  'pages.zwtoken.remint.selectSecretBySeed': 'Select Secret By Seed',
   'pages.zwtoken.remint.seedModal.title': 'Generate Secret from Seed',
   'pages.zwtoken.remint.seedModal.waiting': 'Requesting wallet signature...',
   'pages.zwtoken.remint.seedModal.close': 'Close',
@@ -179,6 +180,17 @@ export default {
   // Remint parameters
   'pages.zwtoken.remint.parameters': 'Remint Parameters:',
   'pages.zwtoken.remint.withdrawUnderlyingDesc': '- Withdraw Underlying: If checked, directly withdraw underlying token; otherwise mint ZWERC20',
+  
+  // Simple Mode Remint Tips
+  'pages.zwtoken.remint.simpleMode.tip.title': '💡 Usage Tips',
+  'pages.zwtoken.remint.simpleMode.tip.what': 'What is Simple Mode Remint?',
+  'pages.zwtoken.remint.simpleMode.tip.whatDesc': 'Simple Mode Remint will remint your ZW tokens using your secret and automatically unwrap them to the underlying token (USDC). The recipient will receive USDC directly.',
+  'pages.zwtoken.remint.simpleMode.tip.how': 'How to use:',
+  'pages.zwtoken.remint.simpleMode.tip.step1': '1. Enter the secret that you used when burning the tokens. This proves ownership without revealing your identity.',
+  'pages.zwtoken.remint.simpleMode.tip.step2': '2. The recipient address (default: your current wallet) will receive the unwrapped underlying tokens (USDC) directly.',
+  'pages.zwtoken.remint.simpleMode.tip.step3': '3. You can remint any amount up to the first receipt amount recorded in the commitment.',
+  'pages.zwtoken.remint.simpleMode.tip.note': 'Note:',
+  'pages.zwtoken.remint.simpleMode.tip.noteDesc': 'In Simple Mode, the "Withdraw Underlying" option is automatically enabled, so you will receive USDC directly instead of ZWUSDC. This provides a seamless experience.',
 
   // Common
   'pages.zwtoken.error.connectWallet': 'Please connect wallet first',
