@@ -330,6 +330,17 @@ const ZWToken: React.FC = () => {
     return () => clearInterval(interval);
   }, [refreshBalances]);
 
+  // 当钱包地址变化时，更新Simple Mode Remint表单的recipient字段
+  React.useEffect(() => {
+    if (account) {
+      const currentRecipient = remintForm.getFieldValue('recipient');
+      // 只在recipient为空时自动填充
+      if (!currentRecipient) {
+        remintForm.setFieldsValue({ recipient: account });
+      }
+    }
+  }, [account, remintForm]);
+
   // 获取provider和signer，并检查网络
   const getProvider = async () => {
     if (!wallet) {
@@ -745,8 +756,9 @@ const ZWToken: React.FC = () => {
       return;
     }
 
-    // If Directly Burn is enabled, check if targetAddress exists
-    if (directBurn && !values.targetAddress) {
+    // If targetAddress is provided, it's burn mode
+    const isBurnMode = !!values.targetAddress || directBurn;
+    if (isBurnMode && !values.targetAddress) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.targetAddressRequired' }));
       return;
     }
@@ -804,8 +816,8 @@ const ZWToken: React.FC = () => {
         signer,
       );
       
-      // Determine to address based on directBurn status
-      const toAddress = directBurn && values.targetAddress ? values.targetAddress : account;
+      // Determine to address: use targetAddress if provided (burn mode), otherwise use account
+      const toAddress = values.targetAddress || account;
       const tx = await zwTokenContract.depositTo(toAddress, 0, depositAmountBigInt);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
@@ -1332,10 +1344,10 @@ const ZWToken: React.FC = () => {
 
         {/* 外层大Tab：Simple Mode 和 Advanced Mode */}
         <Tabs defaultActiveKey="simple" type="card" size="large">
-          {/* Simple Mode - 只包含 Deposit 和 Remint */}
+          {/* Simple Mode - 只包含 Burn 和 Remint */}
           <TabPane tab="Simple Mode" key="simple">
-            <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }}>
-              <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.deposit' })} key="deposit">
+            <Tabs defaultActiveKey="burn" type="line" style={{ marginTop: 16 }}>
+              <TabPane tab="Burn" key="burn">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                   <Form form={depositForm} layout="vertical" onFinish={handleDeposit}>
                     <Form.Item
@@ -1378,67 +1390,46 @@ const ZWToken: React.FC = () => {
                       </div>
                     )}
 
-                    <Form.Item>
-                      <Checkbox
-                        checked={directBurn}
-                        onChange={(e) => {
-                          setDirectBurn(e.target.checked);
-                          if (!e.target.checked) {
-                            depositForm.setFieldsValue({ targetAddress: undefined });
-                          }
-                        }}
-                      >
-                        {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurn' })}
-                      </Checkbox>
+                    <Form.Item
+                      label="Burn Address"
+                      name="targetAddress"
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Please enter a burn address or generate one',
+                        },
+                        {
+                          pattern: /^0x[a-fA-F0-9]{40}$/,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.transfer.targetAddress.invalid',
+                          }),
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder="Enter burn address or generate by seed"
+                        maxLength={42}
+                        addonBefore={
+                          <Button
+                            type="link"
+                            onClick={handleDepositBurnClick}
+                            style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
+                          >
+                            Generate Burn Address By Seed
+                          </Button>
+                        }
+                      />
                     </Form.Item>
-
-                    {directBurn && (
-                      <Form.Item
-                        label={intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress' })}
-                        name="targetAddress"
-                        rules={[
-                          {
-                            required: true,
-                            message: intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress.required' }),
-                          },
-                          {
-                            pattern: /^0x[a-fA-F0-9]{40}$/,
-                            message: intl.formatMessage({
-                              id: 'pages.zwtoken.transfer.targetAddress.invalid',
-                            }),
-                          },
-                        ]}
-                      >
-                        <Input
-                          placeholder={intl.formatMessage({
-                            id: 'pages.zwtoken.deposit.targetAddress.placeholder',
-                          })}
-                          maxLength={42}
-                          addonAfter={
-                            <Button
-                              type="link"
-                              onClick={handleDepositBurnClick}
-                              style={{ padding: 0, height: 'auto' }}
-                            >
-                              {intl.formatMessage({ id: 'pages.zwtoken.deposit.generateBySeed' })}
-                            </Button>
-                          }
-                        />
-                      </Form.Item>
-                    )}
 
                     <Form.Item>
                       <Space>
                         <Button type="primary" htmlType="submit" loading={loading}>
-                          {needsApproval
-                            ? 'Approve'
-                            : intl.formatMessage({ id: 'pages.zwtoken.deposit.button' })}
+                          {needsApproval ? 'Approve' : 'Burn'}
                         </Button>
                         <Button
                           onClick={() => {
                             depositForm.resetFields();
                             setDepositAmount(null);
-                            setDirectBurn(false);
                           }}
                         >
                           {intl.formatMessage({ id: 'pages.zwtoken.deposit.reset' })}
@@ -1448,22 +1439,28 @@ const ZWToken: React.FC = () => {
                   </Form>
 
                   <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.title' })}</h4>
-                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.1' })}</p>
-                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.2' })}</p>
-                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.3' })}</p>
-                    {directBurn && (
-                      <p style={{ color: '#faad14', fontWeight: 'bold' }}>
-                        {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurnNote' })}
-                      </p>
-                    )}
+                    <h4>Usage Tips</h4>
+                    <p><strong>What is Simple Mode Burn?</strong></p>
+                    <p>Simple Mode Burn will wrap your underlying token (USDC) and automatically burn the wrapped ZW token to a privacy address (black hole address). This provides maximum privacy protection.</p>
+                    <p><strong>How to use:</strong></p>
+                    <p>1. Generate a Burn Address using your secret (or create one manually). Keep your secret safe - you'll need it to remint later.</p>
+                    <p>2. The burned tokens can only be reminted using the correct secret that was used to generate the burn address.</p>
+                    <p>3. Your tokens are now in a privacy-protected state and can be reminted anonymously at any time.</p>
                   </div>
                 </div>
               </TabPane>
 
               <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.remint' })} key="remint">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-                  <Form form={remintForm} layout="vertical" onFinish={handleRemint}>
+                  <Form 
+                    form={remintForm} 
+                    layout="vertical" 
+                    onFinish={handleRemint}
+                    initialValues={{
+                      recipient: account || undefined,
+                      withdrawUnderlying: true,
+                    }}
+                  >
                     <Form.Item
                       label={intl.formatMessage({ id: 'pages.zwtoken.remint.secret' })}
                       name="secret"
@@ -1478,13 +1475,13 @@ const ZWToken: React.FC = () => {
                         placeholder={intl.formatMessage({
                           id: 'pages.zwtoken.remint.secret.placeholder',
                         })}
-                        addonAfter={
+                        addonBefore={
                           <Button
                             type="link"
                             onClick={handleRemintGenerateBySeedClick}
-                            style={{ padding: 0, height: 'auto' }}
+                            style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                           >
-                            {intl.formatMessage({ id: 'pages.zwtoken.remint.generateBySeed' })}
+                            Select Secret By Seed
                           </Button>
                         }
                       />
@@ -1505,7 +1502,7 @@ const ZWToken: React.FC = () => {
                       ]}
                     >
                       <Input
-                        placeholder={intl.formatMessage({
+                        placeholder={account || intl.formatMessage({
                           id: 'pages.zwtoken.remint.recipient.placeholder',
                         })}
                         maxLength={42}
@@ -1548,7 +1545,8 @@ const ZWToken: React.FC = () => {
                     <Form.Item
                       name="withdrawUnderlying"
                       valuePropName="checked"
-                      initialValue={false}
+                      initialValue={true}
+                      hidden
                     >
                       <Checkbox>
                         {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlying' })}
@@ -1568,14 +1566,15 @@ const ZWToken: React.FC = () => {
                   </Form>
 
                   <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.title' })}</h4>
-                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.1' })}</p>
-                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.2' })}</p>
-                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.3' })}</p>
-                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.4' })}</p>
+                    <h4>Usage Tips</h4>
+                    <p><strong>What is Simple Mode Remint?</strong></p>
+                    <p>Simple Mode Remint will remint your ZW tokens using your secret and automatically unwrap them to the underlying token (USDC). The recipient will receive USDC directly.</p>
+                    <p><strong>How to use:</strong></p>
+                    <p>1. Enter the secret that you used when burning the tokens. This proves ownership without revealing your identity.</p>
+                    <p>2. The recipient address (default: your current wallet) will receive the unwrapped underlying tokens (USDC) directly.</p>
+                    <p>3. You can remint any amount up to the first receipt amount recorded in the commitment.</p>
                     <p style={{ color: '#1890ff', marginTop: 12 }}>
-                      <strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.parameters' })}</strong><br />
-                      {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlyingDesc' })}
+                      <strong>Note:</strong> In Simple Mode, the "Withdraw Underlying" option is automatically enabled, so you will receive USDC directly instead of ZWUSDC. This provides a seamless experience.
                     </p>
                   </div>
                 </div>
