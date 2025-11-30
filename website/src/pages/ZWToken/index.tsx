@@ -1347,7 +1347,7 @@ const ZWToken: React.FC = () => {
           {/* Simple Mode - 只包含 Burn 和 Remint */}
           <TabPane tab="Simple Mode" key="simple">
             <Tabs defaultActiveKey="burn" type="line" style={{ marginTop: 16 }}>
-              <TabPane tab="Burn" key="burn">
+              <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.burn' })} key="burn">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                   <Form form={depositForm} layout="vertical" onFinish={handleDeposit}>
                     <Form.Item
@@ -1391,12 +1391,12 @@ const ZWToken: React.FC = () => {
                     )}
 
                     <Form.Item
-                      label="Burn Address"
+                      label={intl.formatMessage({ id: 'pages.zwtoken.burn.address' })}
                       name="targetAddress"
                       rules={[
                         {
                           required: true,
-                          message: 'Please enter a burn address or generate one',
+                          message: intl.formatMessage({ id: 'pages.zwtoken.burn.address.required' }),
                         },
                         {
                           pattern: /^0x[a-fA-F0-9]{40}$/,
@@ -1407,7 +1407,7 @@ const ZWToken: React.FC = () => {
                       ]}
                     >
                       <Input
-                        placeholder="Enter burn address or generate by seed"
+                        placeholder={intl.formatMessage({ id: 'pages.zwtoken.burn.address.placeholder' })}
                         maxLength={42}
                         addonBefore={
                           <Button
@@ -1415,7 +1415,7 @@ const ZWToken: React.FC = () => {
                             onClick={handleDepositBurnClick}
                             style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                           >
-                            Generate Burn Address By Seed
+                            {intl.formatMessage({ id: 'pages.zwtoken.burn.generateBySeed' })}
                           </Button>
                         }
                       />
