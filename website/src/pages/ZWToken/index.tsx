@@ -1585,7 +1585,7 @@ const ZWToken: React.FC = () => {
           {/* Advanced Mode - 包含全部四个Tab */}
           <TabPane tab="Advanced Mode" key="advanced">
             <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }}>
-          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.deposit' })} key="deposit">
+          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.wrap' })} key="deposit">
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
               <Form form={depositForm} layout="vertical" onFinish={handleDeposit}>
                 <Form.Item
@@ -1711,7 +1711,7 @@ const ZWToken: React.FC = () => {
             </div>
           </TabPane>
 
-          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.withdraw' })} key="withdraw">
+          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.unwrap' })} key="withdraw">
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
               <Form form={withdrawForm} layout="vertical" onFinish={handleWithdraw}>
                 <Form.Item

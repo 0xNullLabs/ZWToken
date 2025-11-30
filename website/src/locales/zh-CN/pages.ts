@@ -14,6 +14,8 @@ export default {
   'pages.zwtoken.tab.transfer': '🔄 转账',
   'pages.zwtoken.tab.remint': '🎁 重铸',
   'pages.zwtoken.tab.burn': '🔥 销毁',
+  'pages.zwtoken.tab.wrap': '💰 Wrap',
+  'pages.zwtoken.tab.unwrap': '💳 Unwrap',
 
   // Deposit
   'pages.zwtoken.deposit.amount': '存款金额',

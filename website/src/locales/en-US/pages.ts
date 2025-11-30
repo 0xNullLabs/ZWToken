@@ -14,6 +14,8 @@ export default {
   'pages.zwtoken.tab.transfer': '🔄 Transfer',
   'pages.zwtoken.tab.remint': '🎁 Remint',
   'pages.zwtoken.tab.burn': '🔥 Burn',
+  'pages.zwtoken.tab.wrap': '💰 Wrap',
+  'pages.zwtoken.tab.unwrap': '💳 Unwrap',
   
   // Deposit
   'pages.zwtoken.deposit.amount': 'Deposit Amount',
