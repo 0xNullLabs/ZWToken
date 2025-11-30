@@ -13,6 +13,7 @@ export default {
   'pages.zwtoken.tab.withdraw': '💳 取款',
   'pages.zwtoken.tab.transfer': '🔄 转账',
   'pages.zwtoken.tab.remint': '🎁 重铸',
+  'pages.zwtoken.tab.burn': '🔥 销毁',
 
   // Deposit
   'pages.zwtoken.deposit.amount': '存款金额',
@@ -147,6 +148,21 @@ export default {
   'pages.zwtoken.deposit.directBurnNote': '注意：启用直接销毁后，代币将存入指定的隐私地址。只有对应Secret的持有者才能重铸它们。',
   'pages.zwtoken.deposit.privacyAddressGenerated': '隐私地址已生成并填充',
   'pages.zwtoken.deposit.secretSelected': 'Secret已选择',
+  
+  // Burn (Simple Mode)
+  'pages.zwtoken.burn.title': '销毁',
+  'pages.zwtoken.burn.button': '销毁',
+  'pages.zwtoken.burn.address': '销毁地址',
+  'pages.zwtoken.burn.address.required': '请输入销毁地址或通过种子生成',
+  'pages.zwtoken.burn.address.placeholder': '输入销毁地址或通过种子生成',
+  'pages.zwtoken.burn.generateBySeed': '通过种子生成销毁地址',
+  'pages.zwtoken.burn.tip.title': '💡 使用提示',
+  'pages.zwtoken.burn.tip.what': '什么是简易模式销毁？',
+  'pages.zwtoken.burn.tip.whatDesc': '简易模式销毁会将您的底层代币（USDC）进行包装，并自动将包装后的 ZW 代币销毁到隐私地址（黑洞地址）。这提供了最大程度的隐私保护。',
+  'pages.zwtoken.burn.tip.how': '如何使用：',
+  'pages.zwtoken.burn.tip.step1': '1. 使用您的 secret 生成销毁地址（或手动创建）。请妥善保管您的 secret - 稍后重铸时需要它。',
+  'pages.zwtoken.burn.tip.step2': '2. 销毁的代币只能使用生成销毁地址时使用的正确 secret 来重铸。',
+  'pages.zwtoken.burn.tip.step3': '3. 您的代币现在处于隐私保护状态，可以随时匿名重铸。',
   
   // Common messages
   'pages.zwtoken.message.secretSelected': 'Secret已选择',

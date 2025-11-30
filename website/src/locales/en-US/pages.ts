@@ -13,6 +13,7 @@ export default {
   'pages.zwtoken.tab.withdraw': '💳 Withdraw',
   'pages.zwtoken.tab.transfer': '🔄 Transfer',
   'pages.zwtoken.tab.remint': '🎁 Remint',
+  'pages.zwtoken.tab.burn': '🔥 Burn',
   
   // Deposit
   'pages.zwtoken.deposit.amount': 'Deposit Amount',
@@ -145,6 +146,21 @@ export default {
   'pages.zwtoken.deposit.directBurnNote': 'Note: When Directly Burn is enabled, tokens will be deposited to the specified Privacy Address. Only the holder of the corresponding Secret can Remint them.',
   'pages.zwtoken.deposit.privacyAddressGenerated': 'Privacy Address generated and filled',
   'pages.zwtoken.deposit.secretSelected': 'Secret selected',
+  
+  // Burn (Simple Mode)
+  'pages.zwtoken.burn.title': 'Burn',
+  'pages.zwtoken.burn.button': 'Burn',
+  'pages.zwtoken.burn.address': 'Burn Address',
+  'pages.zwtoken.burn.address.required': 'Please enter a burn address or generate one',
+  'pages.zwtoken.burn.address.placeholder': 'Enter burn address or generate by seed',
+  'pages.zwtoken.burn.generateBySeed': 'Generate Burn Address By Seed',
+  'pages.zwtoken.burn.tip.title': '💡 Usage Tips',
+  'pages.zwtoken.burn.tip.what': 'What is Simple Mode Burn?',
+  'pages.zwtoken.burn.tip.whatDesc': 'Simple Mode Burn will wrap your underlying token (USDC) and automatically burn the wrapped ZW token to a privacy address (black hole address). This provides maximum privacy protection.',
+  'pages.zwtoken.burn.tip.how': 'How to use:',
+  'pages.zwtoken.burn.tip.step1': '1. Generate a Burn Address using your secret (or create one manually). Keep your secret safe - you\'ll need it to remint later.',
+  'pages.zwtoken.burn.tip.step2': '2. The burned tokens can only be reminted using the correct secret that was used to generate the burn address.',
+  'pages.zwtoken.burn.tip.step3': '3. Your tokens are now in a privacy-protected state and can be reminted anonymously at any time.',
   
   // Common messages
   'pages.zwtoken.message.secretSelected': 'Secret selected',
