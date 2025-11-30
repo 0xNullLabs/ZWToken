@@ -1199,7 +1199,262 @@ const ZWToken: React.FC = () => {
           </div>
         )}
 
-        <Tabs defaultActiveKey="deposit" type="card">
+        {/* 外层大Tab：Simple Mode 和 Advanced Mode */}
+        <Tabs defaultActiveKey="simple" type="card" size="large">
+          {/* Simple Mode - 只包含 Deposit 和 Remint */}
+          <TabPane tab="Simple Mode" key="simple">
+            <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }}>
+              <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.deposit' })} key="deposit">
+                <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                  <Form form={depositForm} layout="vertical" onFinish={handleDeposit}>
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.deposit.amount' })}
+                      name="amount"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.deposit.amount.required' }),
+                        },
+                        {
+                          type: 'number',
+                          min: 0.000001,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.deposit.amount.min' }),
+                        },
+                      ]}
+                    >
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.deposit.amount.placeholder',
+                        })}
+                        precision={6}
+                        min={0}
+                        onChange={(value) => setDepositAmount(value)}
+                      />
+                    </Form.Item>
+
+                    {account && (
+                      <div
+                        style={{
+                          marginTop: -16,
+                          marginBottom: 16,
+                          color: '#999',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {intl.formatMessage({ id: 'pages.zwtoken.deposit.currentAllowance' })}:{' '}
+                        {parseFloat(allowance).toFixed(6)} USDC
+                      </div>
+                    )}
+
+                    <Form.Item>
+                      <Checkbox
+                        checked={directBurn}
+                        onChange={(e) => {
+                          setDirectBurn(e.target.checked);
+                          if (!e.target.checked) {
+                            depositForm.setFieldsValue({ targetAddress: undefined });
+                          }
+                        }}
+                      >
+                        {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurn' })}
+                      </Checkbox>
+                    </Form.Item>
+
+                    {directBurn && (
+                      <Form.Item
+                        label={intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress' })}
+                        name="targetAddress"
+                        rules={[
+                          {
+                            required: true,
+                            message: intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress.required' }),
+                          },
+                          {
+                            pattern: /^0x[a-fA-F0-9]{40}$/,
+                            message: intl.formatMessage({
+                              id: 'pages.zwtoken.transfer.targetAddress.invalid',
+                            }),
+                          },
+                        ]}
+                      >
+                        <Input
+                          placeholder={intl.formatMessage({
+                            id: 'pages.zwtoken.deposit.targetAddress.placeholder',
+                          })}
+                          maxLength={42}
+                          addonAfter={
+                            <Button
+                              type="link"
+                              onClick={handleDepositBurnClick}
+                              style={{ padding: 0, height: 'auto' }}
+                            >
+                              {intl.formatMessage({ id: 'pages.zwtoken.deposit.generateBySeed' })}
+                            </Button>
+                          }
+                        />
+                      </Form.Item>
+                    )}
+
+                    <Form.Item>
+                      <Space>
+                        <Button type="primary" htmlType="submit" loading={loading}>
+                          {needsApproval
+                            ? 'Approve'
+                            : intl.formatMessage({ id: 'pages.zwtoken.deposit.button' })}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            depositForm.resetFields();
+                            setDepositAmount(null);
+                            setDirectBurn(false);
+                          }}
+                        >
+                          {intl.formatMessage({ id: 'pages.zwtoken.deposit.reset' })}
+                        </Button>
+                      </Space>
+                    </Form.Item>
+                  </Form>
+
+                  <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.title' })}</h4>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.3' })}</p>
+                    {directBurn && (
+                      <p style={{ color: '#faad14', fontWeight: 'bold' }}>
+                        {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurnNote' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </TabPane>
+
+              <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.remint' })} key="remint">
+                <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                  <Form form={remintForm} layout="vertical" onFinish={handleRemint}>
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.remint.secret' })}
+                      name="secret"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.secret.required' }),
+                        },
+                      ]}
+                    >
+                      <Input.Password
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.remint.secret.placeholder',
+                        })}
+                        addonAfter={
+                          <Button
+                            type="link"
+                            onClick={handleRemintGenerateBySeedClick}
+                            style={{ padding: 0, height: 'auto' }}
+                          >
+                            {intl.formatMessage({ id: 'pages.zwtoken.remint.generateBySeed' })}
+                          </Button>
+                        }
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.remint.recipient' })}
+                      name="recipient"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.recipient.required' }),
+                        },
+                        {
+                          pattern: /^0x[a-fA-F0-9]{40}$/,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.recipient.invalid' }),
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.remint.recipient.placeholder',
+                        })}
+                        maxLength={42}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.remint.amount' })}
+                      name="remintAmount"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.amount.required' }),
+                        },
+                        {
+                          type: 'number',
+                          min: 0.000001,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.amount.min' }),
+                        },
+                      ]}
+                    >
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.remint.amount.placeholder',
+                        })}
+                        precision={6}
+                        min={0}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="relayerFee"
+                      initialValue={0}
+                      hidden
+                    >
+                      <InputNumber />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="withdrawUnderlying"
+                      valuePropName="checked"
+                      initialValue={false}
+                    >
+                      <Checkbox>
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlying' })}
+                      </Checkbox>
+                    </Form.Item>
+
+                    <Form.Item>
+                      <Space>
+                        <Button type="primary" htmlType="submit" loading={loading}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
+                        </Button>
+                        <Button onClick={() => remintForm.resetFields()}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.remint.reset' })}
+                        </Button>
+                      </Space>
+                    </Form.Item>
+                  </Form>
+
+                  <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.title' })}</h4>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.3' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.4' })}</p>
+                    <p style={{ color: '#1890ff', marginTop: 12 }}>
+                      <strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.parameters' })}</strong><br />
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlyingDesc' })}
+                    </p>
+                  </div>
+                </div>
+              </TabPane>
+            </Tabs>
+          </TabPane>
+
+          {/* Advanced Mode - 包含全部四个Tab */}
+          <TabPane tab="Advanced Mode" key="advanced">
+            <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }}>
           <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.deposit' })} key="deposit">
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
               <Form form={depositForm} layout="vertical" onFinish={handleDeposit}>
@@ -1578,6 +1833,8 @@ const ZWToken: React.FC = () => {
                 </p>
               </div>
             </div>
+              </TabPane>
+            </Tabs>
           </TabPane>
         </Tabs>
       </Card>
