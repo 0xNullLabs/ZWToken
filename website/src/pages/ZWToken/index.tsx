@@ -1140,7 +1140,36 @@ const ZWToken: React.FC = () => {
                   marginBottom: 8,
                 }}
               >
-                {intl.formatMessage({ id: 'pages.zwtoken.balance.usdc' })}
+                {intl.formatMessage({ id: 'pages.zwtoken.balance.usdc' })}{' '}
+                <span style={{ fontSize: 12 }}>
+                  (Faucet:{' '}
+                  <a
+                    href="https://www.alchemy.com/faucets/ethereum-sepolia"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      textDecoration: 'underline',
+                      textDecorationColor: 'rgba(255, 255, 255, 0.5)',
+                    }}
+                  >
+                    ETH
+                  </a>
+                  ,{' '}
+                  <a
+                    href="https://faucet.circle.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      textDecoration: 'underline',
+                      textDecorationColor: 'rgba(255, 255, 255, 0.5)',
+                    }}
+                  >
+                    USDC
+                  </a>
+                  )
+                </span>
               </div>
               <div
                 style={{
