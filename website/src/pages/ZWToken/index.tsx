@@ -1,4 +1,4 @@
-import { Card, Tabs, Form, InputNumber, Input, Button, message, Space, Modal, Table, Checkbox } from 'antd';
+import { Card, Tabs, Form, InputNumber, Input, Button, message, Modal, Table, Checkbox } from 'antd';
 import { PageContainer } from '@ant-design/pro-components';
 import { useConnectWallet } from '@web3-onboard/react';
 import { useIntl } from '@umijs/max';
@@ -1324,19 +1324,9 @@ const ZWToken: React.FC = () => {
                     </Form.Item>
 
                     <Form.Item>
-                      <Space>
-                        <Button type="primary" htmlType="submit" loading={loading}>
-                          {needsApproval ? 'Approve' : intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            depositForm.resetFields();
-                            setDepositAmount(null);
-                          }}
-                        >
-                          {intl.formatMessage({ id: 'pages.zwtoken.deposit.reset' })}
-                        </Button>
-                      </Space>
+                      <Button type="primary" htmlType="submit" loading={loading} block>
+                        {needsApproval ? 'Approve' : intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
+                      </Button>
                     </Form.Item>
                   </Form>
 
@@ -1459,14 +1449,9 @@ const ZWToken: React.FC = () => {
                     </Form.Item>
 
                     <Form.Item>
-                      <Space>
-                        <Button type="primary" htmlType="submit" loading={loading}>
-                          {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
-                        </Button>
-                        <Button onClick={() => remintForm.resetFields()}>
-                          {intl.formatMessage({ id: 'pages.zwtoken.remint.reset' })}
-                        </Button>
-                      </Space>
+                      <Button type="primary" htmlType="submit" loading={loading} block>
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
+                      </Button>
                     </Form.Item>
                   </Form>
 
@@ -1583,22 +1568,11 @@ const ZWToken: React.FC = () => {
                 )}
 
                 <Form.Item>
-                  <Space>
-                    <Button type="primary" htmlType="submit" loading={loading}>
-                      {needsApproval
-                        ? 'Approve'
-                        : intl.formatMessage({ id: 'pages.zwtoken.deposit.button' })}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        depositForm.resetFields();
-                        setDepositAmount(null);
-                        setDirectBurn(false);
-                      }}
-                    >
-                      {intl.formatMessage({ id: 'pages.zwtoken.deposit.reset' })}
-                    </Button>
-                  </Space>
+                  <Button type="primary" htmlType="submit" loading={loading} block>
+                    {needsApproval
+                      ? 'Approve'
+                      : intl.formatMessage({ id: 'pages.zwtoken.deposit.button' })}
+                  </Button>
                 </Form.Item>
               </Form>
 
@@ -1645,14 +1619,9 @@ const ZWToken: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item>
-                  <Space>
-                    <Button type="primary" htmlType="submit" loading={loading}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.withdraw.button' })}
-                    </Button>
-                    <Button onClick={() => withdrawForm.resetFields()}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.withdraw.reset' })}
-                    </Button>
-                  </Space>
+                  <Button type="primary" htmlType="submit" loading={loading} block>
+                    {intl.formatMessage({ id: 'pages.zwtoken.withdraw.button' })}
+                  </Button>
                 </Form.Item>
               </Form>
 
@@ -1729,14 +1698,9 @@ const ZWToken: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item>
-                  <Space>
-                    <Button type="primary" htmlType="submit" loading={loading}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.transfer.button' })}
-                    </Button>
-                    <Button onClick={() => transferForm.resetFields()}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.transfer.reset' })}
-                    </Button>
-                  </Space>
+                  <Button type="primary" htmlType="submit" loading={loading} block>
+                    {intl.formatMessage({ id: 'pages.zwtoken.transfer.button' })}
+                  </Button>
                 </Form.Item>
               </Form>
 
@@ -1845,14 +1809,9 @@ const ZWToken: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item>
-                  <Space>
-                    <Button type="primary" htmlType="submit" loading={loading}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
-                    </Button>
-                    <Button onClick={() => remintForm.resetFields()}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.remint.reset' })}
-                    </Button>
-                  </Space>
+                  <Button type="primary" htmlType="submit" loading={loading} block>
+                    {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
+                  </Button>
                 </Form.Item>
               </Form>
 
