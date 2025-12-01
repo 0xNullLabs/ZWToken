@@ -18,36 +18,36 @@ export default {
   'pages.zwtoken.tab.unwrap': '💳 Unwrap',
 
   // Deposit
-  'pages.zwtoken.deposit.amount': '存款金额',
-  'pages.zwtoken.deposit.amount.placeholder': '请输入存款金额',
-  'pages.zwtoken.deposit.amount.required': '请输入存款金额',
+  'pages.zwtoken.deposit.amount': 'Wrap 金额',
+  'pages.zwtoken.deposit.amount.placeholder': '请输入 Wrap 金额',
+  'pages.zwtoken.deposit.amount.required': '请输入 Wrap 金额',
   'pages.zwtoken.deposit.amount.min': '金额必须大于0',
   'pages.zwtoken.deposit.currentAllowance': '当前授权额度',
   'pages.zwtoken.deposit.button': '存款',
   'pages.zwtoken.deposit.reset': '重置',
   'pages.zwtoken.deposit.tip.title': '💡 提示',
-  'pages.zwtoken.deposit.tip.1': '• 存款会将您的基础代币(Underlying Token)转换为ZWToken',
-  'pages.zwtoken.deposit.tip.2': '• 存款后可以进行隐私转账',
+  'pages.zwtoken.deposit.tip.1': '• Wrap会将您的基础代币(Underlying Token)转换为ZWToken',
+  'pages.zwtoken.deposit.tip.2': '• Wrap后可以进行隐私转账',
   'pages.zwtoken.deposit.tip.3': '• 请确保您已经授权合约使用您的代币',
   'pages.zwtoken.deposit.approving': '授权中...',
   'pages.zwtoken.deposit.submitting': '交易提交中...',
-  'pages.zwtoken.deposit.success': '存款成功！',
-  'pages.zwtoken.deposit.failed': '存款失败',
+  'pages.zwtoken.deposit.success': 'Wrap成功！',
+  'pages.zwtoken.deposit.failed': 'Wrap失败',
 
   // Withdraw
-  'pages.zwtoken.withdraw.amount': '取款金额',
-  'pages.zwtoken.withdraw.amount.placeholder': '请输入取款金额',
-  'pages.zwtoken.withdraw.amount.required': '请输入取款金额',
+  'pages.zwtoken.withdraw.amount': 'Unwrap 金额',
+  'pages.zwtoken.withdraw.amount.placeholder': '请输入 Unwrap 金额',
+  'pages.zwtoken.withdraw.amount.required': '请输入 Unwrap 金额',
   'pages.zwtoken.withdraw.amount.min': '金额必须大于0',
   'pages.zwtoken.withdraw.button': '取款',
   'pages.zwtoken.withdraw.reset': '重置',
   'pages.zwtoken.withdraw.tip.title': '💡 提示',
-  'pages.zwtoken.withdraw.tip.1': '• 取款会销毁您的ZWToken并返还基础代币(Underlying Token)',
-  'pages.zwtoken.withdraw.tip.2': '• 取款金额不能超过您的ZWToken余额',
-  'pages.zwtoken.withdraw.tip.3': '• 取款操作不会记录commitment',
+  'pages.zwtoken.withdraw.tip.1': '• Unwrap会销毁您的ZWToken并返还基础代币(Underlying Token)',
+  'pages.zwtoken.withdraw.tip.2': '• Unwrap金额不能超过您的ZWToken余额',
+  'pages.zwtoken.withdraw.tip.3': '• Unwrap操作不会记录commitment',
   'pages.zwtoken.withdraw.submitting': '交易提交中...',
-  'pages.zwtoken.withdraw.success': '取款成功！',
-  'pages.zwtoken.withdraw.failed': '取款失败',
+  'pages.zwtoken.withdraw.success': 'Unwrap成功！',
+  'pages.zwtoken.withdraw.failed': 'Unwrap失败',
 
   // Transfer
   'pages.zwtoken.transfer.targetAddress': '目标地址',
@@ -141,7 +141,7 @@ export default {
   'pages.zwtoken.remint.seedModal.select': '选择',
   'pages.zwtoken.remint.seedModal.checking': '查询中...',
   'pages.zwtoken.remint.seedModal.failed': '查询失败',
-  'pages.zwtoken.remint.withdrawUnderlying': '提取底层代币（提取底层代币而非铸造ZWERC20）',
+  'pages.zwtoken.remint.withdrawUnderlying': '重铸并解包底层代币（提取底层代币而非铸造ZWERC20）',
 
   // Deposit Directly Burn
   'pages.zwtoken.deposit.directBurn': '直接销毁（存入可证明销毁的地址）',
@@ -189,7 +189,7 @@ export default {
   
   // Remint parameters
   'pages.zwtoken.remint.parameters': '重铸参数：',
-  'pages.zwtoken.remint.withdrawUnderlyingDesc': '- 提取底层代币：如果勾选，直接提取底层代币；否则铸造ZWERC20',
+  'pages.zwtoken.remint.withdrawUnderlyingDesc': '- 重铸并解包底层代币：如果勾选，直接提取底层代币；否则铸造ZWERC20',
   
   // Simple Mode Remint Tips
   'pages.zwtoken.remint.simpleMode.tip.title': '💡 使用提示',

@@ -18,36 +18,36 @@ export default {
   'pages.zwtoken.tab.unwrap': '💳 Unwrap',
   
   // Deposit
-  'pages.zwtoken.deposit.amount': 'Deposit Amount',
-  'pages.zwtoken.deposit.amount.placeholder': 'Enter deposit amount',
-  'pages.zwtoken.deposit.amount.required': 'Please enter deposit amount',
+  'pages.zwtoken.deposit.amount': 'Wrap Amount',
+  'pages.zwtoken.deposit.amount.placeholder': 'Enter wrap amount',
+  'pages.zwtoken.deposit.amount.required': 'Please enter wrap amount',
   'pages.zwtoken.deposit.amount.min': 'Amount must be greater than 0',
   'pages.zwtoken.deposit.currentAllowance': 'Current Allowance',
   'pages.zwtoken.deposit.button': 'Deposit',
   'pages.zwtoken.deposit.reset': 'Reset',
   'pages.zwtoken.deposit.tip.title': '💡 Tips',
-  'pages.zwtoken.deposit.tip.1': '• Deposit will convert your underlying token to ZWToken',
-  'pages.zwtoken.deposit.tip.2': '• After deposit, you can make privacy transfers',
+  'pages.zwtoken.deposit.tip.1': '• Wrap will convert your underlying token to ZWToken',
+  'pages.zwtoken.deposit.tip.2': '• After wrapping, you can make privacy transfers',
   'pages.zwtoken.deposit.tip.3': '• Please ensure you have approved the contract to use your tokens',
   'pages.zwtoken.deposit.approving': 'Approving...',
   'pages.zwtoken.deposit.submitting': 'Transaction submitting...',
-  'pages.zwtoken.deposit.success': 'Deposit successful!',
-  'pages.zwtoken.deposit.failed': 'Deposit failed',
+  'pages.zwtoken.deposit.success': 'Wrap successful!',
+  'pages.zwtoken.deposit.failed': 'Wrap failed',
   
   // Withdraw
-  'pages.zwtoken.withdraw.amount': 'Withdraw Amount',
-  'pages.zwtoken.withdraw.amount.placeholder': 'Enter withdraw amount',
-  'pages.zwtoken.withdraw.amount.required': 'Please enter withdraw amount',
+  'pages.zwtoken.withdraw.amount': 'Unwrap Amount',
+  'pages.zwtoken.withdraw.amount.placeholder': 'Enter unwrap amount',
+  'pages.zwtoken.withdraw.amount.required': 'Please enter unwrap amount',
   'pages.zwtoken.withdraw.amount.min': 'Amount must be greater than 0',
   'pages.zwtoken.withdraw.button': 'Withdraw',
   'pages.zwtoken.withdraw.reset': 'Reset',
   'pages.zwtoken.withdraw.tip.title': '💡 Tips',
-  'pages.zwtoken.withdraw.tip.1': '• Withdraw will burn your ZWToken and return the underlying token',
-  'pages.zwtoken.withdraw.tip.2': '• Withdraw amount cannot exceed your ZWToken balance',
-  'pages.zwtoken.withdraw.tip.3': '• Withdraw operation will not record commitment',
+  'pages.zwtoken.withdraw.tip.1': '• Unwrap will burn your ZWToken and return the underlying token',
+  'pages.zwtoken.withdraw.tip.2': '• Unwrap amount cannot exceed your ZWToken balance',
+  'pages.zwtoken.withdraw.tip.3': '• Unwrap operation will not record commitment',
   'pages.zwtoken.withdraw.submitting': 'Transaction submitting...',
-  'pages.zwtoken.withdraw.success': 'Withdraw successful!',
-  'pages.zwtoken.withdraw.failed': 'Withdraw failed',
+  'pages.zwtoken.withdraw.success': 'Unwrap successful!',
+  'pages.zwtoken.withdraw.failed': 'Unwrap failed',
   
   // Transfer
   'pages.zwtoken.transfer.targetAddress': 'Target Address',
@@ -139,7 +139,7 @@ export default {
   'pages.zwtoken.remint.seedModal.select': 'Select',
   'pages.zwtoken.remint.seedModal.checking': 'Checking...',
   'pages.zwtoken.remint.seedModal.failed': 'Query Failed',
-  'pages.zwtoken.remint.withdrawUnderlying': 'Withdraw Underlying (withdraw underlying token instead of minting ZWERC20)',
+  'pages.zwtoken.remint.withdrawUnderlying': 'Remint and Unwrap Underlying (withdraw underlying token instead of minting ZWERC20)',
   
   // Deposit Directly Burn
   'pages.zwtoken.deposit.directBurn': 'Directly Burn (Deposit to provably burnable address)',
@@ -187,7 +187,7 @@ export default {
   
   // Remint parameters
   'pages.zwtoken.remint.parameters': 'Remint Parameters:',
-  'pages.zwtoken.remint.withdrawUnderlyingDesc': '- Withdraw Underlying: If checked, directly withdraw underlying token; otherwise mint ZWERC20',
+  'pages.zwtoken.remint.withdrawUnderlyingDesc': '- Remint and Unwrap Underlying: If checked, directly withdraw underlying token; otherwise mint ZWERC20',
   
   // Simple Mode Remint Tips
   'pages.zwtoken.remint.simpleMode.tip.title': '💡 Usage Tips',
