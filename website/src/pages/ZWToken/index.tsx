@@ -46,10 +46,6 @@ const ZWToken: React.FC = () => {
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   
-  // Circuit loading states
-  const [circuitsLoaded, setCircuitsLoaded] = useState(false);
-  const [circuitsProgress, setCircuitsProgress] = useState(0);
-  
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
@@ -73,72 +69,6 @@ const ZWToken: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 预加载电路文件（下载到浏览器缓存中）
-  React.useEffect(() => {
-    const preloadCircuits = async () => {
-      try {
-        console.log('开始预加载电路文件...');
-        setCircuitsProgress(0);
-        
-        // 加载 wasm 文件
-        const wasmResponse = await fetch('/circuits/remint.wasm');
-        const wasmTotal = Number(wasmResponse.headers.get('content-length')) || 0;
-        const wasmReader = wasmResponse.body?.getReader();
-        
-        let wasmReceived = 0;
-        
-        if (wasmReader) {
-          while (true) {
-            const { done, value } = await wasmReader.read();
-            if (done) break;
-            
-            wasmReceived += value.length;
-            
-            // 更新进度 (wasm 占 50%)
-            if (wasmTotal > 0) {
-              setCircuitsProgress(Math.floor((wasmReceived / wasmTotal) * 50));
-            }
-          }
-        }
-        
-        console.log('Wasm 文件加载完成，已缓存到浏览器');
-        setCircuitsProgress(50);
-        
-        // 加载 zkey 文件
-        const zkeyResponse = await fetch('/circuits/remint_final.zkey');
-        const zkeyTotal = Number(zkeyResponse.headers.get('content-length')) || 0;
-        const zkeyReader = zkeyResponse.body?.getReader();
-        
-        let zkeyReceived = 0;
-        
-        if (zkeyReader) {
-          while (true) {
-            const { done, value } = await zkeyReader.read();
-            if (done) break;
-            
-            zkeyReceived += value.length;
-            
-            // 更新进度 (zkey 占 50%)
-            if (zkeyTotal > 0) {
-              setCircuitsProgress(50 + Math.floor((zkeyReceived / zkeyTotal) * 50));
-            }
-          }
-        }
-        
-        console.log('Zkey 文件加载完成，已缓存到浏览器');
-        
-        setCircuitsProgress(100);
-        setCircuitsLoaded(true);
-        
-        console.log('✅ 所有电路文件预加载完成并缓存到浏览器');
-      } catch (error) {
-        console.error('预加载电路文件失败:', error);
-        // 如果预加载失败，仍然允许用户继续操作，届时会重新加载
-      }
-    };
-
-    preloadCircuits();
-  }, []);
 
   // 获取代币小数位数的函数
   const fetchDecimals = React.useCallback(async () => {
@@ -1075,26 +1005,6 @@ const ZWToken: React.FC = () => {
 
       // === 步骤 6: 生成 ZK proof ===
       message.destroy();
-      
-      // 如果电路尚未加载完成，显示加载进度
-      if (!circuitsLoaded) {
-        message.loading(
-          `${intl.formatMessage({ id: 'pages.zwtoken.remint.generatingZKProof' })} (CircuitsLoading: ${circuitsProgress}%)`,
-          0,
-        );
-        
-        // 等待电路加载完成
-        while (!circuitsLoaded) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          message.destroy();
-          message.loading(
-            `${intl.formatMessage({ id: 'pages.zwtoken.remint.generatingZKProof' })} (CircuitsLoading: ${circuitsProgress}%)`,
-            0,
-          );
-        }
-      }
-      
-      message.destroy();
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.generatingZKProof' }), 0);
       console.log('Step 6: Generating ZK proof (this may take 10-30 seconds)...');
 
@@ -1201,46 +1111,6 @@ const ZWToken: React.FC = () => {
               We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero
               Knowledge Token Wrapper to achieve our goal.
             </a>
-          </div>
-        ),
-        extra: (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {/* 电路加载状态显示 */}
-            {!circuitsLoaded ? (
-              <div
-                style={{
-                  padding: '8px 16px',
-                  background: '#fffbe6',
-                  border: '1px solid #ffe58f',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
-                  color: '#faad14',
-                  fontWeight: 500,
-                }}
-              >
-                <span>Circuits Loading: {circuitsProgress}%</span>
-              </div>
-            ) : (
-              <div
-                style={{
-                  padding: '8px 16px',
-                  background: '#f6ffed',
-                  border: '1px solid #b7eb8f',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
-                  color: '#52c41a',
-                  fontWeight: 500,
-                }}
-              >
-                <span>Circuits Loaded</span>
-              </div>
-            )}
           </div>
         ),
       }}
