@@ -1221,24 +1221,24 @@ const ZWToken: React.FC = () => {
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                   <Form form={depositForm} layout="vertical" onFinish={handleDeposit}>
                     <Form.Item
-                      label={intl.formatMessage({ id: 'pages.zwtoken.deposit.amount' })}
+                      label={intl.formatMessage({ id: 'pages.zwtoken.burn.amount' })}
                       name="amount"
                       rules={[
                         {
                           required: true,
-                          message: intl.formatMessage({ id: 'pages.zwtoken.deposit.amount.required' }),
+                          message: intl.formatMessage({ id: 'pages.zwtoken.burn.amount.required' }),
                         },
                         {
                           type: 'number',
                           min: 0.000001,
-                          message: intl.formatMessage({ id: 'pages.zwtoken.deposit.amount.min' }),
+                          message: intl.formatMessage({ id: 'pages.zwtoken.burn.amount.min' }),
                         },
                       ]}
                     >
                       <InputNumber
                         style={{ width: '100%' }}
                         placeholder={intl.formatMessage({
-                          id: 'pages.zwtoken.deposit.amount.placeholder',
+                          id: 'pages.zwtoken.burn.amount.placeholder',
                         })}
                         precision={6}
                         min={0}
@@ -1285,7 +1285,10 @@ const ZWToken: React.FC = () => {
                             onClick={handleDepositBurnClick}
                             style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                           >
-                            {intl.formatMessage({ id: 'pages.zwtoken.burn.generateBySeed' })}
+                            {isMobile 
+                              ? intl.formatMessage({ id: 'pages.zwtoken.burn.generate' })
+                              : intl.formatMessage({ id: 'pages.zwtoken.burn.generateBySeed' })
+                            }
                           </Button>
                         }
                       />
@@ -1351,7 +1354,10 @@ const ZWToken: React.FC = () => {
                             onClick={handleRemintGenerateBySeedClick}
                             style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                           >
-                            {intl.formatMessage({ id: 'pages.zwtoken.remint.selectSecretBySeed' })}
+                            {isMobile
+                              ? intl.formatMessage({ id: 'pages.zwtoken.remint.select' })
+                              : intl.formatMessage({ id: 'pages.zwtoken.remint.selectSecretBySeed' })
+                            }
                           </Button>
                         }
                       />
