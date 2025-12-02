@@ -358,6 +358,8 @@ const ZWToken: React.FC = () => {
     // Reset state
     setSeed('');
     setDepositSecretList([]);
+    // 自动生成 seed
+    handleGenerateBySeed('deposit');
   };
 
   // Handle Deposit Secret confirmation - Generate Privacy Address
@@ -403,7 +405,7 @@ const ZWToken: React.FC = () => {
   };
 
   // Generate Seed through wallet signature
-  const handleGenerateBySeed = async () => {
+  const handleGenerateBySeed = async (targetMode?: 'deposit' | 'transfer') => {
     if (!wallet || !account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
       return;
@@ -446,11 +448,18 @@ const ZWToken: React.FC = () => {
         });
       }
 
-      // Update the corresponding list based on which modal is open
-      if (depositSecretModalVisible) {
+      // Update the corresponding list based on target mode
+      if (targetMode === 'deposit') {
         setDepositSecretList(secrets);
-      } else {
+      } else if (targetMode === 'transfer') {
         setSecretList(secrets);
+      } else {
+        // Fallback: check which modal is open
+        if (depositSecretModalVisible) {
+          setDepositSecretList(secrets);
+        } else {
+          setSecretList(secrets);
+        }
       }
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
@@ -506,8 +515,8 @@ const ZWToken: React.FC = () => {
             isClaimed = false;
           }
 
-          // Update the corresponding list based on which modal is open
-          if (depositSecretModalVisible) {
+          // Update the corresponding list based on target mode
+          if (targetMode === 'deposit') {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
@@ -515,29 +524,63 @@ const ZWToken: React.FC = () => {
                   : item,
               ),
             );
+          } else if (targetMode === 'transfer') {
+            setSecretList((prev) =>
+              prev.map((item, idx) =>
+                idx === i
+                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                  : item,
+              ),
+            );
           } else {
-          setSecretList((prev) =>
-            prev.map((item, idx) =>
-              idx === i
-                ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
-                : item,
-            ),
-          );
+            // Fallback: check which modal is open
+            if (depositSecretModalVisible) {
+              setDepositSecretList((prev) =>
+                prev.map((item, idx) =>
+                  idx === i
+                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    : item,
+                ),
+              );
+            } else {
+              setSecretList((prev) =>
+                prev.map((item, idx) =>
+                  idx === i
+                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    : item,
+                ),
+              );
+            }
           }
         } catch (error) {
           console.error(`Failed to query Secret ${i + 1}:`, error);
-          if (depositSecretModalVisible) {
+          if (targetMode === 'deposit') {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
               ),
             );
-          } else {
-          setSecretList((prev) =>
-            prev.map((item, idx) =>
+          } else if (targetMode === 'transfer') {
+            setSecretList((prev) =>
+              prev.map((item, idx) =>
                 idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
-            ),
-          );
+              ),
+            );
+          } else {
+            // Fallback: check which modal is open
+            if (depositSecretModalVisible) {
+              setDepositSecretList((prev) =>
+                prev.map((item, idx) =>
+                  idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                ),
+              );
+            } else {
+              setSecretList((prev) =>
+                prev.map((item, idx) =>
+                  idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                ),
+              );
+            }
           }
         }
       }
@@ -1959,74 +2002,12 @@ const ZWToken: React.FC = () => {
         footer={null}
         width={900}
       >
-        {/* Mode Selection Buttons */}
-        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-          <Button
-            type={depositSecretMode === 'seed' ? 'primary' : 'default'}
-            onClick={() => {
-              setDepositSecretMode('seed');
-              if (depositSecretList.length === 0) {
-                handleGenerateBySeed();
-              }
-            }}
-            size="large"
-            style={{ flex: 1 }}
-          >
-            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.useSeed' })}
-          </Button>
-          <Button
-            type={depositSecretMode === 'manual' ? 'primary' : 'default'}
-            onClick={() => {
-              setDepositSecretMode('manual');
-              setDepositSecretList([]);
-            }}
-            size="large"
-            style={{ flex: 1 }}
-          >
-            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.manual' })}
-          </Button>
-        </div>
-
-        {/* Manual Input Mode */}
-        {depositSecretMode === 'manual' && (
-          <div>
-            <Form form={depositSecretForm} layout="vertical">
-              <Form.Item
-                label={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.secret' })}
-                name="secret"
-                rules={[
-                  {
-                    required: true,
-                    message: intl.formatMessage({
-                      id: 'pages.zwtoken.transfer.secretModal.secret.required',
-                    }),
-                  },
-                  {
-                    pattern: /^\d+$/,
-                    message: intl.formatMessage({
-                      id: 'pages.zwtoken.transfer.secretModal.secret.invalid',
-                    }),
-                  },
-                ]}
-              >
-                <Input
-                  placeholder={intl.formatMessage({
-                    id: 'pages.zwtoken.transfer.secretModal.secret.placeholder',
-                  })}
-                />
-              </Form.Item>
-              <Button type="primary" onClick={handleDepositSecretConfirm} block size="large">
-                {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.confirm' })}
-              </Button>
-            </Form>
-            <p style={{ color: '#666', fontSize: '12px', marginTop: 12 }}>
-              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.tip' })}
-            </p>
-          </div>
-        )}
-
         {/* Use Seed Mode - Show Secret List */}
-        {depositSecretMode === 'seed' && depositSecretList.length > 0 && (
+        {depositSecretList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.waiting' })}</p>
+          </div>
+        ) : (
           <div>
             <Table
               dataSource={depositSecretList}
@@ -2203,7 +2184,7 @@ const ZWToken: React.FC = () => {
             onClick={() => {
               setTransferSecretMode('seed');
               if (secretList.length === 0) {
-                handleGenerateBySeed();
+                handleGenerateBySeed('transfer');
               }
             }}
             size="large"
