@@ -23,7 +23,7 @@ const SEPOLIA_CHAIN_ID = 11155111;
 
 const ZWToken: React.FC = () => {
   const intl = useIntl();
-  const [{ wallet }] = useConnectWallet();
+  const [{ wallet }, connect] = useConnectWallet();
   const [depositForm] = Form.useForm();
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
@@ -1117,13 +1117,85 @@ const ZWToken: React.FC = () => {
     >
       <Card>
         {/* 余额显示区域 */}
-        {account && (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: '20px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 8,
+            cursor: account ? 'default' : 'pointer',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+          }}
+          onClick={() => {
+            if (!account) {
+              connect();
+            }
+          }}
+          onMouseEnter={(e) => {
+            if (!account) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 16px rgba(102, 126, 234, 0.3)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!account) {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }
+          }}
+        >
+          {/* Faucet 提示 */}
           <div
             style={{
-              marginBottom: 24,
-              padding: '16px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              borderRadius: 8,
+              marginBottom: 16,
+              paddingBottom: 16,
+              borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ color: '#fff', fontSize: 14 }}>
+              💡 {intl.formatMessage({ id: 'pages.zwtoken.faucet.tip' })}
+            </span>
+            <a
+              href="https://www.alchemy.com/faucets/ethereum-sepolia"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 'bold',
+                textDecoration: 'underline',
+                textDecorationColor: 'rgba(255, 255, 255, 0.8)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {intl.formatMessage({ id: 'pages.zwtoken.faucet.eth' })}
+            </a>
+            <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 14 }}>|</span>
+            <a
+              href="https://faucet.circle.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 'bold',
+                textDecoration: 'underline',
+                textDecorationColor: 'rgba(255, 255, 255, 0.8)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {intl.formatMessage({ id: 'pages.zwtoken.faucet.usdc' })}
+            </a>
+          </div>
+
+          {/* 余额信息 */}
+          <div
+            style={{
               display: 'flex',
               flexDirection: 'row',
               flexWrap: 'wrap',
@@ -1140,36 +1212,7 @@ const ZWToken: React.FC = () => {
                   marginBottom: 8,
                 }}
               >
-                {intl.formatMessage({ id: 'pages.zwtoken.balance.usdc' })}{' '}
-                <span style={{ fontSize: 12 }}>
-                  (Faucet:{' '}
-                  <a
-                    href="https://www.alchemy.com/faucets/ethereum-sepolia"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      textDecoration: 'underline',
-                      textDecorationColor: 'rgba(255, 255, 255, 0.5)',
-                    }}
-                  >
-                    ETH
-                  </a>
-                  ,{' '}
-                  <a
-                    href="https://faucet.circle.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      textDecoration: 'underline',
-                      textDecorationColor: 'rgba(255, 255, 255, 0.5)',
-                    }}
-                  >
-                    USDC
-                  </a>
-                  )
-                </span>
+                {intl.formatMessage({ id: 'pages.zwtoken.balance.usdc' })}
               </div>
               <div
                 style={{
@@ -1179,19 +1222,28 @@ const ZWToken: React.FC = () => {
                   wordBreak: 'break-all',
                 }}
               >
-                {parseFloat(usdcBalance).toFixed(6)}{' '}
-                <a
-                  href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.UnderlyingToken}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: '#fff',
-                    textDecoration: 'underline',
-                    textDecorationColor: 'rgba(255, 255, 255, 0.6)',
-                  }}
-                >
-                  USDC
-                </a>
+                {account ? (
+                  <>
+                    {parseFloat(usdcBalance).toFixed(6)}{' '}
+                    <a
+                      href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.UnderlyingToken}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: '#fff',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'rgba(255, 255, 255, 0.6)',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      USDC
+                    </a>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>
+                    {intl.formatMessage({ id: 'pages.zwtoken.balance.clickToConnect' })}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1223,23 +1275,32 @@ const ZWToken: React.FC = () => {
                   wordBreak: 'break-all',
                 }}
               >
-                {parseFloat(zwusdcBalance).toFixed(6)}{' '}
-                <a
-                  href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ZWERC20}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: '#fff',
-                    textDecoration: 'underline',
-                    textDecorationColor: 'rgba(255, 255, 255, 0.6)',
-                  }}
-                >
-                  ZWUSDC
-                </a>
+                {account ? (
+                  <>
+                    {parseFloat(zwusdcBalance).toFixed(6)}{' '}
+                    <a
+                      href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ZWERC20}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: '#fff',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'rgba(255, 255, 255, 0.6)',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      ZWUSDC
+                    </a>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>
+                    {intl.formatMessage({ id: 'pages.zwtoken.balance.clickToConnect' })}
+                  </span>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* 外层大Tab：Simple Mode 和 Advanced Mode */}
         <Tabs defaultActiveKey="simple" type="card" size="large">
@@ -1829,14 +1890,6 @@ const ZWToken: React.FC = () => {
           </TabPane>
         </Tabs>
       </Card>
-
-      {!account && (
-        <Card style={{ marginTop: 16, background: '#fffbe6', borderColor: '#ffe58f' }}>
-          <p style={{ margin: 0, textAlign: 'center' }}>
-            {intl.formatMessage({ id: 'pages.zwtoken.connectWallet' })}
-          </p>
-        </Card>
-      )}
 
       {/* Deposit Directly Burn Secret Modal - Generate Privacy Address */}
       <Modal

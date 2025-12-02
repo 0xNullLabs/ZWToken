@@ -7,6 +7,12 @@ export default {
   // Balance
   'pages.zwtoken.balance.usdc': 'USDC 余额',
   'pages.zwtoken.balance.zwusdc': 'ZWUSDC 余额',
+  'pages.zwtoken.balance.clickToConnect': '👆 点击连接钱包',
+
+  // Faucet
+  'pages.zwtoken.faucet.tip': '需要测试代币？从这里获取：',
+  'pages.zwtoken.faucet.eth': 'ETH 水龙头',
+  'pages.zwtoken.faucet.usdc': 'USDC 水龙头',
 
   // Tabs
   'pages.zwtoken.tab.deposit': '💰 存款',

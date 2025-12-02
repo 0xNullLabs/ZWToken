@@ -7,6 +7,12 @@ export default {
   // Balance
   'pages.zwtoken.balance.usdc': 'USDC Balance',
   'pages.zwtoken.balance.zwusdc': 'ZWUSDC Balance',
+  'pages.zwtoken.balance.clickToConnect': '👆 Click to Connect Wallet',
+  
+  // Faucet
+  'pages.zwtoken.faucet.tip': 'Need test tokens? Get them from faucet:',
+  'pages.zwtoken.faucet.eth': 'ETH Faucet',
+  'pages.zwtoken.faucet.usdc': 'USDC Faucet',
   
   // Tabs
   'pages.zwtoken.tab.deposit': '💰 Deposit',
