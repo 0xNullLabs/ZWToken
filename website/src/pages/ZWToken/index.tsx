@@ -283,6 +283,50 @@ const ZWToken: React.FC = () => {
     return () => clearInterval(interval);
   }, [refreshBalances]);
 
+  // 延迟预加载 circuits 文件，避免阻塞页面主要元素的加载
+  React.useEffect(() => {
+    const preloadCircuits = () => {
+      try {
+        console.log('开始预加载 circuits 文件...');
+        
+        // 使用 prefetch 预加载 circuits 文件
+        const link1 = document.createElement('link');
+        link1.rel = 'prefetch';
+        link1.as = 'fetch';
+        link1.href = '/circuits/remint.wasm';
+        document.head.appendChild(link1);
+
+        const link2 = document.createElement('link');
+        link2.rel = 'prefetch';
+        link2.as = 'fetch';
+        link2.href = '/circuits/remint_final.zkey';
+        document.head.appendChild(link2);
+
+        console.log('Circuits 文件预加载链接已添加');
+      } catch (error) {
+        console.error('预加载 circuits 失败:', error);
+      }
+    };
+
+    // 使用 requestIdleCallback 在浏览器空闲时加载，或延迟 3 秒后加载
+    if ('requestIdleCallback' in window) {
+      const idleCallbackId = (window as any).requestIdleCallback(
+        preloadCircuits,
+        { timeout: 3000 } // 最多 3 秒后强制执行
+      );
+      
+      return () => {
+        if ('cancelIdleCallback' in window) {
+          (window as any).cancelIdleCallback(idleCallbackId);
+        }
+      };
+    } else {
+      // 降级方案：延迟 3 秒后加载
+      const timeoutId = setTimeout(preloadCircuits, 3000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, []); // 空依赖数组，只在组件挂载时执行一次
+
   // 当钱包地址变化时，更新Simple Mode Remint表单的recipient字段
   React.useEffect(() => {
     if (account) {
