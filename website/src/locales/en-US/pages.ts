@@ -156,9 +156,9 @@ export default {
   
   // Deposit Directly Burn
   'pages.zwtoken.deposit.directBurn': 'Directly Burn (Deposit to provably burnable address)',
-  'pages.zwtoken.deposit.targetAddress': 'Target Address',
-  'pages.zwtoken.deposit.targetAddress.required': 'Please enter or generate Target Address',
-  'pages.zwtoken.deposit.targetAddress.placeholder': 'Enter address or click button to generate Privacy Address',
+  'pages.zwtoken.deposit.targetAddress': 'Burn Address',
+  'pages.zwtoken.deposit.targetAddress.required': 'Please enter a burn address or generate one',
+  'pages.zwtoken.deposit.targetAddress.placeholder': 'Enter or generate burn address',
   'pages.zwtoken.deposit.generateBySeed': 'Generate By Seed',
   'pages.zwtoken.deposit.directBurnNote': 'Note: When Directly Burn is enabled, tokens will be deposited to the specified Privacy Address. Only the holder of the corresponding Secret can Remint them.',
   'pages.zwtoken.deposit.privacyAddressGenerated': 'Burn Address generated and filled',

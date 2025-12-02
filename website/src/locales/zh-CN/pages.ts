@@ -158,9 +158,9 @@ export default {
 
   // Deposit Directly Burn
   'pages.zwtoken.deposit.directBurn': '直接销毁（存入可证明销毁的地址）',
-  'pages.zwtoken.deposit.targetAddress': '目标地址',
-  'pages.zwtoken.deposit.targetAddress.required': '请输入或生成目标地址',
-  'pages.zwtoken.deposit.targetAddress.placeholder': '输入地址或点击按钮生成隐私地址',
+  'pages.zwtoken.deposit.targetAddress': '销毁地址',
+  'pages.zwtoken.deposit.targetAddress.required': '请输入销毁地址或通过种子生成',
+  'pages.zwtoken.deposit.targetAddress.placeholder': '输入或生成销毁地址',
   'pages.zwtoken.deposit.generateBySeed': '通过种子生成',
   'pages.zwtoken.deposit.directBurnNote': '注意：启用直接销毁后，代币将存入指定的隐私地址。只有对应Secret的持有者才能重铸它们。',
   'pages.zwtoken.deposit.privacyAddressGenerated': '销毁地址已生成并填充',
