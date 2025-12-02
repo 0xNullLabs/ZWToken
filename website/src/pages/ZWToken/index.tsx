@@ -53,6 +53,8 @@ const ZWToken: React.FC = () => {
   const [depositSecretList, setDepositSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
+  const [depositSecretMode, setDepositSecretMode] = useState<'manual' | 'seed'>('manual');
+  const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed'>('manual');
 
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
@@ -320,6 +322,7 @@ const ZWToken: React.FC = () => {
     // Reset state
     setSeed('');
     setSecretList([]);
+    setTransferSecretMode('manual');
   };
 
   // Handle Deposit Directly Burn button click
@@ -328,6 +331,7 @@ const ZWToken: React.FC = () => {
     // Reset state
     setSeed('');
     setDepositSecretList([]);
+    setDepositSecretMode('manual');
   };
 
   // Handle Deposit Secret confirmation - Generate Privacy Address
@@ -342,6 +346,7 @@ const ZWToken: React.FC = () => {
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setDepositSecretModalVisible(false);
       depositSecretForm.resetFields();
+      setDepositSecretList([]);
     } catch (error: any) {
       if (error.errorFields) {
         // Form validation error, do nothing
@@ -354,9 +359,21 @@ const ZWToken: React.FC = () => {
   };
 
   // Select Secret for Deposit page
-  const handleSelectDepositSecret = (secret: string) => {
-    depositSecretForm.setFieldsValue({ secret });
-    message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.secretSelected' }));
+  const handleSelectDepositSecret = async (secret: string) => {
+    try {
+      const privacyAddress = await generatePrivacyAddress(secret);
+      // Set to Deposit form targetAddress field
+      depositForm.setFieldsValue({ targetAddress: privacyAddress });
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
+      setDepositSecretModalVisible(false);
+      depositSecretForm.resetFields();
+      setDepositSecretList([]);
+      setDepositSecretMode('manual');
+    } catch (error: any) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
+      );
+    }
   };
 
   // Generate Seed through wallet signature
@@ -508,10 +525,22 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Select a SecretBySeed
-  const handleSelectSecret = (secret: string) => {
-    secretForm.setFieldsValue({ secret });
-    message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
+  // Select a SecretBySeed for Transfer page
+  const handleSelectSecret = async (secret: string) => {
+    try {
+      const privacyAddress = await generatePrivacyAddress(secret);
+      // Set to Transfer form targetAddress field
+      transferForm.setFieldsValue({ targetAddress: privacyAddress });
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.generateSuccess' }));
+      setSecretModalVisible(false);
+      secretForm.resetFields();
+      setSecretList([]);
+      setTransferSecretMode('manual');
+    } catch (error: any) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.generateFailed' })}: ${error.message}`,
+      );
+    }
   };
 
   // Click button to open modal and generate Seed immediately
@@ -662,6 +691,7 @@ const ZWToken: React.FC = () => {
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.generateSuccess' }));
       setSecretModalVisible(false);
       secretForm.resetFields();
+      setSecretList([]);
     } catch (error: any) {
       if (error.errorFields) {
         // 表单验证错误，不做处理
@@ -1891,67 +1921,89 @@ const ZWToken: React.FC = () => {
         </Tabs>
       </Card>
 
-      {/* Deposit Directly Burn Secret Modal - Generate Privacy Address */}
+      {/* Deposit Directly Burn Secret Modal - Generate Burn Address */}
       <Modal
         title={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.title' })}
         open={depositSecretModalVisible}
-        onOk={handleDepositSecretConfirm}
         onCancel={() => {
           setDepositSecretModalVisible(false);
           depositSecretForm.resetFields();
           setSeed('');
           setDepositSecretList([]);
+          setDepositSecretMode('manual');
         }}
-        okText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.ok' })}
-        cancelText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.cancel' })}
+        footer={null}
         width={900}
       >
-        <Form form={depositSecretForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item
-            label={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.secret' })}
-            name="secret"
-            rules={[
-              {
-                required: true,
-                message: intl.formatMessage({
-                  id: 'pages.zwtoken.transfer.secretModal.secret.required',
-                }),
-              },
-              {
-                pattern: /^\d+$/,
-                message: intl.formatMessage({
-                  id: 'pages.zwtoken.transfer.secretModal.secret.invalid',
-                }),
-              },
-            ]}
+        {/* Mode Selection Buttons */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          <Button
+            type={depositSecretMode === 'manual' ? 'primary' : 'default'}
+            onClick={() => {
+              setDepositSecretMode('manual');
+              setDepositSecretList([]);
+            }}
+            size="large"
+            style={{ flex: 1 }}
           >
-            <Input
-              placeholder={intl.formatMessage({
-                id: 'pages.zwtoken.transfer.secretModal.secret.placeholder',
-              })}
-              addonAfter={
-                <Button
-                  type="link"
-                  onClick={handleGenerateBySeed}
-                  loading={loading}
-                  style={{ padding: 0, height: 'auto' }}
-                >
-                  {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.generateBySeed' })}
-                </Button>
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.manual' })}
+          </Button>
+          <Button
+            type={depositSecretMode === 'seed' ? 'primary' : 'default'}
+            onClick={() => {
+              setDepositSecretMode('seed');
+              if (depositSecretList.length === 0) {
+                handleGenerateBySeed();
               }
-            />
-          </Form.Item>
-          <p style={{ color: '#666', fontSize: '12px' }}>
-            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.tip' })}
-          </p>
-        </Form>
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.useSeed' })}
+          </Button>
+        </div>
 
-        {/* 显示SecretBySeed列表 */}
-        {depositSecretList.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <h4>
-              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.title' })}
-            </h4>
+        {/* Manual Input Mode */}
+        {depositSecretMode === 'manual' && (
+          <div>
+            <Form form={depositSecretForm} layout="vertical">
+              <Form.Item
+                label={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.secret' })}
+                name="secret"
+                rules={[
+                  {
+                    required: true,
+                    message: intl.formatMessage({
+                      id: 'pages.zwtoken.transfer.secretModal.secret.required',
+                    }),
+                  },
+                  {
+                    pattern: /^\d+$/,
+                    message: intl.formatMessage({
+                      id: 'pages.zwtoken.transfer.secretModal.secret.invalid',
+                    }),
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.secret.placeholder',
+                  })}
+                />
+              </Form.Item>
+              <Button type="primary" onClick={handleDepositSecretConfirm} block size="large">
+                {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.confirm' })}
+              </Button>
+            </Form>
+            <p style={{ color: '#666', fontSize: '12px', marginTop: 12 }}>
+              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.tip' })}
+            </p>
+          </div>
+        )}
+
+        {/* Use Seed Mode - Show Secret List */}
+        {depositSecretMode === 'seed' && depositSecretList.length > 0 && (
+          <div>
             <Table
               dataSource={depositSecretList}
               rowKey="index"
@@ -2091,67 +2143,89 @@ const ZWToken: React.FC = () => {
         )}
       </Modal>
 
-      {/* Secret Modal - Generate Privacy Address (Transfer) */}
+      {/* Secret Modal - Generate Burn Address (Transfer) */}
       <Modal
         title={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.title' })}
         open={secretModalVisible}
-        onOk={handleSecretConfirm}
         onCancel={() => {
           setSecretModalVisible(false);
           secretForm.resetFields();
           setSeed('');
           setSecretList([]);
+          setTransferSecretMode('manual');
         }}
-        okText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.ok' })}
-        cancelText={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.cancel' })}
+        footer={null}
         width={900}
       >
-        <Form form={secretForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item
-            label={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.secret' })}
-            name="secret"
-            rules={[
-              {
-                required: true,
-                message: intl.formatMessage({
-                  id: 'pages.zwtoken.transfer.secretModal.secret.required',
-                }),
-              },
-              {
-                pattern: /^\d+$/,
-                message: intl.formatMessage({
-                  id: 'pages.zwtoken.transfer.secretModal.secret.invalid',
-                }),
-              },
-            ]}
+        {/* Mode Selection Buttons */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          <Button
+            type={transferSecretMode === 'manual' ? 'primary' : 'default'}
+            onClick={() => {
+              setTransferSecretMode('manual');
+              setSecretList([]);
+            }}
+            size="large"
+            style={{ flex: 1 }}
           >
-            <Input
-              placeholder={intl.formatMessage({
-                id: 'pages.zwtoken.transfer.secretModal.secret.placeholder',
-              })}
-              addonAfter={
-                <Button
-                  type="link"
-                  onClick={handleGenerateBySeed}
-                  loading={loading}
-                  style={{ padding: 0, height: 'auto' }}
-                >
-                  {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.generateBySeed' })}
-                </Button>
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.manual' })}
+          </Button>
+          <Button
+            type={transferSecretMode === 'seed' ? 'primary' : 'default'}
+            onClick={() => {
+              setTransferSecretMode('seed');
+              if (secretList.length === 0) {
+                handleGenerateBySeed();
               }
-            />
-          </Form.Item>
-          <p style={{ color: '#666', fontSize: '12px' }}>
-            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.tip' })}
-          </p>
-        </Form>
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.useSeed' })}
+          </Button>
+        </div>
 
-        {/* 显示SecretBySeed列表 */}
-        {secretList.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <h4>
-              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.title' })}
-            </h4>
+        {/* Manual Input Mode */}
+        {transferSecretMode === 'manual' && (
+          <div>
+            <Form form={secretForm} layout="vertical">
+              <Form.Item
+                label={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.secret' })}
+                name="secret"
+                rules={[
+                  {
+                    required: true,
+                    message: intl.formatMessage({
+                      id: 'pages.zwtoken.transfer.secretModal.secret.required',
+                    }),
+                  },
+                  {
+                    pattern: /^\d+$/,
+                    message: intl.formatMessage({
+                      id: 'pages.zwtoken.transfer.secretModal.secret.invalid',
+                    }),
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.secret.placeholder',
+                  })}
+                />
+              </Form.Item>
+              <Button type="primary" onClick={handleSecretConfirm} block size="large">
+                {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.confirm' })}
+              </Button>
+            </Form>
+            <p style={{ color: '#666', fontSize: '12px', marginTop: 12 }}>
+              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.tip' })}
+            </p>
+          </div>
+        )}
+
+        {/* Use Seed Mode - Show Secret List */}
+        {transferSecretMode === 'seed' && secretList.length > 0 && (
+          <div>
             <Table
               dataSource={secretList}
               rowKey="index"
