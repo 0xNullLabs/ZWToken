@@ -117,6 +117,7 @@ export default {
   'pages.zwtoken.remint.amount.placeholder': 'Enter remint amount',
   'pages.zwtoken.remint.amount.required': 'Please enter remint amount',
   'pages.zwtoken.remint.amount.min': 'Amount must be greater than 0',
+  'pages.zwtoken.remint.maxAmountTip': 'You can enter an amount less than or equal to',
   'pages.zwtoken.remint.button': 'Generate Proof and Remint',
   'pages.zwtoken.remint.reset': 'Reset',
   'pages.zwtoken.remint.tip.title': '💡 Tips',

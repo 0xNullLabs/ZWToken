@@ -119,6 +119,7 @@ export default {
   'pages.zwtoken.remint.amount.placeholder': '请输入重铸金额',
   'pages.zwtoken.remint.amount.required': '请输入重铸金额',
   'pages.zwtoken.remint.amount.min': '金额必须大于0',
+  'pages.zwtoken.remint.maxAmountTip': '您可以输入小于等于',
   'pages.zwtoken.remint.button': '生成证明并重铸',
   'pages.zwtoken.remint.reset': '重置',
   'pages.zwtoken.remint.tip.title': '💡 提示',

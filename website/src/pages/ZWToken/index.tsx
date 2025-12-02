@@ -53,6 +53,9 @@ const ZWToken: React.FC = () => {
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   
+  // Store selected max amount for remint
+  const [selectedRemintMaxAmount, setSelectedRemintMaxAmount] = useState<string | null>(null);
+  
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
   
@@ -839,8 +842,18 @@ const ZWToken: React.FC = () => {
   };
 
   // Select SecretBySeed for Remint page
-  const handleSelectRemintSecret = (secret: string) => {
+  const handleSelectRemintSecret = (secret: string, amount: string) => {
     remintForm.setFieldsValue({ secret });
+    
+    // Set remint amount if available
+    const amountNum = parseFloat(amount);
+    if (!isNaN(amountNum) && amountNum > 0) {
+      remintForm.setFieldsValue({ remintAmount: amountNum });
+      setSelectedRemintMaxAmount(amount);
+    } else {
+      setSelectedRemintMaxAmount(null);
+    }
+    
     setRemintSeedModalVisible(false);
     message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
   };
@@ -975,8 +988,18 @@ const ZWToken: React.FC = () => {
   };
 
   // Advanced Mode Remint - Select SecretBySeed
-  const handleAdvancedRemintSelectSecret = (secret: string) => {
+  const handleAdvancedRemintSelectSecret = (secret: string, amount: string) => {
     remintForm.setFieldsValue({ secret });
+    
+    // Set remint amount if available
+    const amountNum = parseFloat(amount);
+    if (!isNaN(amountNum) && amountNum > 0) {
+      remintForm.setFieldsValue({ remintAmount: amountNum });
+      setSelectedRemintMaxAmount(amount);
+    } else {
+      setSelectedRemintMaxAmount(null);
+    }
+    
     setAdvancedRemintSeedModalVisible(false);
     message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
   };
@@ -1394,6 +1417,7 @@ const ZWToken: React.FC = () => {
         console.log(`✅ Remint succeeded! Gas used: ${receipt.gasUsed}`);
 
         remintForm.resetFields();
+        setSelectedRemintMaxAmount(null);
         // 刷新余额
         refreshBalances();
       } catch (proofError: any) {
@@ -1819,6 +1843,19 @@ const ZWToken: React.FC = () => {
                       />
                     </Form.Item>
 
+                    {selectedRemintMaxAmount && parseFloat(selectedRemintMaxAmount) > 0 && (
+                      <div
+                        style={{
+                          marginTop: -16,
+                          marginBottom: 16,
+                          color: '#1890ff',
+                          fontSize: '12px',
+                        }}
+                      >
+                        💡 {intl.formatMessage({ id: 'pages.zwtoken.remint.maxAmountTip' })}: {parseFloat(selectedRemintMaxAmount).toFixed(6)} USDC
+                      </div>
+                    )}
+
                     <Form.Item
                       name="relayerFee"
                       initialValue={0}
@@ -2181,6 +2218,19 @@ const ZWToken: React.FC = () => {
                     min={0}
                   />
                 </Form.Item>
+
+                {selectedRemintMaxAmount && parseFloat(selectedRemintMaxAmount) > 0 && (
+                  <div
+                    style={{
+                      marginTop: -16,
+                      marginBottom: 16,
+                      color: '#1890ff',
+                      fontSize: '12px',
+                    }}
+                  >
+                    💡 {intl.formatMessage({ id: 'pages.zwtoken.remint.maxAmountTip' })}: {parseFloat(selectedRemintMaxAmount).toFixed(6)} ZWUSDC
+                  </div>
+                )}
 
                 <Form.Item
                   name="relayerFee"
@@ -2987,7 +3037,7 @@ const ZWToken: React.FC = () => {
                     <Button
                       type="primary"
                       size="small"
-                      onClick={() => handleSelectRemintSecret(record.secret)}
+                      onClick={() => handleSelectRemintSecret(record.secret, record.amount)}
                       disabled={record.loading}
                     >
                       {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.select' })}
@@ -3124,7 +3174,7 @@ const ZWToken: React.FC = () => {
                     <Button
                       type="primary"
                       size="small"
-                      onClick={() => handleAdvancedRemintSelectSecret(record.secret)}
+                      onClick={() => handleAdvancedRemintSelectSecret(record.secret, record.amount)}
                       disabled={record.loading}
                     >
                       {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.select' })}
