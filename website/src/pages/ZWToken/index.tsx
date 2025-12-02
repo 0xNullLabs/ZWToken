@@ -47,6 +47,12 @@ const ZWToken: React.FC = () => {
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   
+  // Advanced Mode Remint states
+  const [advancedRemintSeedModalVisible, setAdvancedRemintSeedModalVisible] = useState(false);
+  const [advancedRemintSecretList, setAdvancedRemintSecretList] = useState<
+    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+  >([]);
+  
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
   
@@ -836,6 +842,142 @@ const ZWToken: React.FC = () => {
   const handleSelectRemintSecret = (secret: string) => {
     remintForm.setFieldsValue({ secret });
     setRemintSeedModalVisible(false);
+    message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
+  };
+
+  // Advanced Mode Remint - Click button to open modal and generate Seed
+  const handleAdvancedRemintGenerateBySeedClick = async () => {
+    if (!wallet || !account) {
+      message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
+      return;
+    }
+
+    // 先打开模态框
+    setAdvancedRemintSeedModalVisible(true);
+    setAdvancedRemintSecretList([]);
+
+    try {
+      setLoading(true);
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      const signer = await provider.getSigner();
+
+      // 构造签名消息
+      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC20}, chainId: ${network.chainId}`;
+
+      // 请求签名
+      const signature = await signer.signMessage(signMessage);
+
+      // 生成10个SecretBySeed
+      const secrets: Array<{
+        index: number;
+        secret: string;
+        amount: string;
+        loading: boolean;
+        isClaimed: boolean;
+      }> = [];
+      for (let i = 1; i <= 10; i++) {
+        // Seed + 序号，做哈希
+        const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
+        // 转换为BigInt格式的字符串（去掉0x前缀）
+        const secretBigInt = BigInt(secretBySeed).toString();
+        secrets.push({
+          index: i,
+          secret: secretBigInt,
+          amount: '-',
+          loading: true,
+          isClaimed: false,
+        });
+      }
+
+      setAdvancedRemintSecretList(secrets);
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
+
+      // 异步查询每个Secret对应的金额
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
+        provider,
+      );
+
+      // 获取链上所有的leafs（分批获取）
+      const leafCount = await contract.getCommitLeafCount(0);
+      console.log(`Found ${leafCount} commitment(s)`);
+
+      let leaves: any[] = [];
+      if (leafCount > 0n) {
+        leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
+        console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
+      }
+
+      // 逐个查询金额和 IsClaimed 状态
+      for (let i = 0; i < secrets.length; i++) {
+        try {
+          const secret = secrets[i].secret;
+          const { privacyAddress, nullifier } = await deriveFromSecret(secret);
+
+          // Find matching privacy address in leaves to get first receipt amount
+          let foundAmount = '0';
+          for (const leaf of leaves) {
+            if (leaf.to.toLowerCase() === privacyAddress.toLowerCase()) {
+              foundAmount = ethers.formatUnits(leaf.amount, tokenDecimals);
+              break;
+            }
+          }
+
+          // Check if this address has ever received tokens
+          const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
+          
+          let isClaimed = false;
+          
+          if (hasFirstReceipt) {
+            // Address has received tokens before, check if claimed
+            const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+            const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+            
+            // Check current balance of privacy address
+            const currentBalance = await contract.balanceOf(privacyAddress);
+            
+            // Claimed if nullifier used OR balance is 0
+            isClaimed = isNullifierUsed || currentBalance === 0n;
+          } else {
+            // Address has never received tokens, so it's available (not claimed)
+            isClaimed = false;
+          }
+
+          // Update state
+          setAdvancedRemintSecretList((prev) =>
+            prev.map((item, idx) =>
+              idx === i
+                ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                : item,
+            ),
+          );
+        } catch (error) {
+          console.error(`Failed to query Secret ${i + 1} amount:`, error);
+          setAdvancedRemintSecretList((prev) =>
+            prev.map((item, idx) =>
+              idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+            ),
+          );
+        }
+      }
+
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.message.queryCompleted' }));
+    } catch (error: any) {
+      console.error('生成Seed失败:', error);
+      message.error(`生成Seed失败: ${error.message}`);
+      // 如果失败，关闭模态框
+      setAdvancedRemintSeedModalVisible(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Advanced Mode Remint - Select SecretBySeed
+  const handleAdvancedRemintSelectSecret = (secret: string) => {
+    remintForm.setFieldsValue({ secret });
+    setAdvancedRemintSeedModalVisible(false);
     message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
   };
 
@@ -1984,10 +2126,10 @@ const ZWToken: React.FC = () => {
                     addonAfter={
                       <Button
                         type="link"
-                        onClick={handleRemintGenerateBySeedClick}
+                        onClick={handleAdvancedRemintGenerateBySeedClick}
                         style={{ padding: 0, height: 'auto' }}
                       >
-                        {intl.formatMessage({ id: 'pages.zwtoken.remint.generateBySeed' })}
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.selectSecretBySeed' })}
                       </Button>
                     }
                   />
@@ -2721,7 +2863,7 @@ const ZWToken: React.FC = () => {
         )}
       </Modal>
 
-      {/* Remint页面的Seed生成Modal */}
+      {/* Remint页面的Seed生成Modal - Simple Mode */}
       <Modal
         title={intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.title' })}
         open={remintSeedModalVisible}
@@ -2846,6 +2988,143 @@ const ZWToken: React.FC = () => {
                       type="primary"
                       size="small"
                       onClick={() => handleSelectRemintSecret(record.secret)}
+                      disabled={record.loading}
+                    >
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.select' })}
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        )}
+      </Modal>
+
+      {/* Remint页面的Seed生成Modal - Advanced Mode */}
+      <Modal
+        title={intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.title' })}
+        open={advancedRemintSeedModalVisible}
+        onCancel={() => {
+          setAdvancedRemintSeedModalVisible(false);
+          setAdvancedRemintSecretList([]);
+        }}
+        footer={[
+          <Button key="close" onClick={() => setAdvancedRemintSeedModalVisible(false)}>
+            {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.close' })}
+          </Button>,
+        ]}
+        width={1000}
+      >
+        {advancedRemintSecretList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.waiting' })}</p>
+          </div>
+        ) : (
+          <div>
+            <Table
+              dataSource={advancedRemintSecretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 400, x: 'max-content' }}
+              columns={[
+                {
+                  title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.index' }),
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.secret' }),
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 350,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret copied!');
+                          } else {
+                            message.error('Failed to copy');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.amount' }),
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 150,
+                  align: 'right',
+                  render: (amount: string, record) => {
+                    if (record.loading) {
+                      return (
+                        <span style={{ color: '#999' }}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.checking' })}
+                        </span>
+                      );
+                    }
+                    if (amount === 'Query failed') {
+                      return (
+                        <span style={{ color: '#ff4d4f' }}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.failed' })}
+                        </span>
+                      );
+                    }
+                    const amountNum = parseFloat(amount);
+                    if (amountNum > 0) {
+                      return (
+                        <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
+                          {parseFloat(amount).toFixed(6)} ZWUSDC
+                        </span>
+                      );
+                    }
+                    // Show different message based on isClaimed status
+                    if (record.isClaimed) {
+                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
+                  },
+                },
+                {
+                  title: intl.formatMessage({ id: 'pages.zwtoken.table.isReminted' }),
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
+                  width: 100,
+                  align: 'center',
+                  render: (isClaimed: boolean, record) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })}</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
+                  },
+                },
+                {
+                  title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.action' }),
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => (
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleAdvancedRemintSelectSecret(record.secret)}
                       disabled={record.loading}
                     >
                       {intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.select' })}

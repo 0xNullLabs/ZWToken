@@ -152,7 +152,7 @@ export default {
   'pages.zwtoken.remint.seedModal.select': 'Select',
   'pages.zwtoken.remint.seedModal.checking': 'Checking...',
   'pages.zwtoken.remint.seedModal.failed': 'Query Failed',
-  'pages.zwtoken.remint.withdrawUnderlying': 'Remint and Unwrap Underlying (withdraw underlying token instead of minting ZWERC20)',
+  'pages.zwtoken.remint.withdrawUnderlying': 'Unwrap ZWUSDC to USDC',
   
   // Deposit Directly Burn
   'pages.zwtoken.deposit.directBurn': 'Directly Burn (Warp to a burn address)',
@@ -199,7 +199,7 @@ export default {
   
   // Remint parameters
   'pages.zwtoken.remint.parameters': 'Remint Parameters:',
-  'pages.zwtoken.remint.withdrawUnderlyingDesc': '- Remint and Unwrap Underlying: If checked, directly withdraw underlying token; otherwise mint ZWERC20',
+  'pages.zwtoken.remint.withdrawUnderlyingDesc': '- Unwrap ZWUSDC to USDC: If checked, directly unwrap ZWUSDC to USDC; otherwise remint ZWUSDC',
   
   // Simple Mode Remint Tips
   'pages.zwtoken.remint.simpleMode.tip.title': '💡 Usage Tips',
