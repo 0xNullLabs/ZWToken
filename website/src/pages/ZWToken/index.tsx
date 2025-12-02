@@ -1314,10 +1314,7 @@ const ZWToken: React.FC = () => {
                             onClick={handleDepositBurnClick}
                             style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                           >
-                            {isMobile 
-                              ? intl.formatMessage({ id: 'pages.zwtoken.burn.generate' })
-                              : intl.formatMessage({ id: 'pages.zwtoken.burn.generateBySeed' })
-                            }
+                            {intl.formatMessage({ id: 'pages.zwtoken.burn.generate' })}
                           </Button>
                         }
                       />
