@@ -2086,17 +2086,17 @@ const ZWToken: React.FC = () => {
                     if (amountNum > 0) {
                       return (
                         <span style={{ color: '#faad14', fontWeight: 'bold' }}>
-                          {parseFloat(amount).toFixed(6)} ZWUSDC
+                          {parseFloat(amount).toFixed(6)} USDC
                         </span>
                       );
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})</span>;
+                      return <span style={{ color: '#999' }}>0 USDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})</span>;
                     }
                     return (
                       <span style={{ color: '#52c41a' }}>
-                        0 ZWUSDC
+                        0 USDC
                       </span>
                     );
                   },
@@ -2481,15 +2481,15 @@ const ZWToken: React.FC = () => {
                     if (amountNum > 0) {
                       return (
                         <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
-                          {parseFloat(amount).toFixed(6)} ZWUSDC
+                          {parseFloat(amount).toFixed(6)} USDC
                         </span>
                       );
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})</span>;
+                      return <span style={{ color: '#999' }}>0 USDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
+                    return <span style={{ color: '#52c41a' }}>0 USDC</span>;
                   },
                 },
                 {
