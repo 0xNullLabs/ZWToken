@@ -45,7 +45,7 @@ export default {
   'pages.zwtoken.withdraw.amount.placeholder': 'Enter unwrap amount',
   'pages.zwtoken.withdraw.amount.required': 'Please enter unwrap amount',
   'pages.zwtoken.withdraw.amount.min': 'Amount must be greater than 0',
-  'pages.zwtoken.withdraw.button': 'Withdraw',
+  'pages.zwtoken.withdraw.button': 'Unwrap',
   'pages.zwtoken.withdraw.reset': 'Reset',
   'pages.zwtoken.withdraw.tip.title': '💡 Tips',
   'pages.zwtoken.withdraw.tip.1': '• Unwrap will burn your ZWToken and return the underlying token',

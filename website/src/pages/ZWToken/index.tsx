@@ -1819,7 +1819,9 @@ const ZWToken: React.FC = () => {
                   <Button type="primary" htmlType="submit" loading={loading} block>
                     {needsApproval
                       ? 'Approve'
-                      : intl.formatMessage({ id: 'pages.zwtoken.deposit.button' })}
+                      : directBurn
+                      ? 'Wrap and Burn'
+                      : 'Wrap'}
                   </Button>
                 </Form.Item>
               </Form>
