@@ -155,7 +155,7 @@ export default {
   'pages.zwtoken.remint.withdrawUnderlying': 'Remint and Unwrap Underlying (withdraw underlying token instead of minting ZWERC20)',
   
   // Deposit Directly Burn
-  'pages.zwtoken.deposit.directBurn': 'Directly Burn (Deposit to provably burnable address)',
+  'pages.zwtoken.deposit.directBurn': 'Directly Burn (Warp to a burn address)',
   'pages.zwtoken.deposit.targetAddress': 'Burn Address',
   'pages.zwtoken.deposit.targetAddress.required': 'Please enter a burn address or generate one',
   'pages.zwtoken.deposit.targetAddress.placeholder': 'Enter or generate burn address',

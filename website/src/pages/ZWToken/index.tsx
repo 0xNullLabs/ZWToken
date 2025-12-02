@@ -49,12 +49,23 @@ const ZWToken: React.FC = () => {
   
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
+  
+  // Simple Mode Deposit (Burn) states
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
   const [depositSecretForm] = Form.useForm();
   const [depositSecretList, setDepositSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
-  const [depositSecretMode, setDepositSecretMode] = useState<'manual' | 'seed' | undefined>(undefined);
+  
+  // Advanced Mode Deposit states
+  const [advancedDepositSecretModalVisible, setAdvancedDepositSecretModalVisible] = useState(false);
+  const [advancedDepositSecretForm] = Form.useForm();
+  const [advancedDepositSecretList, setAdvancedDepositSecretList] = useState<
+    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+  >([]);
+  const [advancedDepositSecretMode, setAdvancedDepositSecretMode] = useState<'manual' | 'seed' | undefined>(undefined);
+  
+  // Transfer states
   const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed' | undefined>(undefined);
 
   // 获取当前账户
@@ -352,7 +363,7 @@ const ZWToken: React.FC = () => {
     setSecretList([]);
   };
 
-  // Handle Deposit Directly Burn button click
+  // Handle Deposit Directly Burn button click (Simple Mode)
   const handleDepositBurnClick = () => {
     setDepositSecretModalVisible(true);
     // Reset state
@@ -360,6 +371,15 @@ const ZWToken: React.FC = () => {
     setDepositSecretList([]);
     // 自动生成 seed
     handleGenerateBySeed('deposit');
+  };
+
+  // Handle Advanced Mode Deposit Generate button click
+  const handleAdvancedDepositGenerateClick = () => {
+    setAdvancedDepositSecretModalVisible(true);
+    // Reset state
+    setSeed('');
+    setAdvancedDepositSecretList([]);
+    setAdvancedDepositSecretMode(undefined);
   };
 
   // Handle Deposit Secret confirmation - Generate Privacy Address
@@ -386,7 +406,7 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Select Secret for Deposit page
+  // Select Secret for Deposit page (Simple Mode)
   const handleSelectDepositSecret = async (secret: string) => {
     try {
       const privacyAddress = await generatePrivacyAddress(secret);
@@ -396,7 +416,6 @@ const ZWToken: React.FC = () => {
       setDepositSecretModalVisible(false);
       depositSecretForm.resetFields();
       setDepositSecretList([]);
-      setDepositSecretMode('manual');
     } catch (error: any) {
       message.error(
         `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
@@ -404,8 +423,49 @@ const ZWToken: React.FC = () => {
     }
   };
 
+  // Select Secret for Advanced Mode Deposit page
+  const handleSelectAdvancedDepositSecret = async (secret: string) => {
+    try {
+      const privacyAddress = await generatePrivacyAddress(secret);
+      // Set to Deposit form targetAddress field
+      depositForm.setFieldsValue({ targetAddress: privacyAddress });
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
+      setAdvancedDepositSecretModalVisible(false);
+      advancedDepositSecretForm.resetFields();
+      setAdvancedDepositSecretList([]);
+    } catch (error: any) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
+      );
+    }
+  };
+
+  // Handle Advanced Deposit Secret confirmation - Generate Privacy Address
+  const handleAdvancedDepositSecretConfirm = async () => {
+    try {
+      const values = await advancedDepositSecretForm.validateFields();
+      const privacyAddress = await generatePrivacyAddress(values.secret);
+
+      // Set to Deposit form targetAddress field
+      depositForm.setFieldsValue({ targetAddress: privacyAddress });
+
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
+      setAdvancedDepositSecretModalVisible(false);
+      advancedDepositSecretForm.resetFields();
+      setAdvancedDepositSecretList([]);
+    } catch (error: any) {
+      if (error.errorFields) {
+        // Form validation error, do nothing
+        return;
+      }
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
+      );
+    }
+  };
+
   // Generate Seed through wallet signature
-  const handleGenerateBySeed = async (targetMode?: 'deposit' | 'transfer') => {
+  const handleGenerateBySeed = async (targetMode?: 'deposit' | 'transfer' | 'advancedDeposit') => {
     if (!wallet || !account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
       return;
@@ -453,10 +513,14 @@ const ZWToken: React.FC = () => {
         setDepositSecretList(secrets);
       } else if (targetMode === 'transfer') {
         setSecretList(secrets);
+      } else if (targetMode === 'advancedDeposit') {
+        setAdvancedDepositSecretList(secrets);
       } else {
         // Fallback: check which modal is open
         if (depositSecretModalVisible) {
           setDepositSecretList(secrets);
+        } else if (advancedDepositSecretModalVisible) {
+          setAdvancedDepositSecretList(secrets);
         } else {
           setSecretList(secrets);
         }
@@ -532,10 +596,26 @@ const ZWToken: React.FC = () => {
                   : item,
               ),
             );
+          } else if (targetMode === 'advancedDeposit') {
+            setAdvancedDepositSecretList((prev) =>
+              prev.map((item, idx) =>
+                idx === i
+                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                  : item,
+              ),
+            );
           } else {
             // Fallback: check which modal is open
             if (depositSecretModalVisible) {
               setDepositSecretList((prev) =>
+                prev.map((item, idx) =>
+                  idx === i
+                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    : item,
+                ),
+              );
+            } else if (advancedDepositSecretModalVisible) {
+              setAdvancedDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
                     ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
@@ -566,10 +646,22 @@ const ZWToken: React.FC = () => {
                 idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
               ),
             );
+          } else if (targetMode === 'advancedDeposit') {
+            setAdvancedDepositSecretList((prev) =>
+              prev.map((item, idx) =>
+                idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+              ),
+            );
           } else {
             // Fallback: check which modal is open
             if (depositSecretModalVisible) {
               setDepositSecretList((prev) =>
+                prev.map((item, idx) =>
+                  idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                ),
+              );
+            } else if (advancedDepositSecretModalVisible) {
+              setAdvancedDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
                 ),
@@ -1713,7 +1805,7 @@ const ZWToken: React.FC = () => {
                       addonAfter={
                         <Button
                           type="link"
-                          onClick={handleDepositBurnClick}
+                          onClick={handleAdvancedDepositGenerateClick}
                           style={{ padding: 0, height: 'auto' }}
                         >
                           {intl.formatMessage({ id: 'pages.zwtoken.deposit.generateBySeed' })}
@@ -2366,6 +2458,240 @@ const ZWToken: React.FC = () => {
                         type={hasAmount ? 'default' : 'primary'}
                         size="small"
                         onClick={() => handleSelectSecret(record.secret)}
+                        disabled={record.loading || hasAmount}
+                        title={
+                          hasAmount
+                            ? intl.formatMessage({
+                                id: 'pages.zwtoken.transfer.secretModal.seedList.hasAmount',
+                              })
+                            : intl.formatMessage({
+                                id: 'pages.zwtoken.transfer.secretModal.seedList.select',
+                              })
+                        }
+                      >
+                        {intl.formatMessage({
+                          id: 'pages.zwtoken.transfer.secretModal.seedList.select',
+                        })}
+                      </Button>
+                    );
+                  },
+                },
+              ]}
+            />
+            <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.seedList.tip' })}
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Advanced Mode Deposit Secret Modal - Generate Burn Address */}
+      <Modal
+        title={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.title' })}
+        open={advancedDepositSecretModalVisible}
+        onCancel={() => {
+          setAdvancedDepositSecretModalVisible(false);
+          advancedDepositSecretForm.resetFields();
+          setSeed('');
+          setAdvancedDepositSecretList([]);
+          setAdvancedDepositSecretMode(undefined);
+        }}
+        footer={null}
+        width={900}
+      >
+        {/* Mode Selection Buttons */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          <Button
+            type={advancedDepositSecretMode === 'seed' ? 'primary' : 'default'}
+            onClick={() => {
+              setAdvancedDepositSecretMode('seed');
+              if (advancedDepositSecretList.length === 0) {
+                handleGenerateBySeed('advancedDeposit');
+              }
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.useSeed' })}
+          </Button>
+          <Button
+            type={advancedDepositSecretMode === 'manual' ? 'primary' : 'default'}
+            onClick={() => {
+              setAdvancedDepositSecretMode('manual');
+              setAdvancedDepositSecretList([]);
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.manual' })}
+          </Button>
+        </div>
+
+        {/* Manual Input Mode */}
+        {advancedDepositSecretMode === 'manual' && (
+          <div>
+            <Form form={advancedDepositSecretForm} layout="vertical">
+              <Form.Item
+                label={intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.secret' })}
+                name="secret"
+                rules={[
+                  {
+                    required: true,
+                    message: intl.formatMessage({
+                      id: 'pages.zwtoken.transfer.secretModal.secret.required',
+                    }),
+                  },
+                  {
+                    pattern: /^\d+$/,
+                    message: intl.formatMessage({
+                      id: 'pages.zwtoken.transfer.secretModal.secret.invalid',
+                    }),
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.secret.placeholder',
+                  })}
+                />
+              </Form.Item>
+              <Button type="primary" onClick={handleAdvancedDepositSecretConfirm} block size="large">
+                {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.confirm' })}
+              </Button>
+            </Form>
+            <p style={{ color: '#666', fontSize: '12px', marginTop: 12 }}>
+              {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.tip' })}
+            </p>
+          </div>
+        )}
+
+        {/* Use Seed Mode - Show Secret List */}
+        {advancedDepositSecretMode === 'seed' && advancedDepositSecretList.length > 0 && (
+          <div>
+            <Table
+              dataSource={advancedDepositSecretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 300, x: 'max-content' }}
+              columns={[
+                {
+                  title: intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.seedList.index',
+                  }),
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.seedList.secret',
+                  }),
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 350,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret copied!');
+                          } else {
+                            message.error('Failed to copy');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  title: intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.seedList.amount',
+                  }),
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 150,
+                  align: 'right',
+                  render: (amount: string, record) => {
+                    if (record.loading) {
+                      return (
+                        <span style={{ color: '#999' }}>
+                          {intl.formatMessage({
+                            id: 'pages.zwtoken.transfer.secretModal.seedList.checking',
+                          })}
+                        </span>
+                      );
+                    }
+                    if (amount === 'Query failed') {
+                      return (
+                        <span style={{ color: '#ff4d4f' }}>
+                          {intl.formatMessage({
+                            id: 'pages.zwtoken.transfer.secretModal.seedList.failed',
+                          })}
+                        </span>
+                      );
+                    }
+                    const amountNum = parseFloat(amount);
+                    if (amountNum > 0) {
+                      return (
+                        <span style={{ color: '#faad14', fontWeight: 'bold' }}>
+                          {parseFloat(amount).toFixed(6)} ZWUSDC
+                        </span>
+                      );
+                    }
+                    // Show different message based on isClaimed status
+                    if (record.isClaimed) {
+                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})</span>;
+                    }
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        0 ZWUSDC
+                      </span>
+                    );
+                  },
+                },
+                {
+                  title: intl.formatMessage({ id: 'pages.zwtoken.table.isClaimed' }),
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
+                  width: 100,
+                  align: 'center',
+                  render: (isClaimed: boolean, record) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
+                  },
+                },
+                {
+                  title: intl.formatMessage({
+                    id: 'pages.zwtoken.transfer.secretModal.seedList.action',
+                  }),
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => {
+                    const amountNum = parseFloat(record.amount);
+                    const hasAmount =
+                      !record.loading && record.amount !== 'Query failed' && amountNum > 0;
+                    return (
+                      <Button
+                        type={hasAmount ? 'default' : 'primary'}
+                        size="small"
+                        onClick={() => handleSelectAdvancedDepositSecret(record.secret)}
                         disabled={record.loading || hasAmount}
                         title={
                           hasAmount
