@@ -77,7 +77,7 @@ export default {
   'pages.zwtoken.transfer.failed': '转账失败',
   'pages.zwtoken.transfer.generateSuccess': '销毁地址生成成功！',
   'pages.zwtoken.transfer.generateFailed': '生成销毁地址失败',
-  'pages.zwtoken.transfer.secretModal.title': 'Secret',
+  'pages.zwtoken.transfer.secretModal.title': '选择一个Secret',
   'pages.zwtoken.transfer.secretModal.manual': 'Manual',
   'pages.zwtoken.transfer.secretModal.useSeed': 'By Signature',
   'pages.zwtoken.transfer.secretModal.error': '生成地址失败',

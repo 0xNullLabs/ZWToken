@@ -77,7 +77,7 @@ export default {
   'pages.zwtoken.transfer.failed': 'Transfer failed',
   'pages.zwtoken.transfer.generateSuccess': 'Burn address generated successfully!',
   'pages.zwtoken.transfer.generateFailed': 'Failed to generate burn address',
-  'pages.zwtoken.transfer.secretModal.title': 'Secret',
+  'pages.zwtoken.transfer.secretModal.title': 'Select a Secret',
   'pages.zwtoken.transfer.secretModal.manual': 'Manual',
   'pages.zwtoken.transfer.secretModal.useSeed': 'By Signature',
   'pages.zwtoken.transfer.secretModal.error': 'Failed to generate address',
@@ -107,7 +107,7 @@ export default {
   
   // Remint
   'pages.zwtoken.remint.secret': 'Secret',
-  'pages.zwtoken.remint.secret.placeholder': 'Enter your Secret',
+  'pages.zwtoken.remint.secret.placeholder': 'Enter or Select Your Secret',
   'pages.zwtoken.remint.secret.required': 'Please enter Secret',
   'pages.zwtoken.remint.recipient': 'Recipient Address',
   'pages.zwtoken.remint.recipient.placeholder': '0x...',
