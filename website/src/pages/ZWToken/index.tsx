@@ -2096,11 +2096,7 @@ const ZWToken: React.FC = () => {
                     }
                     return (
                       <span style={{ color: '#52c41a' }}>
-                        0 ZWUSDC (
-                        {intl.formatMessage({
-                          id: 'pages.zwtoken.transfer.secretModal.seedList.available',
-                        })}
-                        )
+                        0 ZWUSDC
                       </span>
                     );
                   },
@@ -2333,11 +2329,7 @@ const ZWToken: React.FC = () => {
                     }
                     return (
                       <span style={{ color: '#52c41a' }}>
-                        0 ZWUSDC (
-                        {intl.formatMessage({
-                          id: 'pages.zwtoken.transfer.secretModal.seedList.available',
-                        })}
-                        )
+                        0 ZWUSDC
                       </span>
                     );
                   },
@@ -2497,7 +2489,7 @@ const ZWToken: React.FC = () => {
                     if (record.isClaimed) {
                       return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.available' })})</span>;
+                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
                   },
                 },
                 {
