@@ -335,7 +335,7 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Generate Privacy Address from Secret
+  // Generate Burn Address from Secret
   const generatePrivacyAddress = async (secret: string) => {
     try {
       const poseidon = await buildPoseidon();
@@ -382,7 +382,7 @@ const ZWToken: React.FC = () => {
     setAdvancedDepositSecretMode(undefined);
   };
 
-  // Handle Deposit Secret confirmation - Generate Privacy Address
+  // Handle Deposit Secret confirmation - Generate Burn Address
   const handleDepositSecretConfirm = async () => {
     try {
       const values = await depositSecretForm.validateFields();
@@ -440,7 +440,7 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Handle Advanced Deposit Secret confirmation - Generate Privacy Address
+  // Handle Advanced Deposit Secret confirmation - Generate Burn Address
   const handleAdvancedDepositSecretConfirm = async () => {
     try {
       const values = await advancedDepositSecretForm.validateFields();
@@ -839,7 +839,7 @@ const ZWToken: React.FC = () => {
     message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
   };
 
-  // Handle Secret confirmation - Generate Privacy Address
+  // Handle Secret confirmation - Generate Burn Address
   const handleSecretConfirm = async () => {
     try {
       const values = await secretForm.validateFields();

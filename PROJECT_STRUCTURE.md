@@ -202,7 +202,7 @@ npx hardhat test test/e2e.test.js  # E2E 测试
 
 ## 🔐 隐私保护
 
-1. **Privacy Address**: 从 secret 推导（不关联真实身份）
+1. **Burn Address**: 从 secret 推导（不关联真实身份）
 2. **Commitment**: Poseidon(addr20, firstAmount) 记录在链上
 3. **Nullifier**: 防止重复 claim，但不泄露 commitment
 4. **ZK Proof**: 证明拥有 secret，但不透露 secret 本身

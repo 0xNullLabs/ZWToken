@@ -105,7 +105,7 @@ export default {
   'pages.zwtoken.transfer.secretModal.seedList.available': '可用',
   'pages.zwtoken.transfer.secretModal.seedList.hasAmount': '该地址已有金额，不能再次使用',
   'pages.zwtoken.transfer.secretModal.seedList.tip':
-    '提示：已有金额的Privacy Address不能再次使用，请选择金额为0的Secret',
+    'Burn Address不能再次使用，请选择金额为0的Secret',
 
   // Remint (重铸)
   'pages.zwtoken.remint.secret': 'Secret',

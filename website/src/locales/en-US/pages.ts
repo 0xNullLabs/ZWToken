@@ -103,7 +103,7 @@ export default {
   'pages.zwtoken.transfer.secretModal.seedList.failed': 'Query Failed',
   'pages.zwtoken.transfer.secretModal.seedList.available': 'Available',
   'pages.zwtoken.transfer.secretModal.seedList.hasAmount': 'This address already has amount, cannot be used again',
-  'pages.zwtoken.transfer.secretModal.seedList.tip': 'Tip: Privacy Address with existing amount cannot be reused. Please select Secret with 0 amount',
+  'pages.zwtoken.transfer.secretModal.seedList.tip': 'Tip: Burn Address with existing amount cannot be reused. Please select Secret with 0 amount',
   
   // Remint
   'pages.zwtoken.remint.secret': 'Secret',
@@ -160,7 +160,7 @@ export default {
   'pages.zwtoken.deposit.targetAddress.required': 'Please enter a burn address or generate one',
   'pages.zwtoken.deposit.targetAddress.placeholder': 'Enter or generate burn address',
   'pages.zwtoken.deposit.generateBySeed': 'Generate By Seed',
-  'pages.zwtoken.deposit.directBurnNote': 'Note: When Directly Burn is enabled, tokens will be deposited to the specified Privacy Address. Only the holder of the corresponding Secret can Remint them.',
+  'pages.zwtoken.deposit.directBurnNote': 'Note: When Directly Burn is enabled, tokens will be deposited to the specified Burn Address. Only the holder of the corresponding Secret can Remint them.',
   'pages.zwtoken.deposit.privacyAddressGenerated': 'Burn Address generated and filled',
   'pages.zwtoken.deposit.secretSelected': 'Secret selected',
   
@@ -185,7 +185,7 @@ export default {
   
   // Common messages
   'pages.zwtoken.message.secretSelected': 'Secret selected',
-  'pages.zwtoken.message.privacyAddressZeroBalance': 'Privacy Address has zero balance. Tokens may have been transferred already.',
+  'pages.zwtoken.message.privacyAddressZeroBalance': 'Burn Address has zero balance. Tokens may have been transferred already.',
   'pages.zwtoken.message.seedGeneratedQuerying': 'Seed generated successfully! Querying amounts and status...',
   'pages.zwtoken.message.queryCompleted': 'Amount and status query completed!',
   'pages.zwtoken.message.approveSuccess': 'Approve successful! You can now Deposit',
