@@ -1,4 +1,5 @@
 import { Card, Tabs, Form, InputNumber, Input, Button, message, Modal, Table, Checkbox } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { useConnectWallet } from '@web3-onboard/react';
 import { useIntl } from '@umijs/max';
@@ -53,8 +54,8 @@ const ZWToken: React.FC = () => {
   const [depositSecretList, setDepositSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
-  const [depositSecretMode, setDepositSecretMode] = useState<'manual' | 'seed'>('manual');
-  const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed'>('manual');
+  const [depositSecretMode, setDepositSecretMode] = useState<'manual' | 'seed' | undefined>(undefined);
+  const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed' | undefined>(undefined);
 
   // 获取当前账户
   const account = wallet?.accounts?.[0]?.address;
@@ -296,6 +297,33 @@ const ZWToken: React.FC = () => {
     return provider;
   };
 
+  // Copy text to clipboard with fallback
+  const copyToClipboard = async (text: string) => {
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return successful;
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      return false;
+    }
+  };
+
   // Generate Privacy Address from Secret
   const generatePrivacyAddress = async (secret: string) => {
     try {
@@ -322,7 +350,6 @@ const ZWToken: React.FC = () => {
     // Reset state
     setSeed('');
     setSecretList([]);
-    setTransferSecretMode('manual');
   };
 
   // Handle Deposit Directly Burn button click
@@ -331,7 +358,6 @@ const ZWToken: React.FC = () => {
     // Reset state
     setSeed('');
     setDepositSecretList([]);
-    setDepositSecretMode('manual');
   };
 
   // Handle Deposit Secret confirmation - Generate Privacy Address
@@ -535,7 +561,6 @@ const ZWToken: React.FC = () => {
       setSecretModalVisible(false);
       secretForm.resetFields();
       setSecretList([]);
-      setTransferSecretMode('manual');
     } catch (error: any) {
       message.error(
         `${intl.formatMessage({ id: 'pages.zwtoken.transfer.generateFailed' })}: ${error.message}`,
@@ -1930,24 +1955,12 @@ const ZWToken: React.FC = () => {
           depositSecretForm.resetFields();
           setSeed('');
           setDepositSecretList([]);
-          setDepositSecretMode('manual');
         }}
         footer={null}
         width={900}
       >
         {/* Mode Selection Buttons */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-          <Button
-            type={depositSecretMode === 'manual' ? 'primary' : 'default'}
-            onClick={() => {
-              setDepositSecretMode('manual');
-              setDepositSecretList([]);
-            }}
-            size="large"
-            style={{ flex: 1 }}
-          >
-            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.manual' })}
-          </Button>
           <Button
             type={depositSecretMode === 'seed' ? 'primary' : 'default'}
             onClick={() => {
@@ -1960,6 +1973,17 @@ const ZWToken: React.FC = () => {
             style={{ flex: 1 }}
           >
             {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.useSeed' })}
+          </Button>
+          <Button
+            type={depositSecretMode === 'manual' ? 'primary' : 'default'}
+            onClick={() => {
+              setDepositSecretMode('manual');
+              setDepositSecretList([]);
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.manual' })}
           </Button>
         </div>
 
@@ -2026,12 +2050,28 @@ const ZWToken: React.FC = () => {
                   }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 300,
+                  width: 350,
                   ellipsis: true,
                   render: (text: string) => (
-                    <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                      {text.substring(0, 20)}...{text.substring(text.length - 20)}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret copied!');
+                          } else {
+                            message.error('Failed to copy');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
                   ),
                 },
                 {
@@ -2152,24 +2192,12 @@ const ZWToken: React.FC = () => {
           secretForm.resetFields();
           setSeed('');
           setSecretList([]);
-          setTransferSecretMode('manual');
         }}
         footer={null}
         width={900}
       >
         {/* Mode Selection Buttons */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-          <Button
-            type={transferSecretMode === 'manual' ? 'primary' : 'default'}
-            onClick={() => {
-              setTransferSecretMode('manual');
-              setSecretList([]);
-            }}
-            size="large"
-            style={{ flex: 1 }}
-          >
-            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.manual' })}
-          </Button>
           <Button
             type={transferSecretMode === 'seed' ? 'primary' : 'default'}
             onClick={() => {
@@ -2182,6 +2210,17 @@ const ZWToken: React.FC = () => {
             style={{ flex: 1 }}
           >
             {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.useSeed' })}
+          </Button>
+          <Button
+            type={transferSecretMode === 'manual' ? 'primary' : 'default'}
+            onClick={() => {
+              setTransferSecretMode('manual');
+              setSecretList([]);
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.manual' })}
           </Button>
         </div>
 
@@ -2248,12 +2287,28 @@ const ZWToken: React.FC = () => {
                   }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 300,
+                  width: 350,
                   ellipsis: true,
                   render: (text: string) => (
-                    <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                      {text.substring(0, 20)}...{text.substring(text.length - 20)}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret copied!');
+                          } else {
+                            message.error('Failed to copy');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
                   ),
                 },
                 {
@@ -2404,12 +2459,28 @@ const ZWToken: React.FC = () => {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 300,
+                  width: 350,
                   ellipsis: true,
                   render: (text: string) => (
-                    <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                      {text.substring(0, 20)}...{text.substring(text.length - 20)}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret copied!');
+                          } else {
+                            message.error('Failed to copy');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
                   ),
                 },
                 {

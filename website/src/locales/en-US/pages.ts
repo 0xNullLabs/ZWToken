@@ -79,7 +79,7 @@ export default {
   'pages.zwtoken.transfer.generateFailed': 'Failed to generate burn address',
   'pages.zwtoken.transfer.secretModal.title': 'Secret',
   'pages.zwtoken.transfer.secretModal.manual': 'Manual',
-  'pages.zwtoken.transfer.secretModal.useSeed': 'Use Seed',
+  'pages.zwtoken.transfer.secretModal.useSeed': 'By Signature',
   'pages.zwtoken.transfer.secretModal.error': 'Failed to generate address',
   'pages.zwtoken.transfer.secretModal.secret': 'Secret',
   'pages.zwtoken.transfer.secretModal.secret.placeholder': 'Enter numeric Secret (e.g., 123456789)',

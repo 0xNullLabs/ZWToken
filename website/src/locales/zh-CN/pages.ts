@@ -79,7 +79,7 @@ export default {
   'pages.zwtoken.transfer.generateFailed': '生成销毁地址失败',
   'pages.zwtoken.transfer.secretModal.title': 'Secret',
   'pages.zwtoken.transfer.secretModal.manual': 'Manual',
-  'pages.zwtoken.transfer.secretModal.useSeed': 'Use Seed',
+  'pages.zwtoken.transfer.secretModal.useSeed': 'By Signature',
   'pages.zwtoken.transfer.secretModal.error': '生成地址失败',
   'pages.zwtoken.transfer.secretModal.secret': 'Secret',
   'pages.zwtoken.transfer.secretModal.secret.placeholder': '请输入数字Secret（如：123456789）',
