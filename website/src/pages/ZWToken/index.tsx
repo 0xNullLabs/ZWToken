@@ -19,7 +19,7 @@ import * as snarkjs from 'snarkjs';
 
 const { TabPane } = Tabs;
 
-// Sepolia 测试网的 chainId
+// Sepolia testnet chainId
 const SEPOLIA_CHAIN_ID = 11155111;
 
 const ZWToken: React.FC = () => {
@@ -32,7 +32,7 @@ const ZWToken: React.FC = () => {
   const [secretForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [secretModalVisible, setSecretModalVisible] = useState(false);
-  const [tokenDecimals, setTokenDecimals] = useState<number>(18); // 默认 18 位，实际会动态查询
+  const [tokenDecimals, setTokenDecimals] = useState<number>(18); // Default 18 digits, will be queried dynamically
   const [usdcBalance, setUsdcBalance] = useState<string>('0');
   const [zwusdcBalance, setZwusdcBalance] = useState<string>('0');
   const [allowance, setAllowance] = useState<string>('0');
@@ -77,10 +77,10 @@ const ZWToken: React.FC = () => {
   // Transfer states
   const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed' | undefined>(undefined);
 
-  // 获取当前账户
+  // Get current account
   const account = wallet?.accounts?.[0]?.address;
 
-  // 监听窗口大小变化
+  // Listen to window size changes
   React.useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 576);
@@ -93,7 +93,7 @@ const ZWToken: React.FC = () => {
   }, []);
 
 
-  // 获取代币小数位数的函数
+  // Function to get token decimals
   const fetchDecimals = React.useCallback(async () => {
     if (!wallet) return;
 
@@ -102,7 +102,7 @@ const ZWToken: React.FC = () => {
       const network = await provider.getNetwork();
 
       if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
-        console.log('网络不是 Sepolia，跳过获取 decimals');
+        console.log('Network is not Sepolia, skipping decimals fetch');
         return;
       }
 
@@ -116,11 +116,11 @@ const ZWToken: React.FC = () => {
       console.log('Token decimals:', decimals);
     } catch (error) {
       console.error('Failed to fetch token decimals:', error);
-      // 保持默认值 18
+      // Keep default value 18
     }
   }, [wallet]);
 
-  // 刷新余额的函数
+  // Function to refresh balances
   const refreshBalances = React.useCallback(async () => {
     if (!wallet || !account) {
       setUsdcBalance('0');
@@ -134,14 +134,14 @@ const ZWToken: React.FC = () => {
       const network = await provider.getNetwork();
 
       if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
-        console.log('网络不是 Sepolia，跳过刷新余额');
+        console.log('Network is not Sepolia, skipping balance refresh');
         setUsdcBalance('0');
         setZwusdcBalance('0');
         setAllowance('0');
         return;
       }
 
-      // 查询 USDC 余额
+      // Query USDC balance
       const usdcContract = new ethers.Contract(
         CONTRACT_ADDRESSES.UnderlyingToken,
         CONTRACT_ABIS.ERC20,
@@ -150,11 +150,11 @@ const ZWToken: React.FC = () => {
       const usdcBal = await usdcContract.balanceOf(account);
       setUsdcBalance(ethers.formatUnits(usdcBal, tokenDecimals));
 
-      // 查询 Allowance
+      // Query Allowance
       const allowanceBigInt = await usdcContract.allowance(account, CONTRACT_ADDRESSES.ZWERC20);
       setAllowance(ethers.formatUnits(allowanceBigInt, tokenDecimals));
 
-      // 查询 ZWUSDC 余额
+      // Query ZWUSDC balance
       const zwusdcContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC20,
         CONTRACT_ABIS.ZWERC20,
@@ -167,36 +167,36 @@ const ZWToken: React.FC = () => {
     }
   }, [wallet, account, tokenDecimals]);
 
-  // 检查并切换到 Sepolia 网络
+  // Check and switch to Sepolia network
   React.useEffect(() => {
     const checkNetwork = async () => {
       if (!wallet) return;
 
       try {
-        // 不传入 chainId，获取实际连接的网络
+        // Don't pass chainId, get the actually connected network
         const provider = new ethers.BrowserProvider(wallet.provider);
         const network = await provider.getNetwork();
 
-        console.log('当前连接的网络 chainId:', Number(network.chainId));
+        console.log('Currently connected network chainId:', Number(network.chainId));
 
         if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
           message.error(
-            `错误：当前连接的是 Chain ID ${Number(
+            `Error: Currently connected to Chain ID ${Number(
               network.chainId,
-            )} 的网络，请切换到 Sepolia 测试网 (Chain ID: 11155111)`,
+            )} network, please switch to Sepolia testnet (Chain ID: 11155111)`,
             10,
           );
 
-          // 尝试切换网络
+          // Try to switch network
           try {
             await wallet.provider.request({
               method: 'wallet_switchEthereumChain',
               params: [{ chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}` }],
             });
-            message.success('已成功切换到 Sepolia 测试网');
+            message.success('Successfully switched to Sepolia testnet');
           } catch (switchError: any) {
-            console.error('切换网络失败:', switchError);
-            // 如果网络不存在，尝试添加网络
+            console.error('Failed to switch network:', switchError);
+            // If network doesn't exist, try to add network
             if (switchError.code === 4902) {
               try {
                 await wallet.provider.request({
@@ -215,41 +215,41 @@ const ZWToken: React.FC = () => {
                     },
                   ],
                 });
-                message.success('已添加并切换到 Sepolia 测试网');
+                message.success('Added and switched to Sepolia testnet');
               } catch (addError) {
-                console.error('添加网络失败:', addError);
-                message.error('无法添加 Sepolia 网络，请手动在钱包中添加');
+                console.error('Failed to add network:', addError);
+                message.error('Unable to add Sepolia network, please add it manually in wallet');
               }
             } else {
-              message.error('网络切换失败，请手动切换到 Sepolia 测试网');
+              message.error('Network switch failed, please manually switch to Sepolia testnet');
             }
           }
         } else {
-          console.log('✅ 已连接到 Sepolia 测试网');
+          console.log('✅ Connected to Sepolia testnet');
         }
       } catch (error) {
-        console.error('检查网络失败:', error);
+        console.error('Failed to check network:', error);
       }
     };
 
     checkNetwork();
 
-    // 监听网络变化事件
+    // Listen to network change events
     if (wallet?.provider) {
       const handleChainChanged = (chainId: string) => {
         const decimalChainId = parseInt(chainId, 16);
-        console.log('网络已切换到 chainId:', decimalChainId);
+        console.log('Network switched to chainId:', decimalChainId);
 
         if (decimalChainId !== SEPOLIA_CHAIN_ID) {
           message.warning(
-            `当前网络已切换到 Chain ID ${decimalChainId}，请切换回 Sepolia 测试网 (Chain ID: 11155111)`,
+            `Network has switched to Chain ID ${decimalChainId}, please switch back to Sepolia testnet (Chain ID: 11155111)`,
           );
-          // 清空余额显示
+          // Clear balance display
           setUsdcBalance('0');
           setZwusdcBalance('0');
         } else {
-          message.success('✅ 已连接到 Sepolia 测试网，正在刷新数据...');
-          // 刷新数据而不是刷新页面
+          message.success('✅ Connected to Sepolia testnet, refreshing data...');
+          // Refresh data instead of refreshing page
           setTimeout(() => {
             fetchDecimals();
             refreshBalances();
@@ -259,7 +259,7 @@ const ZWToken: React.FC = () => {
 
       wallet.provider.on('chainChanged', handleChainChanged);
 
-      // 清理函数
+      // Cleanup function
       return () => {
         if (wallet?.provider?.removeListener) {
           wallet.provider.removeListener('chainChanged', handleChainChanged);
@@ -268,28 +268,28 @@ const ZWToken: React.FC = () => {
     }
   }, [wallet, refreshBalances, fetchDecimals]);
 
-  // 初始获取代币小数位数
+  // Initially get token decimals
   React.useEffect(() => {
     fetchDecimals();
   }, [fetchDecimals]);
 
-  // 获取余额
+  // Get balances
   React.useEffect(() => {
     refreshBalances();
 
-    // 每10秒刷新一次余额
+    // Refresh balances every 10 seconds
     const interval = setInterval(refreshBalances, 10000);
 
     return () => clearInterval(interval);
   }, [refreshBalances]);
 
-  // 延迟预加载 circuits 文件，避免阻塞页面主要元素的加载
+  // Delay preloading circuits files to avoid blocking main page elements loading
   React.useEffect(() => {
     const preloadCircuits = () => {
       try {
-        console.log('开始预加载 circuits 文件...');
+        console.log('Starting to preload circuits files...');
         
-        // 使用 prefetch 预加载 circuits 文件
+        // Use prefetch to preload circuits files
         const link1 = document.createElement('link');
         link1.rel = 'prefetch';
         link1.as = 'fetch';
@@ -302,17 +302,17 @@ const ZWToken: React.FC = () => {
         link2.href = '/circuits/remint_final.zkey';
         document.head.appendChild(link2);
 
-        console.log('Circuits 文件预加载链接已添加');
+        console.log('Circuits files preload links added');
       } catch (error) {
-        console.error('预加载 circuits 失败:', error);
+        console.error('Failed to preload circuits:', error);
       }
     };
 
-    // 使用 requestIdleCallback 在浏览器空闲时加载，或延迟 3 秒后加载
+    // Use requestIdleCallback to load when browser is idle, or delay 3 seconds
     if ('requestIdleCallback' in window) {
       const idleCallbackId = (window as any).requestIdleCallback(
         preloadCircuits,
-        { timeout: 3000 } // 最多 3 秒后强制执行
+        { timeout: 3000 } // Force execution after at most 3 seconds
       );
       
       return () => {
@@ -321,24 +321,24 @@ const ZWToken: React.FC = () => {
         }
       };
     } else {
-      // 降级方案：延迟 3 秒后加载
+      // Fallback: delay 3 seconds then load
       const timeoutId = setTimeout(preloadCircuits, 3000);
       return () => clearTimeout(timeoutId);
     }
-  }, []); // 空依赖数组，只在组件挂载时执行一次
+  }, []); // Empty dependency array, only execute once when component mounts
 
-  // 当钱包地址变化时，更新Simple Mode Remint表单的recipient字段
+  // When wallet address changes, update Simple Mode Remint form's recipient field
   React.useEffect(() => {
     if (account) {
       const currentRecipient = remintForm.getFieldValue('recipient');
-      // 只在recipient为空时自动填充
+      // Only auto-fill when recipient is empty
       if (!currentRecipient) {
         remintForm.setFieldsValue({ recipient: account });
       }
     }
   }, [account, remintForm]);
 
-  // 获取provider和signer，并检查网络
+  // Get provider and signer, and check network
   const getProvider = async () => {
     if (!wallet) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
@@ -350,9 +350,9 @@ const ZWToken: React.FC = () => {
 
     if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
       message.error(
-        `当前连接的是 Chain ID ${Number(
+        `Currently connected to Chain ID ${Number(
           network.chainId,
-        )} 的网络，请切换到 Sepolia 测试网 (Chain ID: 11155111)`,
+        )} network, please switch to Sepolia testnet (Chain ID: 11155111)`,
         5,
       );
       return null;
@@ -393,9 +393,9 @@ const ZWToken: React.FC = () => {
     try {
       const poseidon = await buildPoseidon();
       const secretBigInt = BigInt(secret);
-      const tokenId = 0n; // ERC-20 固定为 0
+      const tokenId = 0n; // ERC-20 fixed to 0
 
-      // 参考 e2e.test.js 和 zkProof.ts 中的逻辑
+      // Reference logic from e2e.test.js and zkProof.ts
       // addrScalar = Poseidon(8065, tokenId, secret)
       const addrScalar = poseidon.F.toString(poseidon([8065n, tokenId, secretBigInt]));
       const addr20 = BigInt(addrScalar) & ((1n << 160n) - 1n);
@@ -422,7 +422,7 @@ const ZWToken: React.FC = () => {
     // Reset state
     setSeed('');
     setDepositSecretList([]);
-    // 自动生成 seed
+    // Auto generate seed
     handleGenerateBySeed('deposit');
   };
 
@@ -530,16 +530,16 @@ const ZWToken: React.FC = () => {
       const network = await provider.getNetwork();
       const signer = await provider.getSigner();
 
-      // 构造签名消息
+      // Construct signature message
       const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC20}, chainId: ${network.chainId}`;
 
-      // 请求签名
+      // Request signature
       const signature = await signer.signMessage(signMessage);
 
-      // 签名结果作为Seed
+      // Signature result as Seed
       setSeed(signature);
 
-      // 生成10个SecretBySeed
+      // Generate 10 SecretBySeed
       const secrets: Array<{
         index: number;
         secret: string;
@@ -548,9 +548,9 @@ const ZWToken: React.FC = () => {
         isClaimed: boolean;
       }> = [];
       for (let i = 1; i <= 10; i++) {
-        // Seed + 序号，做哈希
+        // Seed + index, hash
         const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
-        // 转换为BigInt格式的字符串（去掉0x前缀）
+        // Convert to BigInt format string (remove 0x prefix)
         const secretBigInt = BigInt(secretBySeed).toString();
         secrets.push({
           index: i,
@@ -580,14 +580,14 @@ const ZWToken: React.FC = () => {
       }
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
-      // 异步查询每个Secret对应的金额
+      // Asynchronously query amount for each Secret
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC20,
         CONTRACT_ABIS.ZWERC20,
         provider,
       );
 
-      // 获取链上所有的leafs（分批获取）
+      // Get all leafs from chain (fetch in batches)
       const leafCount = await contract.getCommitLeafCount(0);
       console.log(`Found ${leafCount} commitment(s)`);
 
@@ -597,7 +597,7 @@ const ZWToken: React.FC = () => {
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
 
-      // 逐个查询金额和 IsClaimed 状态
+      // Query amount and IsClaimed status one by one
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
@@ -732,8 +732,8 @@ const ZWToken: React.FC = () => {
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.queryCompleted' }));
     } catch (error: any) {
-      console.error('生成Seed失败:', error);
-      message.error(`生成Seed失败: ${error.message}`);
+      console.error('Failed to generate Seed:', error);
+      message.error(`Failed to generate Seed: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -763,7 +763,7 @@ const ZWToken: React.FC = () => {
       return;
     }
 
-    // 先打开模态框
+    // Open modal first
     setRemintSeedModalVisible(true);
     setRemintSecretList([]);
 
@@ -773,13 +773,13 @@ const ZWToken: React.FC = () => {
       const network = await provider.getNetwork();
       const signer = await provider.getSigner();
 
-      // 构造签名消息
+      // Construct signature message
       const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC20}, chainId: ${network.chainId}`;
 
-      // 请求签名
+      // Request signature
       const signature = await signer.signMessage(signMessage);
 
-      // 生成10个SecretBySeed
+      // Generate 10 SecretBySeed
       const secrets: Array<{
         index: number;
         secret: string;
@@ -788,9 +788,9 @@ const ZWToken: React.FC = () => {
         isClaimed: boolean;
       }> = [];
       for (let i = 1; i <= 10; i++) {
-        // Seed + 序号，做哈希
+        // Seed + index, hash
         const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
-        // 转换为BigInt格式的字符串（去掉0x前缀）
+        // Convert to BigInt format string (remove 0x prefix)
         const secretBigInt = BigInt(secretBySeed).toString();
         secrets.push({
           index: i,
@@ -804,14 +804,14 @@ const ZWToken: React.FC = () => {
       setRemintSecretList(secrets);
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
-      // 异步查询每个Secret对应的金额
+      // Asynchronously query amount for each Secret
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC20,
         CONTRACT_ABIS.ZWERC20,
         provider,
       );
 
-      // 获取链上所有的leafs（分批获取）
+      // Get all leafs from chain (fetch in batches)
       const leafCount = await contract.getCommitLeafCount(0);
       console.log(`Found ${leafCount} commitment(s)`);
 
@@ -821,7 +821,7 @@ const ZWToken: React.FC = () => {
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
 
-      // 逐个查询金额和 IsClaimed 状态
+      // Query amount and IsClaimed status one by one
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
@@ -876,9 +876,9 @@ const ZWToken: React.FC = () => {
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.queryCompleted' }));
     } catch (error: any) {
-      console.error('生成Seed失败:', error);
-      message.error(`生成Seed失败: ${error.message}`);
-      // 如果失败，关闭模态框
+      console.error('Failed to generate Seed:', error);
+      message.error(`Failed to generate Seed: ${error.message}`);
+      // If failed, close modal
       setRemintSeedModalVisible(false);
     } finally {
       setLoading(false);
@@ -909,7 +909,7 @@ const ZWToken: React.FC = () => {
       return;
     }
 
-    // 先打开模态框
+    // Open modal first
     setAdvancedRemintSeedModalVisible(true);
     setAdvancedRemintSecretList([]);
 
@@ -919,13 +919,13 @@ const ZWToken: React.FC = () => {
       const network = await provider.getNetwork();
       const signer = await provider.getSigner();
 
-      // 构造签名消息
+      // Construct signature message
       const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC20}, chainId: ${network.chainId}`;
 
-      // 请求签名
+      // Request signature
       const signature = await signer.signMessage(signMessage);
 
-      // 生成10个SecretBySeed
+      // Generate 10 SecretBySeed
       const secrets: Array<{
         index: number;
         secret: string;
@@ -934,9 +934,9 @@ const ZWToken: React.FC = () => {
         isClaimed: boolean;
       }> = [];
       for (let i = 1; i <= 10; i++) {
-        // Seed + 序号，做哈希
+        // Seed + index, hash
         const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
-        // 转换为BigInt格式的字符串（去掉0x前缀）
+        // Convert to BigInt format string (remove 0x prefix)
         const secretBigInt = BigInt(secretBySeed).toString();
         secrets.push({
           index: i,
@@ -950,14 +950,14 @@ const ZWToken: React.FC = () => {
       setAdvancedRemintSecretList(secrets);
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
-      // 异步查询每个Secret对应的金额
+      // Asynchronously query amount for each Secret
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC20,
         CONTRACT_ABIS.ZWERC20,
         provider,
       );
 
-      // 获取链上所有的leafs（分批获取）
+      // Get all leafs from chain (fetch in batches)
       const leafCount = await contract.getCommitLeafCount(0);
       console.log(`Found ${leafCount} commitment(s)`);
 
@@ -967,7 +967,7 @@ const ZWToken: React.FC = () => {
         console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
       }
 
-      // 逐个查询金额和 IsClaimed 状态
+      // Query amount and IsClaimed status one by one
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
@@ -1022,9 +1022,9 @@ const ZWToken: React.FC = () => {
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.queryCompleted' }));
     } catch (error: any) {
-      console.error('生成Seed失败:', error);
-      message.error(`生成Seed失败: ${error.message}`);
-      // 如果失败，关闭模态框
+      console.error('Failed to generate Seed:', error);
+      message.error(`Failed to generate Seed: ${error.message}`);
+      // If failed, close modal
       setAdvancedRemintSeedModalVisible(false);
     } finally {
       setLoading(false);
@@ -1063,7 +1063,7 @@ const ZWToken: React.FC = () => {
       setSecretList([]);
     } catch (error: any) {
       if (error.errorFields) {
-        // 表单验证错误，不做处理
+        // Form validation error, do nothing
         return;
       }
       message.error(
@@ -1072,13 +1072,13 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // 判断是否需要 approve
+  // Check if approval is needed
   const needsApproval = React.useMemo(() => {
     if (!depositAmount || depositAmount <= 0) return false;
     return parseFloat(allowance) < depositAmount;
   }, [depositAmount, allowance]);
 
-  // Deposit操作
+  // Deposit operation
   const handleDeposit = async (values: { amount: number; targetAddress?: string }) => {
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
@@ -1102,14 +1102,14 @@ const ZWToken: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      // 使用配置文件中的合约地址
+      // Use contract address from config file
       const underlyingContract = new ethers.Contract(
         CONTRACT_ADDRESSES.UnderlyingToken,
         CONTRACT_ABIS.ERC20,
         signer,
       );
 
-      // 使用正确的小数位数
+      // Use correct decimals
       const depositAmountBigInt = ethers.parseUnits(values.amount.toString(), tokenDecimals);
       console.log(
         `Deposit amount: ${
@@ -1122,7 +1122,7 @@ const ZWToken: React.FC = () => {
         CONTRACT_ADDRESSES.ZWERC20,
       );
 
-      // 如果授权不足，只执行授权
+      // If allowance is insufficient, only execute approval
       if (currentAllowance < depositAmountBigInt) {
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.approving' }), 0);
         const approveTx = await underlyingContract.approve(
@@ -1132,7 +1132,7 @@ const ZWToken: React.FC = () => {
         await approveTx.wait();
         message.destroy();
         message.success(intl.formatMessage({ id: 'pages.zwtoken.message.approveSuccess' }));
-        // 刷新余额和 allowance
+        // Refresh balances and allowance
         refreshBalances();
         setLoading(false);
         return;
@@ -1168,7 +1168,7 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Withdraw操作
+  // Withdraw operation
   const handleWithdraw = async (values: { amount: number }) => {
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
@@ -1185,14 +1185,14 @@ const ZWToken: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      // 使用配置文件中的合约地址
+      // Use contract address from config file
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC20,
         CONTRACT_ABIS.ZWERC20,
         signer,
       );
 
-      // 使用正确的小数位数
+      // Use correct decimals
       const withdrawAmount = ethers.parseUnits(values.amount.toString(), tokenDecimals);
       console.log(
         `Withdraw amount: ${
@@ -1207,7 +1207,7 @@ const ZWToken: React.FC = () => {
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.withdraw.success' }));
       withdrawForm.resetFields();
-      // 刷新余额
+      // Refresh balances
       refreshBalances();
     } catch (error: any) {
       message.destroy();
@@ -1219,7 +1219,7 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Transfer操作
+  // Transfer operation
   const handleTransfer = async (values: { targetAddress: string; amount: number }) => {
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
@@ -1236,14 +1236,14 @@ const ZWToken: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      // 使用配置文件中的合约地址
+      // Use contract address from config file
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC20,
         CONTRACT_ABIS.ZWERC20,
         signer,
       );
 
-      // 使用正确的小数位数
+      // Use correct decimals
       const transferAmount = ethers.parseUnits(values.amount.toString(), tokenDecimals);
       console.log(
         `Transfer amount: ${
@@ -1258,7 +1258,7 @@ const ZWToken: React.FC = () => {
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.success' }));
       transferForm.resetFields();
-      // 刷新余额
+      // Refresh balances
       refreshBalances();
     } catch (error: any) {
       message.destroy();
@@ -1270,7 +1270,7 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Remint操作
+  // Remint operation
   const handleRemint = async (values: any) => {
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
@@ -1293,14 +1293,14 @@ const ZWToken: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      // 使用配置文件中的合约地址
+      // Use contract address from config file
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC20,
         CONTRACT_ABIS.ZWERC20,
         signer,
       );
 
-      // === 步骤 1: 从 Secret 推导参数 ===
+      // === Step 1: Derive parameters from Secret ===
       console.log('Step 1: Deriving from secret...');
       const { privacyAddress, addr20, q, nullifier, secret } = await deriveFromSecret(
         values.secret,
@@ -1325,7 +1325,7 @@ const ZWToken: React.FC = () => {
         return;
       }
 
-      // === 步骤 2: 从链上重建 Merkle tree ===
+      // === Step 2: Rebuild Merkle tree from chain ===
       hideLoading();
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.rebuildingTree' }), 0);
       console.log('Step 2: Rebuilding Merkle tree from chain...');
@@ -1344,7 +1344,7 @@ const ZWToken: React.FC = () => {
         return;
       }
 
-      // === 步骤 3: 查找用户的 commitment ===
+      // === Step 3: Find user's commitment ===
       message.destroy();
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.findingCommitment' }), 0);
       console.log('Step 3: Finding user commitment...');
@@ -1359,7 +1359,7 @@ const ZWToken: React.FC = () => {
       console.log(`Found commitment at index ${userCommitment.index}`);
       console.log(`First amount: ${ethers.formatUnits(userCommitment.amount, tokenDecimals)}`);
 
-      // 验证 remint amount 不超过 first amount
+      // Verify remint amount does not exceed first amount
       const remintAmount = ethers.parseUnits(values.remintAmount.toString(), tokenDecimals);
       console.log(
         `Remint amount: ${
@@ -1373,7 +1373,7 @@ const ZWToken: React.FC = () => {
         return;
       }
 
-      // === 步骤 4: 生成 Merkle proof ===
+      // === Step 4: Generate Merkle proof ===
       message.destroy();
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.generatingProof' }), 0);
       console.log('Step 4: Generating Merkle proof...');
@@ -1381,7 +1381,7 @@ const ZWToken: React.FC = () => {
       const merkleProof = tree.getProof(userCommitment.index);
       console.log(`Merkle proof generated (${merkleProof.pathElements.length} elements)`);
 
-      // === 步骤 5: 准备电路输入 ===
+      // === Step 5: Prepare circuit input ===
       const withdrawUnderlying = values.withdrawUnderlying || false;
       const relayerFee = values.relayerFee || 0;
       
@@ -1392,7 +1392,7 @@ const ZWToken: React.FC = () => {
         remintAmount: remintAmount, // Already BigInt
         id: 0n,
         withdrawUnderlying: withdrawUnderlying,
-        relayerFee: BigInt(relayerFee), // 转换为 BigInt
+        relayerFee: BigInt(relayerFee), // Convert to BigInt
         secret,
         addr20,
         commitAmount: userCommitment.amount,
@@ -1402,13 +1402,13 @@ const ZWToken: React.FC = () => {
 
       console.log('Circuit input prepared:', circuitInput);
 
-      // === 步骤 6: 生成 ZK proof ===
+      // === Step 6: Generate ZK proof ===
       message.destroy();
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.generatingZKProof' }), 0);
       console.log('Step 6: Generating ZK proof (this may take 10-30 seconds)...');
 
       try {
-        // 使用电路生成真实的 ZK proof（如果已预加载，浏览器会从缓存读取）
+        // Use circuit to generate real ZK proof (if preloaded, browser will read from cache)
         const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
           circuitInput,
           '/circuits/remint.wasm',
@@ -1418,7 +1418,7 @@ const ZWToken: React.FC = () => {
         console.log('✅ ZK proof generated!');
         console.log('Public signals:', publicSignals);
 
-        // 格式化为 Solidity calldata
+        // Format as Solidity calldata
         const calldata = await snarkjs.groth16.exportSolidityCallData(zkProof, publicSignals);
         const calldataJson = JSON.parse('[' + calldata + ']');
 
@@ -1437,7 +1437,7 @@ const ZWToken: React.FC = () => {
           [solidityProof.a, solidityProof.b, solidityProof.c]
         );
 
-        // === 步骤 7: 提交 remint 交易 ===
+        // === Step 7: Submit remint transaction ===
         message.destroy();
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.submitting' }), 0);
         console.log('Step 7: Submitting remint transaction...');
@@ -1447,10 +1447,10 @@ const ZWToken: React.FC = () => {
           localRoot,
           nullifierHex,
           values.recipient,
-          0, // id (ERC-20 固定为 0)
+          0, // id (ERC-20 fixed to 0)
           remintAmount, // BigInt from parseUnits
           withdrawUnderlying, // boolean
-          relayerFee // relayerFee 已经是 number 类型
+          relayerFee // relayerFee is already number type
         );
 
         console.log('Transaction submitted, waiting for confirmation...');
@@ -1462,7 +1462,7 @@ const ZWToken: React.FC = () => {
 
         remintForm.resetFields();
         setSelectedRemintMaxAmount(null);
-        // 刷新余额
+        // Refresh balances
         refreshBalances();
       } catch (proofError: any) {
         message.destroy();
@@ -1516,7 +1516,7 @@ const ZWToken: React.FC = () => {
       }}
     >
       <Card>
-        {/* 余额显示区域 */}
+        {/* Balance display area */}
         <div
           style={{
             marginBottom: 24,
@@ -1544,7 +1544,7 @@ const ZWToken: React.FC = () => {
             }
           }}
         >
-          {/* Faucet 提示 */}
+          {/* Faucet tip */}
           <div
             style={{
               marginBottom: 16,
@@ -1593,7 +1593,7 @@ const ZWToken: React.FC = () => {
             </a>
           </div>
 
-          {/* 余额信息 */}
+          {/* Balance information */}
           <div
             style={{
               display: 'flex',
@@ -1702,9 +1702,9 @@ const ZWToken: React.FC = () => {
           </div>
         </div>
 
-        {/* 外层大Tab：Simple Mode 和 Advanced Mode */}
+        {/* Outer main Tab: Simple Mode and Advanced Mode */}
         <Tabs defaultActiveKey="simple" type="card" size="large">
-          {/* Simple Mode - 只包含 Burn 和 Remint */}
+          {/* Simple Mode - Only includes Burn and Remint */}
           <TabPane tab="Simple Mode" key="simple">
             <Tabs defaultActiveKey="burn" type="line" style={{ marginTop: 16 }}>
               <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.burn' })} key="burn">
@@ -1943,7 +1943,7 @@ const ZWToken: React.FC = () => {
             </Tabs>
           </TabPane>
 
-          {/* Advanced Mode - 包含全部四个Tab */}
+          {/* Advanced Mode - Includes all four Tabs */}
           <TabPane tab="Advanced Mode" key="advanced">
             <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }}>
           <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.wrap' })} key="deposit">
@@ -2957,7 +2957,7 @@ const ZWToken: React.FC = () => {
         )}
       </Modal>
 
-      {/* Remint页面的Seed生成Modal - Simple Mode */}
+      {/* Remint page Seed generation Modal - Simple Mode */}
       <Modal
         title={intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.title' })}
         open={remintSeedModalVisible}
@@ -3094,7 +3094,7 @@ const ZWToken: React.FC = () => {
         )}
       </Modal>
 
-      {/* Remint页面的Seed生成Modal - Advanced Mode */}
+      {/* Remint page Seed generation Modal - Advanced Mode */}
       <Modal
         title={intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.title' })}
         open={advancedRemintSeedModalVisible}
