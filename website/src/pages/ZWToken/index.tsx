@@ -25,7 +25,8 @@ const SEPOLIA_CHAIN_ID = 11155111;
 const ZWToken: React.FC = () => {
   const intl = useIntl();
   const [{ wallet }, connect] = useConnectWallet();
-  const [depositForm] = Form.useForm();
+  const [simpleDepositForm] = Form.useForm(); // Simple Mode Burn 表单
+  const [advancedDepositForm] = Form.useForm(); // Advanced Mode Wrap 表单
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
   const [remintForm] = Form.useForm();
@@ -36,7 +37,8 @@ const ZWToken: React.FC = () => {
   const [usdcBalance, setUsdcBalance] = useState<string>('0');
   const [zwusdcBalance, setZwusdcBalance] = useState<string>('0');
   const [allowance, setAllowance] = useState<string>('0');
-  const [depositAmount, setDepositAmount] = useState<number | null>(null);
+  const [simpleDepositAmount, setSimpleDepositAmount] = useState<number | null>(null); // Simple Mode
+  const [advancedDepositAmount, setAdvancedDepositAmount] = useState<number | null>(null); // Advanced Mode
   const [isMobile, setIsMobile] = useState(false);
   const [seed, setSeed] = useState<string>('');
   const [secretList, setSecretList] = useState<
@@ -435,14 +437,14 @@ const ZWToken: React.FC = () => {
     setAdvancedDepositSecretMode(undefined);
   };
 
-  // Handle Deposit Secret confirmation - Generate Burn Address
+  // Handle Deposit Secret confirmation - Generate Burn Address (Simple Mode)
   const handleDepositSecretConfirm = async () => {
     try {
       const values = await depositSecretForm.validateFields();
       const privacyAddress = await generatePrivacyAddress(values.secret);
 
-      // Set to Deposit form targetAddress field
-      depositForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Set to Simple Deposit form targetAddress field
+      simpleDepositForm.setFieldsValue({ targetAddress: privacyAddress });
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setDepositSecretModalVisible(false);
@@ -463,8 +465,8 @@ const ZWToken: React.FC = () => {
   const handleSelectDepositSecret = async (secret: string) => {
     try {
       const privacyAddress = await generatePrivacyAddress(secret);
-      // Set to Deposit form targetAddress field
-      depositForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Set to Simple Deposit form targetAddress field
+      simpleDepositForm.setFieldsValue({ targetAddress: privacyAddress });
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setDepositSecretModalVisible(false);
       depositSecretForm.resetFields();
@@ -480,8 +482,8 @@ const ZWToken: React.FC = () => {
   const handleSelectAdvancedDepositSecret = async (secret: string) => {
     try {
       const privacyAddress = await generatePrivacyAddress(secret);
-      // Set to Deposit form targetAddress field
-      depositForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Set to Advanced Deposit form targetAddress field
+      advancedDepositForm.setFieldsValue({ targetAddress: privacyAddress });
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setAdvancedDepositSecretModalVisible(false);
       advancedDepositSecretForm.resetFields();
@@ -499,8 +501,8 @@ const ZWToken: React.FC = () => {
       const values = await advancedDepositSecretForm.validateFields();
       const privacyAddress = await generatePrivacyAddress(values.secret);
 
-      // Set to Deposit form targetAddress field
-      depositForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Set to Advanced Deposit form targetAddress field
+      advancedDepositForm.setFieldsValue({ targetAddress: privacyAddress });
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setAdvancedDepositSecretModalVisible(false);
@@ -1072,22 +1074,28 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Check if approval is needed
-  const needsApproval = React.useMemo(() => {
-    if (!depositAmount || depositAmount <= 0) return false;
-    return parseFloat(allowance) < depositAmount;
-  }, [depositAmount, allowance]);
+  // Check if approval is needed - Simple Mode
+  const simpleNeedsApproval = React.useMemo(() => {
+    if (!simpleDepositAmount || simpleDepositAmount <= 0) return false;
+    return parseFloat(allowance) < simpleDepositAmount;
+  }, [simpleDepositAmount, allowance]);
 
-  // Deposit operation
-  const handleDeposit = async (values: { amount: number; targetAddress?: string }) => {
+  // Check if approval is needed - Advanced Mode
+  const advancedNeedsApproval = React.useMemo(() => {
+    if (!advancedDepositAmount || advancedDepositAmount <= 0) return false;
+    return parseFloat(allowance) < advancedDepositAmount;
+  }, [advancedDepositAmount, allowance]);
+
+  // Simple Mode Deposit (Burn) - 必须有 targetAddress
+  const handleSimpleDeposit = async (values: { amount: number; targetAddress: string }) => {
+    console.log('🔵 [Simple Mode] handleSimpleDeposit called with:', values);
+
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
       return;
     }
 
-    // If targetAddress is provided, it's burn mode
-    const isBurnMode = !!values.targetAddress || directBurn;
-    if (isBurnMode && !values.targetAddress) {
+    if (!values.targetAddress) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.targetAddressRequired' }));
       return;
     }
@@ -1102,20 +1110,14 @@ const ZWToken: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      // Use contract address from config file
       const underlyingContract = new ethers.Contract(
         CONTRACT_ADDRESSES.UnderlyingToken,
         CONTRACT_ABIS.ERC20,
         signer,
       );
 
-      // Use correct decimals
       const depositAmountBigInt = ethers.parseUnits(values.amount.toString(), tokenDecimals);
-      console.log(
-        `Deposit amount: ${
-          values.amount
-        } tokens = ${depositAmountBigInt.toString()} units (${tokenDecimals} decimals)`,
-      );
+      console.log(`[Simple] Deposit amount: ${values.amount} tokens = ${depositAmountBigInt.toString()} units`);
 
       const currentAllowance = await underlyingContract.allowance(
         account,
@@ -1124,6 +1126,7 @@ const ZWToken: React.FC = () => {
 
       // If allowance is insufficient, only execute approval
       if (currentAllowance < depositAmountBigInt) {
+        console.log('[Simple] Starting approval...');
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.approving' }), 0);
         const approveTx = await underlyingContract.approve(
           CONTRACT_ADDRESSES.ZWERC20,
@@ -1132,11 +1135,112 @@ const ZWToken: React.FC = () => {
         await approveTx.wait();
         message.destroy();
         message.success(intl.formatMessage({ id: 'pages.zwtoken.message.approveSuccess' }));
-        // Refresh balances and allowance
         refreshBalances();
         setLoading(false);
         return;
       }
+
+      console.log('[Simple] Allowance sufficient, proceeding to burn...');
+
+      // Execute depositTo with targetAddress (Burn)
+      const zwTokenContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ABIS.ZWERC20,
+        signer,
+      );
+      
+      const tx = await zwTokenContract.depositTo(values.targetAddress, 0, depositAmountBigInt);
+
+      message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
+      await tx.wait();
+      message.destroy();
+      message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
+      simpleDepositForm.resetFields();
+      setSimpleDepositAmount(null);
+      refreshBalances();
+    } catch (error: any) {
+      console.error('❌ [Simple] Deposit/Approve error:', error);
+      message.destroy();
+      
+      let errorMessage = error.message || 'Unknown error';
+      if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+        errorMessage = '用户取消了交易';
+      }
+      
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.deposit.failed' })}: ${errorMessage}`,
+      );
+    } finally {
+      console.log('🏁 [Simple] handleSimpleDeposit finished');
+      setLoading(false);
+    }
+  };
+
+  // Advanced Mode Deposit (Wrap) - targetAddress 可选
+  const handleAdvancedDeposit = async (values: { amount: number; targetAddress?: string }) => {
+    console.log('🟢 [Advanced Mode] handleAdvancedDeposit called with:', {
+      ...values,
+      directBurn
+    });
+
+    if (!account) {
+      message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
+      return;
+    }
+
+    // 如果启用了 directBurn，必须提供 targetAddress
+    if (directBurn && !values.targetAddress) {
+      message.error(intl.formatMessage({ id: 'pages.zwtoken.error.targetAddressRequired' }));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const provider = await getProvider();
+      if (!provider) {
+        setLoading(false);
+        return;
+      }
+
+      const signer = await provider.getSigner();
+
+      const underlyingContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingToken,
+        CONTRACT_ABIS.ERC20,
+        signer,
+      );
+
+      const depositAmountBigInt = ethers.parseUnits(values.amount.toString(), tokenDecimals);
+      console.log(`[Advanced] Deposit amount: ${values.amount} tokens = ${depositAmountBigInt.toString()} units`);
+
+      const currentAllowance = await underlyingContract.allowance(
+        account,
+        CONTRACT_ADDRESSES.ZWERC20,
+      );
+
+      console.log('[Advanced] Allowance check:', {
+        currentAllowance: currentAllowance.toString(),
+        depositAmountBigInt: depositAmountBigInt.toString(),
+        needsApproval: currentAllowance < depositAmountBigInt
+      });
+
+      // If allowance is insufficient, only execute approval
+      if (currentAllowance < depositAmountBigInt) {
+        console.log('[Advanced] Starting approval...');
+        message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.approving' }), 0);
+        const approveTx = await underlyingContract.approve(
+          CONTRACT_ADDRESSES.ZWERC20,
+          depositAmountBigInt,
+        );
+        await approveTx.wait();
+        message.destroy();
+        message.success(intl.formatMessage({ id: 'pages.zwtoken.message.approveSuccess' }));
+        refreshBalances();
+        setLoading(false);
+        return;
+      }
+
+      console.log('[Advanced] Allowance sufficient, proceeding to wrap...');
 
       // Execute depositTo
       const zwTokenContract = new ethers.Contract(
@@ -1153,17 +1257,24 @@ const ZWToken: React.FC = () => {
       await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
-      depositForm.resetFields();
-      setDepositAmount(null);
+      advancedDepositForm.resetFields();
+      setAdvancedDepositAmount(null);
       setDirectBurn(false);
-      // Refresh balances
       refreshBalances();
     } catch (error: any) {
+      console.error('❌ [Advanced] Deposit/Approve error:', error);
       message.destroy();
+      
+      let errorMessage = error.message || 'Unknown error';
+      if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+        errorMessage = '用户取消了交易';
+      }
+      
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.deposit.failed' })}: ${error.message}`,
+        `${intl.formatMessage({ id: 'pages.zwtoken.deposit.failed' })}: ${errorMessage}`,
       );
     } finally {
+      console.log('🏁 [Advanced] handleAdvancedDeposit finished');
       setLoading(false);
     }
   };
@@ -1200,7 +1311,7 @@ const ZWToken: React.FC = () => {
         } tokens = ${withdrawAmount.toString()} units (${tokenDecimals} decimals)`,
       );
 
-      const tx = await contract.withdraw(withdrawAmount);
+      const tx = await contract.withdraw(account, 0, withdrawAmount);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.withdraw.submitting' }), 0);
       await tx.wait();
@@ -1709,7 +1820,7 @@ const ZWToken: React.FC = () => {
             <Tabs defaultActiveKey="burn" type="line" style={{ marginTop: 16 }}>
               <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.burn' })} key="burn">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-                  <Form form={depositForm} layout="vertical" onFinish={handleDeposit}>
+                  <Form form={simpleDepositForm} layout="vertical" onFinish={handleSimpleDeposit}>
                     <Form.Item
                       label={intl.formatMessage({ id: 'pages.zwtoken.burn.amount' })}
                       name="amount"
@@ -1732,7 +1843,7 @@ const ZWToken: React.FC = () => {
                         })}
                         precision={6}
                         min={0}
-                        onChange={(value) => setDepositAmount(value)}
+                        onChange={(value) => setSimpleDepositAmount(value)}
                       />
                     </Form.Item>
 
@@ -1783,7 +1894,7 @@ const ZWToken: React.FC = () => {
 
                     <Form.Item>
                       <Button type="primary" htmlType="submit" loading={loading} block>
-                        {needsApproval ? 'Approve' : intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
+                        {simpleNeedsApproval ? 'Approve' : intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
                       </Button>
                     </Form.Item>
                   </Form>
@@ -1948,7 +2059,7 @@ const ZWToken: React.FC = () => {
             <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }}>
           <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.wrap' })} key="deposit">
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-              <Form form={depositForm} layout="vertical" onFinish={handleDeposit}>
+              <Form form={advancedDepositForm} layout="vertical" onFinish={handleAdvancedDeposit}>
                 <Form.Item
                   label={intl.formatMessage({ id: 'pages.zwtoken.deposit.amount' })}
                   name="amount"
@@ -1971,7 +2082,7 @@ const ZWToken: React.FC = () => {
                     })}
                     precision={6}
                     min={0}
-                    onChange={(value) => setDepositAmount(value)}
+                    onChange={(value) => setAdvancedDepositAmount(value)}
                   />
                 </Form.Item>
 
@@ -1995,7 +2106,7 @@ const ZWToken: React.FC = () => {
                     onChange={(e) => {
                       setDirectBurn(e.target.checked);
                       if (!e.target.checked) {
-                        depositForm.setFieldsValue({ targetAddress: undefined });
+                        advancedDepositForm.setFieldsValue({ targetAddress: undefined });
                       }
                     }}
                   >
@@ -2040,7 +2151,7 @@ const ZWToken: React.FC = () => {
 
                 <Form.Item>
                   <Button type="primary" htmlType="submit" loading={loading} block>
-                    {needsApproval
+                    {advancedNeedsApproval
                       ? 'Approve'
                       : directBurn
                       ? 'Wrap and Burn'
