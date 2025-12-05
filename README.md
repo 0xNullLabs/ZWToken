@@ -35,22 +35,22 @@
 
 ### Circuit Performance
 
-> 📊 数据来源: `zk-profile.json` (生成于 2025-12-05)
+> 📊 Data Source: `zk-profile.json` (generated on 2025-12-05)
 
 ```
-Constraints: 13,084 (实测值，来自 snarkjs r1cs info)
+Constraints: 13,084 (measured value, from snarkjs r1cs info)
 Circuit Files: 7.69 MB total (remint.wasm 2.14MB + zkey 5.55MB)
 
-Browser Proof Generation (实测，5次平均):
+Browser Proof Generation (measured, 5-run average):
 - Desktop: 875ms ✅
 - Mobile (mid-range): ~3.1s ✅
 
-Memory Usage: 6.13 MB total (浏览器友好)
+Memory Usage: 6.13 MB total (browser-friendly)
 ```
 
 ### Gas Cost (0.2 Gwei, $4000/ETH)
 
-> 📊 数据来源: `gas-report.json` (生成于 2025-12-05)
+> 📊 Data Source: `gas-report.json` (generated on 2025-12-05)
 
 | Operation             | Gas           | ETH          | USD    | vs USDT       |
 | --------------------- | ------------- | ------------ | ------ | ------------- |
@@ -65,9 +65,9 @@ Memory Usage: 6.13 MB total (浏览器友好)
 
 **Key Findings**:
 
-- ✅ **Subsequent transfer**: 36,979 vs 34,520 gas (仅多 7.1%)
-- ✅ **First receipt 是一次性成本** ($1.09), 为该地址提供永久隐私
-- ✅ 在 L2 (如 Arbitrum, Optimism) 上成本可降低 10-100x
+- ✅ **Subsequent transfer**: 36,979 vs 34,520 gas (only 7.1% more)
+- ✅ **First receipt is a one-time cost** ($1.09), providing permanent privacy for this address
+- ✅ Cost can be reduced 10-100x on L2 (such as Arbitrum, Optimism)
 - 📊 **Detailed Reports**:
   - [GAS_ANALYSIS_REPORT.md](./GAS_ANALYSIS_REPORT.md) - Gas cost analysis
   - [ZK_PROFILE_REPORT.md](./ZK_PROFILE_REPORT.md) - ZK proof performance & mobile compatibility
@@ -313,7 +313,7 @@ ZWToken/
 
 - ⚠️ Only records first receipt (subsequent receipts don't generate new commitment)
 - ⚠️ User must safeguard secret (cannot recover if lost)
-- ⚠️ First receipt Gas: 1,364,771 (from `gas-report.json`, 包含 Merkle tree 插入)
+- ⚠️ First receipt Gas: 1,364,771 (from `gas-report.json`, includes Merkle tree insertion)
 
 ---
 
@@ -321,59 +321,59 @@ ZWToken/
 
 ### vs Original Approach (Ethereum MPT + Keccak256)
 
-**原方案**：直接使用以太坊的 Merkle Patricia Trie (MPT) 存储 commitment，ZK proof 基于 MPT state proof 生成。
+**Original Approach**: Directly use Ethereum's Merkle Patricia Trie (MPT) to store commitments, with ZK proof based on MPT state proof generation.
 
 ```
-原方案（MPT + Keccak256）:
-├── Commitment 存储在合约 storage (Ethereum MPT)
-├── ZK circuit 需验证 MPT state proof
-├── MPT 使用 Keccak256 哈希
-│   └── Keccak256 在 ZK 中约束极高（~150K/hash）
-│   └── MPT proof 需多次 Keccak256（深度 ~40）
-└── 总约束: ~3,000,000+ (浏览器不可行)
+Original Approach (MPT + Keccak256):
+├── Commitment stored in contract storage (Ethereum MPT)
+├── ZK circuit needs to verify MPT state proof
+├── MPT uses Keccak256 hash
+│   └── Keccak256 has extremely high constraints in ZK (~150K/hash)
+│   └── MPT proof requires multiple Keccak256 (depth ~40)
+└── Total constraints: ~3,000,000+ (not feasible in browser)
 
-ZWToken 方案（自定义 Poseidon Tree）:
-├── Commitment 存储在自定义 Merkle Tree (链上数组)
-├── ZK circuit 验证 Poseidon Merkle proof
-├── Poseidon 是 ZK-friendly 哈希
-│   └── Poseidon 在 ZK 中约束低（~300/hash）
-│   └── 20 层树仅需 20 次 Poseidon
-└── 总约束: 13,084 (浏览器友好)
+ZWToken Approach (Custom Poseidon Tree):
+├── Commitment stored in custom Merkle Tree (on-chain array)
+├── ZK circuit verifies Poseidon Merkle proof
+├── Poseidon is ZK-friendly hash
+│   └── Poseidon has low constraints in ZK (~300/hash)
+│   └── 20-layer tree only needs 20 Poseidon hashes
+└── Total constraints: 13,084 (browser-friendly)
 ```
 
-| Dimension           | MPT + Keccak256 | ZWToken (Poseidon) | Trade-off        |
-| ------------------- | --------------- | ------------------ | ---------------- |
-| Circuit Constraints | ~3,000,000+     | **13,084** ✅      | **-99.6%**       |
-| Proof Time          | 5-15 分钟+      | **875ms** ✅       | **~500x faster** |
-| Browser Support     | ❌ Not feasible | ✅ **Perfect**     | 从不可用到完美   |
-| First Receipt Gas   | ~35K (MPT 自动) | 1,364,771          | +3,848% ⚠️       |
-| 链上存储成本        | 低（自动）      | 高（显式 Merkle）  | Trade-off ⚠️     |
+| Dimension              | MPT + Keccak256      | ZWToken (Poseidon) | Trade-off              |
+| ---------------------- | -------------------- | ------------------ | ---------------------- |
+| Circuit Constraints    | ~3,000,000+          | **13,084** ✅      | **-99.6%**             |
+| Proof Time             | 5-15 minutes+        | **875ms** ✅       | **~500x faster**       |
+| Browser Support        | ❌ Not feasible      | ✅ **Perfect**     | From infeasible to perfect |
+| First Receipt Gas      | ~35K (MPT automatic) | 1,364,771          | +3,848% ⚠️             |
+| On-chain Storage Cost  | Low (automatic)      | High (explicit Merkle) | Trade-off ⚠️       |
 
-> 📊 **数据来源**:
+> 📊 **Data Sources**:
 >
-> - ZWToken 约束数: 13,084 (from `snarkjs r1cs info` 实测)
-> - ZWToken Proof 时间: 875ms desktop, 3063ms mobile (from `zk-profile.json` 实测)
-> - ZWToken Gas: 1,364,771 (from `gas-report.json` 实测)
-> - MPT 约束数: ~3M (估算，基于 Keccak256 约束数 ~150K × MPT 深度 ~40)
+> - ZWToken Constraints: 13,084 (from `snarkjs r1cs info` measured)
+> - ZWToken Proof Time: 875ms desktop, 3063ms mobile (from `zk-profile.json` measured)
+> - ZWToken Gas: 1,364,771 (from `gas-report.json` measured)
+> - MPT Constraints: ~3M (estimated, based on Keccak256 constraints ~150K × MPT depth ~40)
 
-**核心 Trade-off**:
+**Core Trade-off**:
 
-使用自定义 Poseidon Merkle Tree 需要**额外的链上 Gas 成本**：
+Using a custom Poseidon Merkle Tree requires **additional on-chain Gas cost**:
 
-- **首次 transfer**: 1,364,771 gas (vs ERC20 的 34,520 gas)
-  - 包含：Poseidon hash 计算 + 20 层 Merkle tree 插入
-  - 一次性成本：~$1.09 (0.2 Gwei, $4000/ETH)
-- **后续 transfer**: 36,979 gas (vs ERC20 的 34,520 gas)
-  - 仅增加 7.1%，几乎无额外成本
+- **First transfer**: 1,364,771 gas (vs ERC20's 34,520 gas)
+  - Includes: Poseidon hash calculation + 20-layer Merkle tree insertion
+  - One-time cost: ~$1.09 (0.2 Gwei, $4000/ETH)
+- **Subsequent transfers**: 36,979 gas (vs ERC20's 34,520 gas)
+  - Only 7.1% increase, almost no additional cost
 
-**换来的收益**：
+**Benefits Gained**:
 
-- ✅ 浏览器端 ZK proof 生成可行（875ms vs 不可能）
-- ✅ 移动端兼容（~3s vs 不可能）
-- ✅ 无需信任后端服务器
-- ✅ 完全去中心化的隐私方案
+- ✅ Browser-side ZK proof generation is feasible (875ms vs impossible)
+- ✅ Mobile compatibility (~3s vs impossible)
+- ✅ No need to trust backend servers
+- ✅ Fully decentralized privacy solution
 
-**结论**: 在 0.2 Gwei 的 Gas 环境下，用户愿意支付 $1.09 的一次性成本，换取浏览器端完全自主的隐私保护能力。
+**Conclusion**: At 0.2 Gwei gas environment, users are willing to pay $1.09 one-time cost in exchange for fully autonomous browser-based privacy protection capability.
 
 ### vs Batch Submission Solution
 
@@ -408,7 +408,114 @@ ZWToken 方案（自定义 Poseidon Tree）:
 
 ## 🤝 Contributing
 
-Issues and Pull Requests are welcome!
+We welcome contributions from the community! Whether you're reporting bugs, suggesting new features, improving documentation, or submitting code, we greatly appreciate your help.
+
+### 💡 How to Contribute
+
+#### Bug Reports
+
+If you find a bug, please report it via [GitHub Issues](https://github.com/0xNullLabs/issues) and include:
+
+- **Description**: Clear description of the issue
+- **Steps to Reproduce**: How to reproduce the problem
+- **Expected Behavior**: What you expected to happen
+- **Actual Behavior**: What actually happened
+- **Environment**: Node.js version, network, browser, etc.
+- **Logs**: Error messages or console output
+
+#### Feature Requests
+
+Have a great idea? We'd love to hear it! Create an issue and describe:
+
+- **Feature Description**: What feature you'd like to add
+- **Use Case**: Why this feature is needed
+- **Expected Outcome**: How this feature should work
+- **Alternatives**: Any alternative solutions you've considered
+
+#### Pull Requests
+
+1. **Fork the repository** and clone it locally
+2. **Create a new branch**: `git checkout -b feature/your-feature-name`
+3. **Install dependencies**: `npm install`
+4. **Make your changes** and ensure:
+   - Code follows the existing style
+   - Add necessary tests
+   - All tests pass: `npm test`
+   - Commit messages are clear and descriptive
+5. **Push to your fork**: `git push origin feature/your-feature-name`
+6. **Create a Pull Request** to the `main` branch
+
+#### Documentation Improvements
+
+Documentation improvements are valuable contributions! You can:
+
+- Fix typos or grammatical errors
+- Improve clarity of existing explanations
+- Add more usage examples
+- Translate documentation to other languages
+
+### 📋 Development Guide
+
+```bash
+# Clone the repository
+git clone https://github.com/0xNullLabs/ZWToken/issues
+cd ZWToken
+
+# Install dependencies
+npm install
+
+# Compile circuits (first time only)
+./scripts/build_circuit.sh
+
+# Compile contracts
+npx hardhat compile
+
+# Run tests
+npx hardhat test
+
+# Run specific tests
+npx hardhat test test/e2e.test.js
+
+# Generate gas report
+npm run test:gas-profile
+
+# Generate ZK performance report
+npm run test:zk-profile
+```
+
+### 🎯 Code Guidelines
+
+- **Solidity**: Follow the [Solidity Style Guide](https://docs.soliditylang.org/en/latest/style-guide.html)
+- **JavaScript**: Use the ESLint configuration
+- **Comments**: Add clear comments for complex logic
+- **Tests**: Add tests for new features
+- **Commit Messages**: Use clear commit messages (e.g., `feat: add batch deposit`, `fix: resolve merkle tree bug`)
+
+### 🌟 Code of Conduct
+
+We are committed to fostering an open and welcoming community. We expect all participants to:
+
+- ✅ Be respectful and inclusive
+- ✅ Accept constructive criticism gracefully
+- ✅ Focus on what's best for the community
+- ✅ Show empathy towards other community members
+
+### 💬 Need Help?
+
+- 📖 Check [Project Structure](PROJECT_STRUCTURE.md) to understand the codebase
+- 📖 Read [Contract Documentation](contracts/README.md) for contract details
+- 💬 Ask questions in [GitHub Discussions](https://github.com/0xNullLabs/ZWToken/discussions)
+- 🐛 Report issues in [GitHub Issues](https://github.com/0xNullLabs/issues)
+
+### 🙏 Acknowledgments
+
+Thank you to all the developers who have contributed to ZWToken! Your contributions make this project better.
+
+<!-- Contributors list will be automatically updated here -->
+
+---
+
+**Remember**: No contribution is too small. Even fixing a typo is a valuable contribution to the project! 🎉
 
 ---
 
@@ -439,8 +546,25 @@ MIT License - See [LICENSE](LICENSE)
 
 ## 💬 Contact
 
-- Issues: [GitHub Issues](https://github.com/your-repo/issues)
-- Discussions: [GitHub Discussions](https://github.com/your-repo/discussions)
+- **X (Twitter)**: [@wallet_aa](https://x.com/wallet_aa)
+- **Telegram Group**: [Join Discussion](https://t.me/+JzL6_HdgU_AzYjEx)
+- **Ethereum Magicians**: [ERC-8065 Forum](https://ethereum-magicians.org/t/erc-8065-zero-knowledge-token-wrapper/26006)
+- **Issues**: [GitHub Issues](https://github.com/0xNullLabs/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/0xNullLabs/discussions)
+
+---
+
+## 💝 Donation
+
+If you believe in our vision to **"Make privacy a native feature of all tokens on Ethereum"**, we welcome your support!
+
+**Ethereum Mainnet:**
+
+```
+0x8EA35dd88e2e7ec04a3C5F9B36Bd9eda90424a32
+```
+
+Your contributions help us continue building privacy infrastructure for the Ethereum ecosystem. Thank you! 🙏
 
 ---
 
@@ -450,8 +574,8 @@ MIT License - See [LICENSE](LICENSE)
 
 ## 🎉 Project Achievements
 
-**Browser-Friendly ZK Circuit** (13,084 constraints, snarkjs 实测)  
-**Fast Proof Generation** (875ms desktop, 3.1s mobile - zk-profile.json 实测)  
+**Browser-Friendly ZK Circuit** (13,084 constraints, measured by snarkjs)  
+**Fast Proof Generation** (875ms desktop, 3.1s mobile - measured in zk-profile.json)  
 **Complete Test Coverage** (All tests passing, including real ZK proofs)  
 **Mobile Browser Compatible** (✅ Works on all modern devices)  
 **Production Ready** (Gas optimized, fully documented)
