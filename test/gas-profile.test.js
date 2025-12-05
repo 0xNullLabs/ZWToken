@@ -12,6 +12,17 @@ function encodeProof(a, b, c) {
     [a, b, c]
   );
 }
+
+/**
+ * Helper: 将 relayerFee 编码为 relayerData bytes
+ */
+function encodeRelayerData(relayerFee) {
+  if (relayerFee === 0 || relayerFee === 0n) {
+    return "0x"; // Empty bytes
+  }
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+  return abiCoder.encode(["uint256"], [relayerFee]);
+}
 const path = require("path");
 
 // Gas price constants
@@ -58,13 +69,6 @@ describe("Gas Profile Comparison", function () {
     );
     poseidonT3 = await PoseidonT3.deploy();
     await poseidonT3.waitForDeployment();
-
-    // Deploy PoseidonT4 library
-    const PoseidonT4 = await ethers.getContractFactory(
-      "poseidon-solidity/PoseidonT4.sol:PoseidonT4"
-    );
-    poseidonT4 = await PoseidonT4.deploy();
-    await poseidonT4.waitForDeployment();
 
     // Deploy ERC20Mock as underlying token
     const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
@@ -177,7 +181,7 @@ describe("Gas Profile Comparison", function () {
         const amount = ethers.parseEther("100");
         const tx = await zwToken
           .connect(alice)
-          .depositTo(alice.address, 0, amount);
+          .deposit(alice.address, 0, amount);
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(formatGasReport("ZWERC20: deposit (first time)", cost));
@@ -191,7 +195,7 @@ describe("Gas Profile Comparison", function () {
         const amount = ethers.parseEther("50");
         const tx = await zwToken
           .connect(alice)
-          .depositTo(alice.address, 0, amount);
+          .deposit(alice.address, 0, amount);
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(formatGasReport("ZWERC20: deposit (subsequent)", cost));
@@ -235,7 +239,7 @@ describe("Gas Profile Comparison", function () {
         // Bob deposits first
         await zwToken
           .connect(bob)
-          .depositTo(bob.address, 0, ethers.parseEther("200"));
+          .deposit(bob.address, 0, ethers.parseEther("200"));
 
         // Bob transfers to Charlie (Charlie's first receipt - will record commitment)
         const amount = ethers.parseEther("100");
@@ -298,15 +302,20 @@ describe("Gas Profile Comparison", function () {
         const dave = ethers.Wallet.createRandom();
 
         const proofBytes = encodeProof(proof.a, proof.b, proof.c);
+        const relayerData = encodeRelayerData(0);
         const tx = await zwToken.remint(
-          proofBytes,
-          root,
-          nullifier,
-          dave.address,
+          dave.address, // to
           0, // id
-          amount,
+          amount, // amount
           false, // withdrawUnderlying
-          0 // relayerFee
+          {
+            // RemintData struct
+            commitment: root,
+            nullifiers: [nullifier],
+            proverData: "0x",
+            relayerData: relayerData,
+            proof: proofBytes,
+          }
         );
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
@@ -344,15 +353,20 @@ describe("Gas Profile Comparison", function () {
 
         // Claim to Charlie again (already has commitment)
         const proofBytes2 = encodeProof(proof.a, proof.b, proof.c);
+        const relayerData2 = encodeRelayerData(0);
         const tx = await zwToken.remint(
-          proofBytes2,
-          root,
-          nullifier,
-          charlie.address,
+          charlie.address, // to
           0, // id
-          amount,
+          amount, // amount
           false, // withdrawUnderlying
-          0 // relayerFee
+          {
+            // RemintData struct
+            commitment: root,
+            nullifiers: [nullifier],
+            proverData: "0x",
+            relayerData: relayerData2,
+            proof: proofBytes2,
+          }
         );
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);

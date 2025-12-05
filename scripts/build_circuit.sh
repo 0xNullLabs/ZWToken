@@ -62,7 +62,7 @@ cat > "${OUT_DIR}/input_test.json" << EOF
     "remintAmount": "0",
     "id": "0",
     "withdrawUnderlying": "0",
-    "relayerFee": "0",
+    "relayerDataHash": "0",
     "secret": "123456789",
     "addr20": "0",
     "commitAmount": "0",

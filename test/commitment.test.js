@@ -13,6 +13,17 @@ function encodeProof(a, b, c) {
   );
 }
 
+/**
+ * Helper: 将 relayerFee 编码为 relayerData bytes
+ */
+function encodeRelayerData(relayerFee) {
+  if (relayerFee === 0 || relayerFee === 0n) {
+    return "0x"; // Empty bytes
+  }
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+  return abiCoder.encode(["uint256"], [relayerFee]);
+}
+
 describe("ZWERC20 - Commitment Recording", function () {
   let zwToken, underlying, verifier, poseidonT3;
   let owner, alice, bob, charlie;
@@ -26,13 +37,6 @@ describe("ZWERC20 - Commitment Recording", function () {
     );
     poseidonT3 = await PoseidonT3.deploy();
     await poseidonT3.waitForDeployment();
-
-    // Deploy PoseidonT4 library
-    const PoseidonT4 = await ethers.getContractFactory(
-      "poseidon-solidity/PoseidonT4.sol:PoseidonT4"
-    );
-    poseidonT4 = await PoseidonT4.deploy();
-    await poseidonT4.waitForDeployment();
 
     // Deploy mock underlying token
     const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
@@ -82,7 +86,7 @@ describe("ZWERC20 - Commitment Recording", function () {
 
       await zwToken
         .connect(alice)
-        .depositTo(alice.address, 0, ethers.parseEther("100"));
+        .deposit(alice.address, 0, ethers.parseEther("100"));
 
       // Check no commitments were created
       const leafCount = await zwToken.getCommitLeafCount(0);
@@ -95,7 +99,7 @@ describe("ZWERC20 - Commitment Recording", function () {
         .approve(await zwToken.getAddress(), ethers.parseEther("100"));
       await zwToken
         .connect(alice)
-        .depositTo(alice.address, 0, ethers.parseEther("100"));
+        .deposit(alice.address, 0, ethers.parseEther("100"));
 
       const hasRecorded = await zwToken.hasFirstReceiptRecorded(alice.address);
       expect(hasRecorded).to.be.false;
@@ -107,14 +111,14 @@ describe("ZWERC20 - Commitment Recording", function () {
         .approve(await zwToken.getAddress(), ethers.parseEther("100"));
       await zwToken
         .connect(alice)
-        .depositTo(alice.address, 0, ethers.parseEther("100"));
+        .deposit(alice.address, 0, ethers.parseEther("100"));
 
       await underlying
         .connect(bob)
         .approve(await zwToken.getAddress(), ethers.parseEther("100"));
       await zwToken
         .connect(bob)
-        .depositTo(bob.address, 0, ethers.parseEther("100"));
+        .deposit(bob.address, 0, ethers.parseEther("100"));
 
       const count = await zwToken.getCommitLeafCount(0);
       expect(count).to.equal(0);
@@ -129,7 +133,7 @@ describe("ZWERC20 - Commitment Recording", function () {
         .approve(await zwToken.getAddress(), ethers.parseEther("100"));
       await zwToken
         .connect(alice)
-        .depositTo(alice.address, 0, ethers.parseEther("100"));
+        .deposit(alice.address, 0, ethers.parseEther("100"));
     });
 
     it("Should create commitment on first transfer to Bob", async function () {
@@ -225,7 +229,7 @@ describe("ZWERC20 - Commitment Recording", function () {
         .approve(await zwToken.getAddress(), ethers.parseEther("100"));
       await zwToken
         .connect(alice)
-        .depositTo(alice.address, 0, ethers.parseEther("100"));
+        .deposit(alice.address, 0, ethers.parseEther("100"));
       await zwToken
         .connect(alice)
         .approve(bob.address, ethers.parseEther("100"));
@@ -276,7 +280,7 @@ describe("ZWERC20 - Commitment Recording", function () {
         .approve(await zwToken.getAddress(), ethers.parseEther("100"));
       await zwToken
         .connect(alice)
-        .depositTo(alice.address, 0, ethers.parseEther("100"));
+        .deposit(alice.address, 0, ethers.parseEther("100"));
 
       // Generate privacy address
       const secret = 12345n;
@@ -308,15 +312,19 @@ describe("ZWERC20 - Commitment Recording", function () {
         ],
         [0, 0]
       );
+      const relayerData = encodeRelayerData(0);
       await zwToken.remint(
-        proofBytes,
-        root,
-        nullifier,
-        bob.address,
-        0, // id
-        amount,
-        false, // withdrawUnderlying
-        0 // relayerFee
+        bob.address,      // to
+        0,                // id
+        amount,           // amount
+        false,            // withdrawUnderlying
+        {                 // RemintData struct
+          commitment: root,
+          nullifiers: [nullifier],
+          proverData: "0x",
+          relayerData: relayerData,
+          proof: proofBytes
+        }
       );
 
       // Check commitment was created
@@ -357,15 +365,19 @@ describe("ZWERC20 - Commitment Recording", function () {
         ],
         [0, 0]
       );
+      const relayerData2 = encodeRelayerData(0);
       await zwToken.remint(
-        proofBytes2,
-        root,
-        nullifier,
-        bob.address,
-        0, // id
-        amount,
-        false, // withdrawUnderlying
-        0 // relayerFee
+        bob.address,      // to
+        0,                // id
+        amount,           // amount
+        false,            // withdrawUnderlying
+        {                 // RemintData struct
+          commitment: root,
+          nullifiers: [nullifier],
+          proverData: "0x",
+          relayerData: relayerData2,
+          proof: proofBytes2
+        }
       );
 
       // Should still have only 2 commitments (no new one created)
@@ -390,15 +402,19 @@ describe("ZWERC20 - Commitment Recording", function () {
         ],
         [0, 0]
       );
+      const relayerData3 = encodeRelayerData(0);
       await zwToken.remint(
-        proofBytes3,
-        root,
-        nullifier,
-        bob.address,
-        0, // id
-        amount,
-        false, // withdrawUnderlying
-        0 // relayerFee
+        bob.address,      // to
+        0,                // id
+        amount,           // amount
+        false,            // withdrawUnderlying
+        {                 // RemintData struct
+          commitment: root,
+          nullifiers: [nullifier],
+          proverData: "0x",
+          relayerData: relayerData3,
+          proof: proofBytes3
+        }
       );
 
       const bobBalanceAfter = await zwToken.balanceOf(bob.address);
@@ -413,7 +429,7 @@ describe("ZWERC20 - Commitment Recording", function () {
         .approve(await zwToken.getAddress(), ethers.parseEther("200"));
       await zwToken
         .connect(alice)
-        .depositTo(alice.address, 0, ethers.parseEther("200"));
+        .deposit(alice.address, 0, ethers.parseEther("200"));
     });
 
     it("Should build correct Merkle tree with multiple transfers", async function () {

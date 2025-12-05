@@ -12,7 +12,7 @@ interface ISnarkVerifier {
      * @param a Proof component A (G1 point)
      * @param b Proof component B (G2 point)
      * @param c Proof component C (G1 point)
-     * @param input Public inputs: [root, nullifier, to, amount, id, withdrawUnderlying, relayerFee]
+     * @param input Public inputs: [root, nullifier, to, amount, id, withdrawUnderlying, relayerDataHash]
      * @return True if proof is valid, false otherwise
      */
     function verifyProof(

@@ -8,6 +8,24 @@ pragma solidity ^0.8.20;
  */
 interface IERC8065 {
     
+    // ========== Structs ==========
+    
+    /**
+     * @notice Encapsulates all data required for remint operations
+     * @param commitment The commitment (Merkle root) corresponding to the provided proof
+     * @param nullifiers Array of unique nullifiers used to prevent double-remint
+     * @param proverData Generic data for prover (reserved for future use)
+     * @param relayerData Generic data for relayer, can contain fee information. Hash is used in ZK proof.
+     * @param proof Zero-knowledge proof bytes verifying ownership of the provable burn address
+     */
+    struct RemintData {
+        bytes32 commitment;
+        bytes32[] nullifiers;
+        bytes proverData;
+        bytes relayerData;
+        bytes proof;
+    }
+    
     // ========== Events ==========
     
     /**
@@ -58,7 +76,7 @@ interface IERC8065 {
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
      * @param amount The amount of the underlying asset to deposit.
      */
-    function depositTo(address to, uint256 id, uint256 amount) external payable;
+    function deposit(address to, uint256 id, uint256 amount) external payable;
     
     /**
      * @notice Withdraw underlying tokens by burning ZWToken
@@ -70,24 +88,20 @@ interface IERC8065 {
     
     /**
      * @notice Remint ZWToken using a zero-knowledge proof to unlink the source of funds
-     * @param proof Zero-knowledge proof bytes verifying ownership of the provable burn address
-     * @param commitment The commitment corresponding to the provided proof
-     * @param nullifier Unique nullifier used to prevent double-remint
+     * @dev Interface supports array of nullifiers for future batch remint support.
+     *      Current implementations MAY require exactly one nullifier.
      * @param to Recipient address that will receive the reminted ZWToken or the underlying token
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
      * @param amount Amount of ZWToken burned from the provable burn address for reminting
      * @param withdrawUnderlying If true, withdraws the equivalent underlying token instead of reminting ZWToken
-     * @param relayerFee Fee paid to the relayer that submits the remint transaction, if executed through a relayer
+     * @param data Encapsulated remint data including commitment, nullifiers, proof, and relayer information
      */
     function remint(
-        bytes calldata proof,
-        bytes32 commitment,
-        bytes32 nullifier,
         address to,
         uint256 id,
         uint256 amount,
         bool withdrawUnderlying,
-        uint256 relayerFee
+        RemintData calldata data
     ) external;
     
     // ========== Query Functions ==========

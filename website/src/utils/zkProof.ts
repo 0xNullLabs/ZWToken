@@ -262,7 +262,7 @@ export function prepareCircuitInput(params: {
   remintAmount: bigint;
   id?: bigint; // Token ID (default 0 for ERC-20)
   withdrawUnderlying?: boolean; // Default false
-  relayerFee?: bigint; // Default 0
+  relayerFee?: bigint; // Relayer fee in basis points (default 0)
   secret: bigint;
   addr20: bigint;
   commitAmount: bigint;
@@ -277,7 +277,7 @@ export function prepareCircuitInput(params: {
     remintAmount: params.remintAmount,
     id: params.id ?? 0n, // Default to 0 for ERC-20
     withdrawUnderlying: params.withdrawUnderlying ? 1n : 0n, // Convert boolean to 0/1
-    relayerFee: params.relayerFee ?? 0n, // Default to 0
+    relayerFee: params.relayerFee ?? 0n, // Relayer fee (basis points)
 
     // Private inputs
     secret: params.secret,

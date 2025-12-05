@@ -23,17 +23,18 @@ contracts/
 
 #### `ZWERC20.sol`
 
-ZK Wrapper Token 主合约，提供以下功能：
+ZK Wrapper Token 主合约（实现 IERC8065），提供以下功能：
 
 - **Deposit/Withdraw**: 包装/解包装底层 ERC20 代币
 - **Transfer**: 支持标准 ERC20 转账，自动记录首次接收 commitment
-- **Claim**: 使用 ZK proof 进行隐私转账
+- **Remint**: 使用 ZK proof 进行隐私转账或提现
 - **First Receipt Tracking**: 记录每个地址首次接收代币的金额
 
 继承关系：
 
 - `ERC20` (OpenZeppelin)
 - `PoseidonMerkleTree` (自定义工具合约)
+- `IERC8065` (接口实现)
 
 ### 接口
 
@@ -116,10 +117,10 @@ transfer/claim → _recordCommitmentIfNeeded()
                  _insertLeaf(commitment) → 更新 Merkle Tree
 ```
 
-### 3. Claim 流程（隐私转账）
+### 3. Remint 流程（隐私转账）
 
 ```
-User → claim(proof, root, nullifier, to, amount)
+User → remint(to, id, amount, withdrawUnderlying, data)
      ↓
 验证 root 是否为历史有效 root
      ↓
@@ -127,9 +128,10 @@ User → claim(proof, root, nullifier, to, amount)
      ↓
 验证 ZK proof (via ISnarkVerifier)
      ↓
-Mint ZWToken 到 to 地址
+如果 withdrawUnderlying=false: Mint ZWToken 到 to 地址
+如果 withdrawUnderlying=true: 转出底层代币
      ↓
-记录 commitment（如果是首次接收）
+记录 commitment（如果是首次接收且 mint）
 ```
 
 ## 🔐 安全特性
@@ -149,9 +151,10 @@ Mint ZWToken 到 to 地址
 
 合约测试位于 `test/` 目录：
 
-- `e2e.test.js`: 端到端测试（含真实 ZK proof）
+- `e2e.test.js`: 端到端测试
 - `commitment.test.js`: Commitment 记录测试
-- `claim.test.js`: Claim 功能测试
+- `remint.test.js`: Remint 功能测试
+- `gas-profile.test.js`: Gas 分析测试
 
 运行测试：
 
@@ -161,5 +164,5 @@ npx hardhat test
 
 ## 📚 更多信息
 
-- 电路代码: `circuits/claim_first_receipt.circom`
-- 前端示例: `client/browser_claim_example.js`
+- 电路代码: `circuits/remint.circom`
+- 前端应用: `website/`

@@ -14,6 +14,17 @@ function encodeProof(a, b, c) {
 }
 
 /**
+ * Helper: 将 relayerFee 编码为 relayerData bytes
+ */
+function encodeRelayerData(relayerFee) {
+  if (relayerFee === 0 || relayerFee === 0n) {
+    return "0x"; // Empty bytes
+  }
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+  return abiCoder.encode(["uint256"], [relayerFee]);
+}
+
+/**
  * ZWERC20 Remint 测试
  * 基于 IERC8065：Poseidon Merkle tree + 首次接收记录
  */
@@ -35,14 +46,6 @@ describe("ZWERC20 - Remint Test", function () {
     poseidonT3 = await PoseidonT3.deploy();
     await poseidonT3.waitForDeployment();
     console.log("✅ PoseidonT3 deployed:", await poseidonT3.getAddress());
-
-    // 2. 部署 PoseidonT4 库
-    const PoseidonT4 = await ethers.getContractFactory(
-      "poseidon-solidity/PoseidonT4.sol:PoseidonT4"
-    );
-    poseidonT4 = await PoseidonT4.deploy();
-    await poseidonT4.waitForDeployment();
-    console.log("✅ PoseidonT4 deployed:", await poseidonT4.getAddress());
 
     // 2. 部署底层 ERC20
     const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
@@ -103,7 +106,7 @@ describe("ZWERC20 - Remint Test", function () {
     await underlying
       .connect(alice)
       .approve(await zwToken.getAddress(), depositAmount);
-    await zwToken.connect(alice).depositTo(alice.address, 0, depositAmount);
+    await zwToken.connect(alice).deposit(alice.address, 0, depositAmount);
 
     const aliceBalance = await zwToken.balanceOf(alice.address);
     console.log(`   Alice ZWT balance: ${ethers.formatEther(aliceBalance)}`);
@@ -203,15 +206,20 @@ describe("ZWERC20 - Remint Test", function () {
 
     // Bob 提交 remint
     const proofBytes = encodeProof(mockProof.a, mockProof.b, mockProof.c);
+    const relayerData = encodeRelayerData(0);
     const claimTx = await zwToken.remint(
-      proofBytes,
-      root,
-      nullifierHex,
-      bob.address,
+      bob.address, // to
       0, // id
-      claimAmount,
+      claimAmount, // amount
       false, // withdrawUnderlying
-      0 // relayerFee
+      {
+        // RemintData struct
+        commitment: root,
+        nullifiers: [nullifierHex],
+        proverData: "0x",
+        relayerData: relayerData,
+        proof: proofBytes,
+      }
     );
 
     // 验证 Reminted 事件
@@ -264,14 +272,18 @@ describe("ZWERC20 - Remint Test", function () {
 
     await expect(
       zwToken.remint(
-        proofBytes,
-        root,
-        nullifierHex,
-        bob.address,
+        bob.address, // to
         0, // id
-        claimAmount,
+        claimAmount, // amount
         false, // withdrawUnderlying
-        0 // relayerFee
+        {
+          // RemintData struct
+          commitment: root,
+          nullifiers: [nullifierHex],
+          proverData: "0x",
+          relayerData: relayerData,
+          proof: proofBytes,
+        }
       )
     ).to.be.revertedWithCustomError(zwToken, "NullifierUsed");
 
@@ -332,15 +344,20 @@ describe("ZWERC20 - Remint Test", function () {
 
     // Bob remint（不应该 emit CommitmentAdded）
     const proofBytes2 = encodeProof(mockProof2.a, mockProof2.b, mockProof2.c);
+    const relayerData2 = encodeRelayerData(0);
     const claimTx = await zwToken.remint(
-      proofBytes2,
-      root2,
-      nullifierHex2,
-      bob.address,
+      bob.address, // to
       0, // id
-      claimAmount2,
+      claimAmount2, // amount
       false, // withdrawUnderlying
-      0 // relayerFee
+      {
+        // RemintData struct
+        commitment: root2,
+        nullifiers: [nullifierHex2],
+        proverData: "0x",
+        relayerData: relayerData2,
+        proof: proofBytes2,
+      }
     );
 
     // 应该 emit Reminted
@@ -429,16 +446,21 @@ describe("ZWERC20 - Remint Test", function () {
 
     // 应该成功（oldRoot 仍然有效）
     const proofBytes3 = encodeProof(mockProof3.a, mockProof3.b, mockProof3.c);
+    const relayerData3 = encodeRelayerData(0);
     await expect(
       zwToken.remint(
-        proofBytes3,
-        oldRoot, // 使用旧 root
-        nullifierHex3,
-        deployer.address,
+        deployer.address, // to
         0, // id
-        claimAmount3,
+        claimAmount3, // amount
         false, // withdrawUnderlying
-        0 // relayerFee
+        {
+          // RemintData struct
+          commitment: oldRoot, // 使用旧 root
+          nullifiers: [nullifierHex3],
+          proverData: "0x",
+          relayerData: relayerData3,
+          proof: proofBytes3,
+        }
       )
     ).to.emit(zwToken, "Reminted");
 

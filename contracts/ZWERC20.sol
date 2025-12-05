@@ -22,7 +22,7 @@ import {IERC8065} from "./interfaces/IERC8065.sol";
  * - No backend dependency (frontend builds Merkle proofs from chain data)
  * 
  * Commitment Recording Logic:
- * - depositTo(): Mint (from=0) → Records commitment if to != msg.sender
+ * - deposit(): Mint (from=0) → Records commitment if to != msg.sender
  * - transfer/transferFrom(): Transfer (from≠0, to≠0) → Records commitment if first receipt
  * - remint(): Mint to recipient + explicit commitment call → Records if first receipt
  * - withdraw(): Burn (to=0) → NO commitment recorded
@@ -112,7 +112,7 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
 
     /**
      * @notice Deposits underlying tokens and mints ZWERC20 to the specified address
-     * @dev Implements IERC8065.depositTo
+     * @dev Implements IERC8065.deposit
      * - For ERC-20: id MUST be 0
      * - Records commitment if to != msg.sender (potential provable burn address)
      * - Applies depositFee if configured
@@ -120,7 +120,7 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
      * @param id The token identifier (MUST be 0 for ERC-20)
      * @param amount The amount of the underlying asset to deposit
      */
-    function depositTo(address to, uint256 id, uint256 amount) external payable override {
+    function deposit(address to, uint256 id, uint256 amount) external payable override {
         if (id != 0) revert InvalidTokenId();
         if (amount == 0) revert InvalidAmount();
         
@@ -189,128 +189,117 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
     }
     
     /**
-     * @notice Remint ZWERC20 using zero-knowledge proof
-     * @dev Implements IERC8065.remint
-     * - Verifies ZK proof of provable burn address ownership
-     * - Supports direct withdrawal of underlying token (withdrawUnderlying=true)
-     * - Supports relayer fee payment
-     * - Applies remintFee (and withdrawFee if withdrawing)
-     * @param proof Zero-knowledge proof bytes (Groth16 format: a, b, c concatenated)
-     * @param commitment The commitment (merkle root) corresponding to the proof
-     * @param nullifier Unique nullifier to prevent double-remint
-     * @param to Recipient address
+     * @notice Remint ZWToken using zero-knowledge proof
+     * @dev Implements IERC8065.remint - Current implementation requires exactly one nullifier
+     * @param to Recipient address that will receive the reminted ZWToken or underlying token
      * @param id Token identifier (MUST be 0 for ERC-20)
-     * @param amount Amount to remint
-     * @param withdrawUnderlying If true, withdraw underlying token instead of minting ZWERC20
-     * @param relayerFee Fee rate paid to relayer (in basis points)
+     * @param amount Amount of ZWToken burned from the provable burn address for reminting
+     * @param withdrawUnderlying If true, withdraws underlying token instead of reminting ZWToken
+     * @param data Encapsulated remint data including commitment, nullifiers, proof, and relayer information
      */
     function remint(
+        address to,
+        uint256 id,
+        uint256 amount,
+        bool withdrawUnderlying,
+        IERC8065.RemintData calldata data
+    ) external override {
+        // Parameter validation
+        if (id != 0) revert InvalidTokenId();
+        if (amount == 0) revert InvalidAmount();
+        require(data.nullifiers.length == 1, "Only single nullifier supported");
+        
+        // Extract and validate nullifier
+        bytes32 nullifier = data.nullifiers[0];
+        if (!isKnownRoot[data.commitment]) revert InvalidRoot();
+        if (nullifierUsed[nullifier]) revert NullifierUsed();
+        nullifierUsed[nullifier] = true;
+        
+        // Parse relayer fee from relayerData
+        bytes calldata relayerData = data.relayerData;
+        uint256 relayerFee;
+        if (relayerData.length >= 32) {
+            assembly {
+                relayerFee := calldataload(relayerData.offset)
+            }
+            if (relayerFee >= feeDenominator) revert InvalidFee();
+        }
+        
+        // Verify ZK proof
+        _verifyProof(
+            data.proof,
+            data.commitment,
+            nullifier,
+            to,
+            amount,
+            id,
+            withdrawUnderlying,
+            relayerFee
+        );
+        
+        // Execute remint
+        _executeRemint(to, id, amount, withdrawUnderlying, relayerFee);
+    }
+    
+    /**
+     * @dev Verify ZK proof (separated to avoid stack too deep)
+     * Note: commitment and nullifier are Poseidon outputs, guaranteed to be < BN128_PRIME
+     *       relayerFee is a small value (< feeDenominator), always within range
+     */
+    function _verifyProof(
         bytes calldata proof,
         bytes32 commitment,
         bytes32 nullifier,
+        address to,
+        uint256 amount,
+        uint256 id,
+        bool withdrawUnderlying,
+        uint256 relayerFee
+    ) private view {
+        uint256[7] memory pubInputs = [
+            uint256(commitment),      // Poseidon output, always < BN128_PRIME
+            uint256(nullifier),       // Poseidon output, always < BN128_PRIME
+            uint256(uint160(to)),
+            amount,
+            id,
+            withdrawUnderlying ? 1 : 0,
+            relayerFee                // Small value, always within BN128 range
+        ];
+        
+        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c) = 
+            abi.decode(proof, (uint256[2], uint256[2][2], uint256[2]));
+        
+        if (!verifier.verifyProof(a, b, c, pubInputs)) {
+            revert InvalidProof();
+        }
+    }
+    
+    /**
+     * @dev Execute remint (separated to avoid stack too deep)
+     */
+    function _executeRemint(
         address to,
         uint256 id,
         uint256 amount,
         bool withdrawUnderlying,
         uint256 relayerFee
-    ) external override {
-        if (id != 0) revert InvalidTokenId();
-        if (amount == 0) revert InvalidAmount();
-        if (relayerFee >= feeDenominator) revert InvalidFee();
-        
-        // Verify commitment is known
-        if (!isKnownRoot[commitment]) {
-            revert InvalidRoot();
-        }
-        
-        // Verify nullifier not used
-        if (nullifierUsed[nullifier]) {
-            revert NullifierUsed();
-        }
-        
-        // Decode proof (assuming Groth16 format: 2 + 4 + 2 = 8 uint256s)
-        require(proof.length == 256, "Invalid proof length"); // 8 * 32 bytes
-        
-        // Decode proof from bytes
-        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c) = 
-            abi.decode(proof, (uint256[2], uint256[2][2], uint256[2]));
-        
-        // Verify ZK proof
-        // Public inputs: [root, nullifier, to, amount, id, withdrawUnderlying, relayerFee]
-        uint256[7] memory pubInputs = [
-            uint256(commitment),
-            uint256(nullifier),
-            uint256(uint160(to)),
-            amount,
-            id,
-            withdrawUnderlying ? 1 : 0,
-            relayerFee
-        ];
-        
-        if (!_verifyProof(a, b, c, pubInputs)) {
-            revert InvalidProof();
-        }
-        
-        // Mark nullifier as used
-        nullifierUsed[nullifier] = true;
-        
-        // Calculate amount after fees
-        uint256 protocolFeeRate = remintFee;
-        if (withdrawUnderlying) {
-            protocolFeeRate += withdrawFee;
-        }
-        
+    ) private {
+        uint256 protocolFeeRate = withdrawUnderlying ? remintFee + withdrawFee : remintFee;
         uint256 protocolFee = (amount * protocolFeeRate) / feeDenominator;
         uint256 relayerPayment = (amount * relayerFee) / feeDenominator;
-        uint256 totalFee = protocolFee + relayerPayment;
-        uint256 recipientAmount = amount - totalFee;
+        uint256 recipientAmount = amount - protocolFee - relayerPayment;
         
         if (withdrawUnderlying) {
-            // Withdraw underlying token to recipient
             underlying.safeTransfer(to, recipientAmount);
-            
-            // Pay relayer in zkToken if relayerFee > 0
-            if (relayerPayment > 0) {
-                _mint(msg.sender, relayerPayment);
-            }
-            
-            // Mint protocol fee to fee collector
-            if (protocolFee > 0) {
-                _mint(feeCollector, protocolFee);
-            }
         } else {
-            // Mint ZWERC20 to recipient
             _mint(to, recipientAmount);
-            
-            // Record commitment if first receipt
             _recordCommitmentIfNeeded(id, to, recipientAmount);
-            
-            // Pay relayer in ZWERC20 if relayerFee > 0
-            if (relayerPayment > 0) {
-                _mint(msg.sender, relayerPayment);
-            }
-            
-            // Mint protocol fee to fee collector
-            if (protocolFee > 0) {
-                _mint(feeCollector, protocolFee);
-            }
         }
         
+        if (relayerPayment > 0) _mint(msg.sender, relayerPayment);
+        if (protocolFee > 0) _mint(feeCollector, protocolFee);
+        
         emit Reminted(msg.sender, to, id, recipientAmount, withdrawUnderlying);
-    }
-    
-    /**
-     * @notice Internal proof verification
-     * @dev Uses new format (7 inputs) with IERC8065-compiled circuit
-     */
-    function _verifyProof(
-        uint256[2] memory a,
-        uint256[2][2] memory b,
-        uint256[2] memory c,
-        uint256[7] memory pubInputs
-    ) internal view returns (bool) {
-        // Use new format (7 public inputs) matching the recompiled circuit
-        return verifier.verifyProof(a, b, c, pubInputs);
     }
     
     // ========== Internal Functions ==========

@@ -1311,6 +1311,9 @@ const ZWToken: React.FC = () => {
         } tokens = ${withdrawAmount.toString()} units (${tokenDecimals} decimals)`,
       );
 
+      // withdraw(address to, uint256 id, uint256 amount)
+      const signerAddress = await signer.getAddress();
+      const tx = await contract.withdraw(signerAddress, 0, withdrawAmount);
       const tx = await contract.withdraw(account, 0, withdrawAmount);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.withdraw.submitting' }), 0);
@@ -1504,8 +1507,10 @@ const ZWToken: React.FC = () => {
         id: 0n,
         withdrawUnderlying: withdrawUnderlying,
         relayerFee: BigInt(relayerFee), // Convert to BigInt
+        remintAmount: BigInt(claimAmount),
         secret,
         addr20,
+        commitAmount: userCommitment.amount,
         commitAmount: userCommitment.amount,
         q,
         merkleProof,
@@ -1522,6 +1527,8 @@ const ZWToken: React.FC = () => {
         // Use circuit to generate real ZK proof (if preloaded, browser will read from cache)
         const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
           circuitInput,
+          '/circuits/remint.wasm',
+          '/circuits/remint_final.zkey',
           '/circuits/remint.wasm',
           '/circuits/remint_final.zkey',
         );
@@ -1549,6 +1556,7 @@ const ZWToken: React.FC = () => {
         );
 
         // === Step 7: Submit remint transaction ===
+        // === 步骤 7: 提交 remint 交易 ===
         message.destroy();
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.submitting' }), 0);
         console.log('Step 7: Submitting remint transaction...');
@@ -1562,6 +1570,29 @@ const ZWToken: React.FC = () => {
           remintAmount, // BigInt from parseUnits
           withdrawUnderlying, // boolean
           relayerFee // relayerFee is already number type
+        message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.submitting' }), 0);
+        console.log('Step 7: Submitting remint transaction...');
+
+        // 编码 proof 为 bytes
+        const abiCoder = new ethers.AbiCoder();
+        const proofBytes = abiCoder.encode(
+          ['uint256[2]', 'uint256[2][2]', 'uint256[2]'],
+          [solidityProof.a, solidityProof.b, solidityProof.c],
+        );
+
+        const tx = await contract.remint(
+          values.recipient, // to
+          0, // id (ERC-20)
+          claimAmount, // amount
+          false, // withdrawUnderlying
+          {
+            // RemintData struct
+            commitment: localRoot,
+            nullifiers: [nullifierHex],
+            proverData: '0x',
+            relayerData: '0x',
+            proof: proofBytes,
+          },
         );
 
         console.log('Transaction submitted, waiting for confirmation...');
@@ -2086,19 +2117,19 @@ const ZWToken: React.FC = () => {
                   />
                 </Form.Item>
 
-                {account && (
-                  <div
-                    style={{
-                      marginTop: -16,
-                      marginBottom: 16,
-                      color: '#999',
-                      fontSize: '12px',
-                    }}
-                  >
-                    {intl.formatMessage({ id: 'pages.zwtoken.deposit.currentAllowance' })}:{' '}
-                    {parseFloat(allowance).toFixed(6)} USDC
-                  </div>
-                )}
+                    {account && (
+                      <div
+                        style={{
+                          marginTop: -16,
+                          marginBottom: 16,
+                          color: '#999',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {intl.formatMessage({ id: 'pages.zwtoken.deposit.currentAllowance' })}:{' '}
+                        {parseFloat(allowance).toFixed(6)} USDC
+                      </div>
+                    )}
 
                 <Form.Item>
                   <Checkbox
@@ -2209,77 +2240,84 @@ const ZWToken: React.FC = () => {
                 </Form.Item>
               </Form>
 
-              <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                <h4>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.title' })}</h4>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.1' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.2' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.3' })}</p>
-              </div>
-            </div>
-          </TabPane>
+                  <div
+                    style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
+                  >
+                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.title' })}</h4>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.withdraw.tip.3' })}</p>
+                  </div>
+                </div>
+              </TabPane>
 
-          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.transfer' })} key="transfer">
-            <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-              <Form form={transferForm} layout="vertical" onFinish={handleTransfer}>
-                <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.transfer.targetAddress' })}
-                  name="targetAddress"
-                  rules={[
-                    {
-                      required: true,
-                      message: intl.formatMessage({
-                        id: 'pages.zwtoken.transfer.targetAddress.required',
-                      }),
-                    },
-                    {
-                      pattern: /^0x[a-fA-F0-9]{40}$/,
-                      message: intl.formatMessage({
-                        id: 'pages.zwtoken.transfer.targetAddress.invalid',
-                      }),
-                    },
-                  ]}
-                >
-                  <Input
-                    placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.transfer.targetAddress.placeholder',
-                    })}
-                    maxLength={42}
-                    addonAfter={
-                      <Button
-                        type="link"
-                        onClick={handleBurnClick}
-                        style={{ padding: 0, height: 'auto' }}
-                      >
-                        {intl.formatMessage({ id: 'pages.zwtoken.transfer.burn' })}
-                      </Button>
-                    }
-                  />
-                </Form.Item>
+              <TabPane
+                tab={intl.formatMessage({ id: 'pages.zwtoken.tab.transfer' })}
+                key="transfer"
+              >
+                <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                  <Form form={transferForm} layout="vertical" onFinish={handleTransfer}>
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.transfer.targetAddress' })}
+                      name="targetAddress"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.transfer.targetAddress.required',
+                          }),
+                        },
+                        {
+                          pattern: /^0x[a-fA-F0-9]{40}$/,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.transfer.targetAddress.invalid',
+                          }),
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.transfer.targetAddress.placeholder',
+                        })}
+                        maxLength={42}
+                        addonAfter={
+                          <Button
+                            type="link"
+                            onClick={handleBurnClick}
+                            style={{ padding: 0, height: 'auto' }}
+                          >
+                            {intl.formatMessage({ id: 'pages.zwtoken.transfer.burn' })}
+                          </Button>
+                        }
+                      />
+                    </Form.Item>
 
-                <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.transfer.amount' })}
-                  name="amount"
-                  rules={[
-                    {
-                      required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.transfer.amount.required' }),
-                    },
-                    {
-                      type: 'number',
-                      min: 0.000001,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.transfer.amount.min' }),
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.transfer.amount.placeholder',
-                    })}
-                    precision={6}
-                    min={0}
-                  />
-                </Form.Item>
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.transfer.amount' })}
+                      name="amount"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.transfer.amount.required',
+                          }),
+                        },
+                        {
+                          type: 'number',
+                          min: 0.000001,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.transfer.amount.min' }),
+                        },
+                      ]}
+                    >
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.transfer.amount.placeholder',
+                        })}
+                        precision={6}
+                        min={0}
+                      />
+                    </Form.Item>
 
                 <Form.Item>
                   <Button type="primary" htmlType="submit" loading={loading} block>
@@ -2288,15 +2326,17 @@ const ZWToken: React.FC = () => {
                 </Form.Item>
               </Form>
 
-              <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                <h4>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.title' })}</h4>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.1' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.2' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.3' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.4' })}</p>
-              </div>
-            </div>
-          </TabPane>
+                  <div
+                    style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
+                  >
+                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.title' })}</h4>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.3' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.transfer.tip.4' })}</p>
+                  </div>
+                </div>
+              </TabPane>
 
           <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.remint' })} key="remint">
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>

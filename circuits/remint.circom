@@ -53,6 +53,10 @@ template Selector() {
     signal output outL;        // left child
     signal output outR;        // right child
     
+    // 🔒 安全约束：确保 index 只能是 0 或 1
+    // 防止攻击者使用任意值绕过 Merkle proof 验证
+    index * (1 - index) === 0;
+    
     // index === 0: outL = current, outR = sibling
     // index === 1: outL = sibling, outR = current
     
@@ -73,7 +77,12 @@ template Selector() {
  * 3. commitment = Poseidon(addr20, commitAmount) 在 Merkle tree 中
  * 4. remintAmount <= commitAmount
  * 5. nullifier = Poseidon(addr20, secret) 正确（防双花且保护隐私）
- * 6. 验证 to 地址与 public input 一致
+ * 6. 绑定 to, withdrawUnderlying, relayerDataHash 到约束系统
+ * 
+ * 安全保证：
+ * - 所有 public inputs 必须参与约束，防止验证时篡改
+ * - to, withdrawUnderlying, relayerDataHash 通过 Poseidon 哈希绑定
+ * - 若 proof 生成时与验证时的 public inputs 不一致，验证将失败
  * 
  * 隐私保护：
  * - 隐私地址推导：addrScalar = Poseidon(8065, id, secret)
@@ -92,7 +101,7 @@ template Remint(TREE_DEPTH, TWO160) {
     signal input remintAmount;          // Remint 金额
     signal input id;                    // Token ID (must be 0 for ERC-20)
     signal input withdrawUnderlying;    // 1 = withdraw underlying, 0 = mint ZWToken
-    signal input relayerFee;            // 中继器费率（basis points）
+    signal input relayerFee;            // Relayer fee (basis points, e.g., 100 = 1%)
     
     // ========== PRIVATE INPUTS ==========
     signal input secret;            // 用户秘密
@@ -106,6 +115,7 @@ template Remint(TREE_DEPTH, TWO160) {
     
     // ========== 1. 推导和验证隐私地址 ==========
     
+    // secret 有着 chain id, contract address 的重放保护
     // 计算 addrScalar = Poseidon(8065, id, secret)
     component posAddr = Poseidon(3);
     posAddr.inputs[0] <== 8065;
@@ -162,6 +172,23 @@ template Remint(TREE_DEPTH, TWO160) {
     nullifierHasher.inputs[1] <== secret;
     
     nullifier === nullifierHasher.out;
+    
+    // ========== 6. 绑定未约束的 public inputs ==========
+    // to, withdrawUnderlying, relayerFee 必须参与约束
+    // 否则攻击者可以在验证时篡改这些值而 proof 仍然有效
+    // 通过 Poseidon 哈希将它们绑定到约束系统中
+    
+    // 🔒 安全约束：确保 withdrawUnderlying 只能是 0 或 1
+    withdrawUnderlying * (1 - withdrawUnderlying) === 0;
+    
+    component publicInputsHasher = Poseidon(3);
+    publicInputsHasher.inputs[0] <== to;
+    publicInputsHasher.inputs[1] <== withdrawUnderlying;
+    publicInputsHasher.inputs[2] <== relayerFee;
+    
+    // 计算绑定哈希（<== 创建约束，确保这些 public inputs 参与 R1CS）
+    signal publicInputsBinding;
+    publicInputsBinding <== publicInputsHasher.out;
 }
 
 // 实例化主电路

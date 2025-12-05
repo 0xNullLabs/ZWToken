@@ -65,7 +65,7 @@ zKey 大小：~12 MB
 - ✅ **后续转账成本几乎与 USDT 相同**（仅多 7%，~38K vs ~35K gas）
 - ✅ 首次接收的高 Gas 成本是**一次性的**（~$0.86），为该地址提供永久隐私
 - ✅ 在 L2（如 Arbitrum、Optimism）上成本可降低 10-100 倍
-- 📊 **详细 Gas 分析报告**：见 [GAS\_分析报告.md](./GAS_分析报告.md) 和 [GAS_PROFILE_REPORT.md](./GAS_PROFILE_REPORT.md)
+- 📊 **详细 Gas 分析报告**：见 [GAS\_分析报告.md](./GAS_分析报告.md)
 
 ---
 
@@ -88,13 +88,13 @@ zKey 大小：~12 MB
 ### ZK 电路
 
 ```circom
-// circuits/claim_first_receipt.circom
+// circuits/remint.circom
 // 20 层 Poseidon Merkle tree
 
 证明内容：
 ✅ 用户知道某个地址的 secret
 ✅ 该地址有首次接收记录（commitment 在树中）
-✅ claimAmount <= firstAmount
+✅ remintAmount <= commitAmount
 ✅ nullifier 防双花
 ```
 
@@ -139,9 +139,10 @@ npx hardhat run scripts/deploy.js --network mainnet
 npx hardhat test
 
 # 运行特定测试
-npx hardhat test test/commitment_v2.test.js    # 功能测试 (15/15)
-npx hardhat test test/claim_v2_e2e.test.js     # E2E 测试 (3/3)
-npx hardhat test test/e2e_v2.test.js           # 真实 ZK proof (1/1)
+npx hardhat test test/commitment.test.js       # Commitment 功能测试
+npx hardhat test test/e2e.test.js              # E2E 测试
+npx hardhat test test/remint.test.js           # Remint 功能测试
+npx hardhat test test/gas-profile.test.js      # Gas 分析测试
 
 # 查看 Gas 报告
 REPORT_GAS=true npx hardhat test
@@ -157,12 +158,12 @@ REPORT_GAS=true npx hardhat test
 
 ```javascript
 const {
-  ZWTokenV2,
-} = require("./artifacts/contracts/ZWTokenV2.sol/ZWTokenV2.json");
+  ZWERC20,
+} = require("./artifacts/contracts/ZWERC20.sol/ZWERC20.json");
 
 // Deposit underlying token
 await underlyingToken.approve(zwToken.address, amount);
-await zwToken.deposit(amount);
+await zwToken.deposit(recipientAddress, 0, amount); // (to, id, amount)
 ```
 
 #### 2. 转账到隐私地址
@@ -180,37 +181,34 @@ const privacyAddress = "0x" + addr20.toString(16).padStart(40, "0");
 await zwToken.transfer(privacyAddress, amount);
 ```
 
-#### 3. Claim（浏览器生成 Proof）
+#### 3. Remint（浏览器生成 Proof）
 
 ```javascript
-const { ZKProofGenerator } = require("./client/merkle_proof_frontend");
-
-// 初始化
-const generator = new ZKProofGenerator(contractAddress, provider);
-
-// 生成电路输入
-const circuitInput = await generator.generateCircuitInput(
-  secret, // 用户的秘密
-  recipientAddress, // 接收地址
-  claimAmount // 提现金额
-);
+const snarkjs = require("snarkjs");
 
 // 生成 ZK proof（浏览器，5-12 秒）
 const { proof, publicSignals } = await snarkjs.groth16.fullProve(
   circuitInput,
-  "claim_first_receipt.wasm",
-  "claim_first_receipt_final.zkey"
+  "remint.wasm",
+  "remint_final.zkey"
 );
 
-// 提交 claim
-await zwToken.claim(
-  proof.pi_a,
-  proof.pi_b,
-  proof.pi_c,
-  circuitInput.root,
-  circuitInput.nullifier,
-  recipientAddress,
-  claimAmount
+// 格式化 proof
+const calldata = await snarkjs.groth16.exportSolidityCallData(proof, publicSignals);
+
+// 提交 remint
+await zwToken.remint(
+  recipientAddress,     // to
+  0,                    // id (0 for ERC-20)
+  remintAmount,         // amount
+  false,                // withdrawUnderlying
+  {                     // RemintData struct
+    commitment: root,
+    nullifiers: [nullifier],
+    proverData: "0x",
+    relayerData: "0x",
+    proof: proofBytes
+  }
 );
 ```
 
@@ -244,40 +242,40 @@ await zwToken.claim(
 ```
 ZWToken/
 ├── circuits/
-│   ├── claim_first_receipt.circom         # 主电路（12,166 约束）
+│   ├── remint.circom                      # 主电路（约 12K 约束）
 │   └── out/                               # 编译输出
-│       ├── claim_first_receipt.wasm       # 证明生成器
-│       ├── claim_first_receipt_final.zkey # 验证密钥（12MB）
+│       ├── remint.wasm                    # 证明生成器
+│       ├── remint_final.zkey              # 验证密钥（~12MB）
 │       └── verification_key.json          # 公开参数
 │
 ├── contracts/
-│   ├── ZWTokenV2.sol                      # 主合约 ⭐
-│   ├── Groth16Verifier.sol                # ZK 验证器
+│   ├── ZWERC20.sol                        # 主合约 ⭐
+│   ├── Groth16Verifier.sol                # ZK 验证器（由 snarkjs 生成）
+│   ├── interfaces/                        # 接口定义
+│   │   ├── IERC8065.sol                   # ERC-8065 接口
+│   │   └── ISnarkVerifier.sol             # ZK 验证器接口
+│   ├── utils/
+│   │   └── PoseidonMerkleTree.sol         # Poseidon Merkle Tree 实现
 │   └── mocks/                             # 测试辅助合约
 │       ├── MockVerifier.sol               # Mock ZK 验证器
 │       └── ERC20Mock.sol                  # Mock ERC20 代币
 │
-├── client/
-│   ├── merkle_proof_frontend.js           # Merkle proof 生成工具
-│   ├── browser_claim_example.js           # 浏览器完整示例
-│   └── generate_proof.js                  # Proof 生成工具
+├── utils/
+│   └── merkle-tree-utils.js               # Merkle Tree JS 工具
 │
 ├── test/
-│   ├── commitment_v2.test.js              # 功能测试 (15/15)
-│   ├── claim_v2_e2e.test.js               # E2E 测试 (3/3)
-│   ├── e2e_v2.test.js                     # 真实 ZK proof E2E (1/1)
-│   └── (其他测试)                         # Gas 对比等 (6/6)
+│   ├── commitment.test.js                 # Commitment 功能测试
+│   ├── e2e.test.js                        # E2E 测试
+│   ├── remint.test.js                     # Remint 功能测试
+│   └── gas-profile.test.js                # Gas 分析测试
 │
 ├── scripts/
-│   └── build_circuit.sh                   # 电路编译脚本（含 PTAU 优化）
+│   ├── build_circuit.sh                   # 电路编译脚本
+│   └── deploy.js                          # 部署脚本
 │
-└── docs/
-    ├── NEW_ARCHITECTURE_FINAL.md          # 详细架构文档
-    ├── BROWSER_PROOF_VERIFICATION.md      # 浏览器可行性验证
-    ├── BROWSER_MERKLE_PATH.md             # Merkle path 方案
-    ├── PROJECT_OVERVIEW.md                # 项目概览
-    ├── REFACTOR_COMPLETE_V2.md            # 重构报告
-    └── TEST_SUMMARY_V2.md                 # 测试总结
+├── website/                               # 前端 Web 应用
+│
+└── deployments/                           # 部署记录
 ```
 
 ---
@@ -352,7 +350,7 @@ ZWToken/
 
 ## 🤝 贡献
 
-欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md)
+欢迎提交 Issue 和 Pull Request！
 
 ---
 
@@ -366,24 +364,10 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 ### 项目文档
 
-#### 快速开始
-
-- [项目概览](PROJECT_OVERVIEW.md) - 完整的项目介绍和快速开始指南
-- [测试总结](TEST_SUMMARY_V2.md) - 25/25 测试通过报告
-- [更新日志](CHANGELOG.md) - 版本更新记录
-
-#### 架构与设计
-
-- [详细架构文档](docs/NEW_ARCHITECTURE_FINAL.md) - 完整的系统架构说明
-- [浏览器可行性验证](docs/BROWSER_PROOF_VERIFICATION.md) - 浏览器端实现验证
-- [Merkle Path 方案](docs/BROWSER_MERKLE_PATH.md) - 前端 Merkle proof 生成
-- [重构报告](REFACTOR_COMPLETE_V2.md) - 重构细节和设计决策
-
-#### 技术指南
-
-- [真实 ZK Proof 指南](REAL_ZK_PROOF_GUIDE.md) - 生成真实证明的详细步骤
-- [PTAU 文件指南](PTAU_SIZE_GUIDE.md) - Powers of Tau 文件选择和优化
-- [项目状态](FINAL_PROJECT_STATUS.md) - 完整项目状态报告
+- [项目结构](PROJECT_STRUCTURE.md) - 项目目录结构说明
+- [合约文档](contracts/README.md) - 智能合约详解
+- [Gas 分析报告](GAS_分析报告.md) - Gas 成本分析
+- [部署指南](DEPLOYMENT_GUIDE.md) - 部署流程说明
 
 ### 技术参考
 
@@ -443,3 +427,32 @@ Made with ❤️ using Circom, Solidity, and ethers.js
 - ✅ 浏览器 proof 生成验证（5-12 秒）
 - ✅ 完整文档编写
 - ✅ 基础测试覆盖
+
+---
+
+## 📦 部署记录
+
+### Sepolia - 2025/11/6 15:53:20
+
+**合约地址:**
+
+- PoseidonT3: [`0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62`](https://sepolia.etherscan.io/address/0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62)
+- Verifier: [`0xaB165da0aB5D12C0D75ff49b53319fff60140C51`](https://sepolia.etherscan.io/address/0xaB165da0aB5D12C0D75ff49b53319fff60140C51)
+- ZWERC20: [`0xFdb64908218B900585571218a77a0a1B47c537e7`](https://sepolia.etherscan.io/address/0xFdb64908218B900585571218a77a0a1B47c537e7)
+- Underlying Token (USDC): [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
+
+**代币信息:**
+
+- 名称: Zero Knowledge Wrapper USDC
+- 符号: ZWUSDC
+- 小数位数: 6
+
+**费用配置:**
+
+- 费用收集器: `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`
+- 费用分母: 1000000
+- 存款费率: 0 (0.00%)
+- Remint 费率: 0 (0.00%)
+- 提款费率: 0 (0.00%)
+
+**部署账户:** `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`

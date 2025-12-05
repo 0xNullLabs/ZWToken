@@ -7,38 +7,42 @@ ZK Wrapper Token - 基于零知识证明的隐私代币包装器
 ```
 ZWToken/
 ├── contracts/                      # Solidity 智能合约
-│   ├── ZWERC20.sol                # 主合约
-│   ├── Groth16Verifier.sol       # ZK proof 验证器（自动生成）
+│   ├── ZWERC20.sol                # 主合约（实现 IERC8065）
+│   ├── Groth16Verifier.sol        # ZK proof 验证器（由 snarkjs 生成）
 │   ├── interfaces/                # 接口定义
-│   │   └── ISnarkVerifier.sol    # Verifier 接口
+│   │   ├── IERC8065.sol           # ERC-8065 接口
+│   │   └── ISnarkVerifier.sol     # Verifier 接口
 │   ├── utils/                     # 工具合约
-│   │   └── PoseidonMerkleTree.sol # Merkle Tree 实现
+│   │   └── PoseidonMerkleTree.sol # Poseidon Merkle Tree 实现
 │   ├── mocks/                     # Mock 合约（仅用于测试）
-│   │   ├── ERC20Mock.sol         # Mock ERC20 代币
-│   │   └── MockVerifier.sol      # Mock ZK 验证器
+│   │   ├── ERC20Mock.sol          # Mock ERC20 代币
+│   │   └── MockVerifier.sol       # Mock ZK 验证器
 │   └── README.md                  # 合约文档
 │
 ├── circuits/                       # ZK 电路
-│   ├── claim_first_receipt.circom # 主电路（12K 约束）
+│   ├── remint.circom              # 主电路（约 12K 约束）
 │   └── out/                       # 编译输出
-│       ├── claim_first_receipt.wasm
-│       ├── claim_first_receipt_final.zkey
-│       └── verification_key.json
+│       ├── remint_js/             # JS witness 生成器
+│       ├── remint.wasm            # WASM witness 生成器
+│       ├── remint_final.zkey      # Proving key
+│       └── verification_key.json  # Verification key
 │
 ├── utils/                          # 通用工具
 │   └── merkle-tree-utils.js       # Merkle Tree JS 实现
 │
-├── client/                         # 前端示例
-│   └── browser_claim_example.js   # 浏览器端 claim 完整流程
-│
 ├── test/                           # 测试文件
-│   ├── e2e.test.js                # 端到端测试（真实 ZK proof）
+│   ├── e2e.test.js                # 端到端测试
 │   ├── commitment.test.js         # Commitment 记录测试
-│   └── claim.test.js              # Claim 功能测试
+│   ├── remint.test.js             # Remint 功能测试
+│   └── gas-profile.test.js        # Gas 分析测试
 │
 ├── scripts/                        # 脚本工具
-│   └── build_circuit.sh           # 电路编译脚本
+│   ├── build_circuit.sh           # 电路编译脚本
+│   └── deploy.js                  # 部署脚本
 │
+├── website/                        # 前端 Web 应用
+│
+├── deployments/                    # 部署记录
 ├── artifacts/                      # Hardhat 编译产物
 ├── cache/                          # Hardhat 缓存
 ├── node_modules/                   # 依赖包
@@ -73,16 +77,16 @@ ZWToken/
 
 **电路实现**:
 
-- `claim_first_receipt.circom`:
+- `remint.circom`:
   - 验证 secret → privacy address 推导
   - 验证 commitment 在 Merkle tree 中
-  - 验证 claim 金额 ≤ first amount
-  - ~12K 约束（5-12 秒生成 proof）
+  - 验证 remint 金额 ≤ commit amount
+  - 约 12K 约束（5-12 秒生成 proof）
 
 **编译产物** (`out/`):
 
-- `.wasm`: 见证生成器
-- `.zkey`: Proving key
+- `remint.wasm`: WASM 见证生成器
+- `remint_final.zkey`: Proving key
 - `verification_key.json`: Verification key
 
 ### 3. 工具层 (`utils/`)
@@ -94,22 +98,22 @@ ZWToken/
   - `PoseidonMerkleTree`: 完整版（合约存储客户端）
   - 被 2 个模块共用（test, client）
 
-### 4. 前端集成层 (`client/`)
+### 4. 前端 Web 应用 (`website/`)
 
-**浏览器示例**:
+**功能**:
 
-- `browser_claim_example.js`:
-  - 方案 1: 从链上事件重建 Merkle tree
-  - 方案 2: 优化版增量获取
-  - 方案 3: 合约查询接口（推荐）
+- 浏览器端 ZK proof 生成
+- 与合约交互（deposit, transfer, remint, withdraw）
+- 钱包连接
 
 ### 5. 测试层 (`test/`)
 
 **测试套件**:
 
-- `e2e.test.js`: 完整流程（真实 ZK proof）
+- `e2e.test.js`: 端到端测试
 - `commitment.test.js`: Commitment 记录逻辑
-- `claim.test.js`: Claim 功能单元测试
+- `remint.test.js`: Remint 功能测试
+- `gas-profile.test.js`: Gas 分析测试
 
 ## 🔧 技术栈
 
@@ -160,12 +164,12 @@ npx hardhat test test/e2e.test.js  # E2E 测试
 
 ## 📊 数据流
 
-### Deposit → Transfer → Claim 流程
+### Deposit → Transfer → Remint 流程
 
 ```
 1. Alice deposits 1000 underlying tokens
    ↓
-   ZWToken.deposit() → mint 1000 ZWT to Alice
+   ZWERC20.deposit(to, 0, amount) → mint ZWT to recipient
 
 2. Alice transfers 500 ZWT to privacy address
    ↓
@@ -185,9 +189,9 @@ npx hardhat test test/e2e.test.js  # E2E 测试
    ↓
    构造 circuit inputs
 
-5. 用户提交 claim
+4. 用户提交 remint
    ↓
-   ZWToken.claim(proof, root, nullifier, to, 300)
+   ZWERC20.remint(to, id, amount, withdrawUnderlying, data)
    ↓
    验证 root in isKnownRoot
    ↓
@@ -195,9 +199,9 @@ npx hardhat test test/e2e.test.js  # E2E 测试
    ↓
    verifier.verifyProof() → true
    ↓
-   mint 300 ZWT to Bob
+   mint ZWT to recipient (or withdraw underlying)
    ↓
-   _recordCommitmentIfNeeded(Bob, 300)
+   _recordCommitmentIfNeeded() (if minting)
 ```
 
 ## 🔐 隐私保护

@@ -6,9 +6,9 @@ export const CONTRACT_CONFIG = {
   // ZWToken 合约 ABI (IERC8065)
   abi: [
     // IERC8065 核心函数
-    'function depositTo(address to, uint256 id, uint256 amount) external payable',
+    'function deposit(address to, uint256 id, uint256 amount) external payable',
     'function withdraw(address to, uint256 id, uint256 amount) external',
-    'function remint(bytes calldata proof, bytes32 commitment, bytes32 nullifier, address to, uint256 id, uint256 amount, bool withdrawUnderlying, uint256 relayerFee) external',
+    'function remint(address to, uint256 id, uint256 amount, bool withdrawUnderlying, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bytes proof) data) external',
 
     // Transfer 函数
     'function transfer(address to, uint256 amount) external returns (bool)',

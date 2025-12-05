@@ -1,5 +1,144 @@
 const hre = require("hardhat");
 const { ethers } = hre;
+const fs = require("fs");
+const path = require("path");
+
+/**
+ * 保存部署记录到 JSON 文件（递增式，不删除历史记录）
+ */
+function saveDeploymentRecord(deploymentInfo) {
+  const deploymentsDir = path.join(__dirname, "..", "deployments");
+
+  // 确保 deployments 目录存在
+  if (!fs.existsSync(deploymentsDir)) {
+    fs.mkdirSync(deploymentsDir, { recursive: true });
+  }
+
+  // 生成文件名：deployment-{network}-{timestamp}.json
+  const timestamp = Date.now();
+  const filename = `deployment-${deploymentInfo.network}-${timestamp}.json`;
+  const filepath = path.join(deploymentsDir, filename);
+
+  // 保存部署信息
+  fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
+  console.log(`\n📝 部署信息已保存: deployments/${filename}`);
+
+  // 同时保存一个 latest.json 指向最新部署
+  const latestFilepath = path.join(
+    deploymentsDir,
+    `latest-${deploymentInfo.network}.json`
+  );
+  fs.writeFileSync(latestFilepath, JSON.stringify(deploymentInfo, null, 2));
+  console.log(
+    `📝 最新部署信息: deployments/latest-${deploymentInfo.network}.json`
+  );
+}
+
+/**
+ * 获取区块浏览器 URL
+ */
+function getExplorerUrl(network) {
+  const explorers = {
+    mainnet: "https://etherscan.io",
+    sepolia: "https://sepolia.etherscan.io",
+    goerli: "https://goerli.etherscan.io",
+    arbitrum: "https://arbiscan.io",
+    arbitrumSepolia: "https://sepolia.arbiscan.io",
+    optimism: "https://optimistic.etherscan.io",
+    optimismSepolia: "https://sepolia-optimistic.etherscan.io",
+    polygon: "https://polygonscan.com",
+    polygonMumbai: "https://mumbai.polygonscan.com",
+    bsc: "https://bscscan.com",
+    bscTestnet: "https://testnet.bscscan.com",
+    hardhat: null, // 本地网络无浏览器
+    localhost: null,
+  };
+  return explorers[network] || null;
+}
+
+/**
+ * 更新 README.md 的部署记录（递增式，追加新记录）
+ */
+function updateReadmeDeployment(deploymentInfo) {
+  const readmePath = path.join(__dirname, "..", "README.md");
+  let readme = fs.readFileSync(readmePath, "utf-8");
+
+  // 生成部署记录的 Markdown 内容
+  const deploymentDate = new Date(deploymentInfo.timestamp).toLocaleString(
+    "zh-CN",
+    {
+      timeZone: "Asia/Shanghai",
+    }
+  );
+
+  const explorerBaseUrl = getExplorerUrl(deploymentInfo.network);
+
+  // 根据是否有区块浏览器生成不同格式的链接
+  const formatAddress = (address, label) => {
+    if (explorerBaseUrl) {
+      return `- ${label}: [\`${address}\`](${explorerBaseUrl}/address/${address})`;
+    } else {
+      return `- ${label}: \`${address}\``;
+    }
+  };
+
+  const newDeploymentSection = `
+### ${
+    deploymentInfo.network.charAt(0).toUpperCase() +
+    deploymentInfo.network.slice(1)
+  } - ${deploymentDate}
+
+**合约地址:**
+${formatAddress(deploymentInfo.addresses.poseidonT3, "PoseidonT3")}
+${formatAddress(deploymentInfo.addresses.verifier, "Verifier")}
+${formatAddress(deploymentInfo.addresses.zwToken, "ZWERC20")}
+${formatAddress(
+  deploymentInfo.addresses.underlying,
+  `Underlying Token (${deploymentInfo.tokenInfo.underlyingSymbol})`
+)}
+
+**代币信息:**
+- 名称: ${deploymentInfo.tokenInfo.name}
+- 符号: ${deploymentInfo.tokenInfo.symbol}
+- 小数位数: ${deploymentInfo.tokenInfo.decimals}
+
+**费用配置:**
+- 费用收集器: \`${deploymentInfo.feeConfig.feeCollector}\`
+- 费用分母: ${deploymentInfo.feeConfig.feeDenominator}
+- 存款费率: ${deploymentInfo.feeConfig.depositFee} (${(
+    (Number(deploymentInfo.feeConfig.depositFee) * 100) /
+    Number(deploymentInfo.feeConfig.feeDenominator)
+  ).toFixed(2)}%)
+- Remint 费率: ${deploymentInfo.feeConfig.remintFee} (${(
+    (Number(deploymentInfo.feeConfig.remintFee) * 100) /
+    Number(deploymentInfo.feeConfig.feeDenominator)
+  ).toFixed(2)}%)
+- 提款费率: ${deploymentInfo.feeConfig.withdrawFee} (${(
+    (Number(deploymentInfo.feeConfig.withdrawFee) * 100) /
+    Number(deploymentInfo.feeConfig.feeDenominator)
+  ).toFixed(2)}%)
+
+**部署账户:** \`${deploymentInfo.deployer}\`
+`;
+
+  // 查找或创建"部署记录"章节
+  const deploymentSectionRegex = /## 📦 部署记录[\s\S]*?(?=\n## |\n---\n|$)/;
+
+  if (readme.match(deploymentSectionRegex)) {
+    // 如果已存在"部署记录"章节，在其后追加新记录
+    readme = readme.replace(
+      deploymentSectionRegex,
+      (match) => match + "\n" + newDeploymentSection
+    );
+  } else {
+    // 如果不存在"部署记录"章节，在文件末尾添加
+    const deploymentChapter = `\n---\n\n## 📦 部署记录\n${newDeploymentSection}`;
+    readme = readme.trimEnd() + "\n" + deploymentChapter + "\n";
+  }
+
+  fs.writeFileSync(readmePath, readme);
+  console.log(`📝 README.md 已更新部署记录`);
+}
 
 /**
  * ZWERC20 生产环境部署脚本
@@ -182,6 +321,41 @@ async function main() {
   console.log("Verifier:          ", verifierAddress);
   console.log("ZWERC20:           ", zwTokenAddress);
   console.log("─".repeat(80));
+
+  // ========== 保存部署记录 ==========
+  const deploymentInfo = {
+    network: hre.network.name,
+    timestamp: new Date().toISOString(),
+    deployer: deployer.address,
+    addresses: {
+      poseidonT3: poseidonT3Address,
+      underlying: underlyingAddress,
+      verifier: verifierAddress,
+      zwToken: zwTokenAddress,
+    },
+    tokenInfo: {
+      name: zwTokenName,
+      symbol: zwTokenSymbol,
+      decimals: underlyingDecimals.toString(),
+      underlyingName: underlyingName,
+      underlyingSymbol: underlyingSymbol,
+    },
+    feeConfig: {
+      feeCollector: feeCollector,
+      feeDenominator: feeDenominator.toString(),
+      depositFee: depositFee.toString(),
+      remintFee: remintFee.toString(),
+      withdrawFee: withdrawFee.toString(),
+    },
+  };
+
+  // 保存部署信息到 JSON 文件
+  saveDeploymentRecord(deploymentInfo);
+
+  // 更新 README.md 的部署记录
+  updateReadmeDeployment(deploymentInfo);
+
+  console.log("\n✅ 部署记录已保存到 deployments/ 目录和 README.md");
 
   // 返回部署的合约地址供测试使用
   return {
