@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const { poseidon } = require("circomlibjs");
 
 /**
- * Helper: 将 Groth16 proof 编码为 bytes
+ * Helper: Encode Groth16 proof as bytes
  */
 function encodeProof(a, b, c) {
   const abiCoder = ethers.AbiCoder.defaultAbiCoder();
@@ -14,7 +14,7 @@ function encodeProof(a, b, c) {
 }
 
 /**
- * Helper: 将 relayerFee 编码为 relayerData bytes
+ * Helper: Encode relayerFee as relayerData bytes
  */
 function encodeRelayerData(relayerFee) {
   if (relayerFee === 0 || relayerFee === 0n) {
@@ -50,7 +50,7 @@ describe("ZWERC20 - Commitment Recording", function () {
     const MockVerifier = await ethers.getContractFactory("MockVerifier");
     verifier = await MockVerifier.deploy();
 
-    // Deploy ZWERC20 with linked library (使用完全限定名避免歧义)
+    // Deploy ZWERC20 with linked library (use fully qualified name to avoid ambiguity)
     const ZWERC20 = await ethers.getContractFactory(
       "contracts/ZWERC20.sol:ZWERC20",
       {
@@ -63,7 +63,7 @@ describe("ZWERC20 - Commitment Recording", function () {
     zwToken = await ZWERC20.deploy(
       "ZK Wrapper Token",
       "ZWT",
-      underlyingDecimals, // 从 underlying token 获取 decimals
+      underlyingDecimals, // Get decimals from underlying token
       await underlying.getAddress(),
       await verifier.getAddress(),
       owner.address, // feeCollector
@@ -314,16 +314,17 @@ describe("ZWERC20 - Commitment Recording", function () {
       );
       const relayerData = encodeRelayerData(0);
       await zwToken.remint(
-        bob.address,      // to
-        0,                // id
-        amount,           // amount
-        false,            // withdrawUnderlying
-        {                 // RemintData struct
+        bob.address, // to
+        0, // id
+        amount, // amount
+        false, // withdrawUnderlying
+        {
+          // RemintData struct
           commitment: root,
           nullifiers: [nullifier],
           proverData: "0x",
           relayerData: relayerData,
-          proof: proofBytes
+          proof: proofBytes,
         }
       );
 
@@ -367,16 +368,17 @@ describe("ZWERC20 - Commitment Recording", function () {
       );
       const relayerData2 = encodeRelayerData(0);
       await zwToken.remint(
-        bob.address,      // to
-        0,                // id
-        amount,           // amount
-        false,            // withdrawUnderlying
-        {                 // RemintData struct
+        bob.address, // to
+        0, // id
+        amount, // amount
+        false, // withdrawUnderlying
+        {
+          // RemintData struct
           commitment: root,
           nullifiers: [nullifier],
           proverData: "0x",
           relayerData: relayerData2,
-          proof: proofBytes2
+          proof: proofBytes2,
         }
       );
 
@@ -404,16 +406,17 @@ describe("ZWERC20 - Commitment Recording", function () {
       );
       const relayerData3 = encodeRelayerData(0);
       await zwToken.remint(
-        bob.address,      // to
-        0,                // id
-        amount,           // amount
-        false,            // withdrawUnderlying
-        {                 // RemintData struct
+        bob.address, // to
+        0, // id
+        amount, // amount
+        false, // withdrawUnderlying
+        {
+          // RemintData struct
           commitment: root,
           nullifiers: [nullifier],
           proverData: "0x",
           relayerData: relayerData3,
-          proof: proofBytes3
+          proof: proofBytes3,
         }
       );
 

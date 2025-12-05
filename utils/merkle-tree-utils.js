@@ -1,15 +1,15 @@
 /**
- * Merkle Tree 工具类
+ * Merkle Tree Utility Classes
  *
- * 提供 Incremental Poseidon Merkle Tree 的实现，
- * 用于 ZWERC20 的 commitment 管理和 proof 生成
+ * Provides Incremental Poseidon Merkle Tree implementation
+ * for ZWERC20 commitment management and proof generation
  */
 
 const { poseidon } = require("circomlibjs");
 
 /**
- * Incremental Merkle Tree 实现（简化版）
- * 适用于浏览器端和测试环境
+ * Incremental Merkle Tree Implementation (Simplified Version)
+ * Suitable for browser and test environments
  */
 class IncrementalMerkleTree {
   constructor(depth) {
@@ -19,7 +19,7 @@ class IncrementalMerkleTree {
     this.leaves = [];
     this.nextIndex = 0;
 
-    // 初始化 zero hashes
+    // Initialize zero hashes
     let currentZero = 0n;
     this.zeros[0] = currentZero;
     for (let i = 1; i < depth; i++) {
@@ -30,8 +30,8 @@ class IncrementalMerkleTree {
   }
 
   /**
-   * 插入叶子节点
-   * @param {BigInt|string} leaf - 叶子节点值
+   * Insert a leaf node
+   * @param {BigInt|string} leaf - Leaf node value
    */
   insert(leaf) {
     this.leaves.push(leaf);
@@ -55,8 +55,8 @@ class IncrementalMerkleTree {
   }
 
   /**
-   * 获取 Merkle proof
-   * @param {number} index - 叶子节点索引
+   * Get Merkle proof
+   * @param {number} index - Leaf node index
    * @returns {{root: BigInt, pathElements: BigInt[], pathIndices: number[]}}
    */
   getProof(index) {
@@ -73,19 +73,19 @@ class IncrementalMerkleTree {
       pathIndices.push(isRight ? 1 : 0);
 
       if (isRight) {
-        // 当前节点是右子节点，sibling 是 filledSubtrees[i]
+        // Current node is right child, sibling is filledSubtrees[i]
         pathElements.push(this.filledSubtrees[i] || this.zeros[i]);
       } else {
-        // 当前节点是左子节点，需要计算右侧 sibling
+        // Current node is left child, need to compute right sibling
         const siblingIndex = currentIndex + 1;
         const levelSize = Math.pow(2, i);
         const siblingLeafStart = siblingIndex * levelSize;
 
         if (siblingLeafStart < this.nextIndex) {
-          // 有真实的右兄弟，需要重建它的子树
+          // Has real right sibling, need to rebuild its subtree
           pathElements.push(this._reconstructSubtree(siblingLeafStart, i));
         } else {
-          // 没有右兄弟，使用 zero
+          // No right sibling, use zero
           pathElements.push(this.zeros[i]);
         }
       }
@@ -96,14 +96,14 @@ class IncrementalMerkleTree {
   }
 
   /**
-   * 重建子树的根哈希
-   * @param {number} leafIndex - 子树起始叶子索引
-   * @param {number} level - 子树的层级（0 = 叶子层）
-   * @returns {BigInt} 子树根哈希
+   * Rebuild subtree root hash
+   * @param {number} leafIndex - Subtree starting leaf index
+   * @param {number} level - Subtree level (0 = leaf layer)
+   * @returns {BigInt} Subtree root hash
    */
   _reconstructSubtree(leafIndex, level) {
     if (level === 0) {
-      // 叶子层
+      // Leaf layer
       if (leafIndex < this.leaves.length) {
         return BigInt(this.leaves[leafIndex]);
       } else {
@@ -111,7 +111,7 @@ class IncrementalMerkleTree {
       }
     }
 
-    // 递归构建左右子树
+    // Recursively build left and right subtrees
     const levelSize = Math.pow(2, level - 1);
     const leftChild = this._reconstructSubtree(leafIndex, level - 1);
     const rightChild = this._reconstructSubtree(
@@ -124,15 +124,15 @@ class IncrementalMerkleTree {
 }
 
 /**
- * Poseidon Merkle Tree 实现（完整版）
- * 适用于合约存储客户端，支持完整的验证功能
+ * Poseidon Merkle Tree Implementation (Full Version)
+ * Suitable for contract storage clients, supports full verification functionality
  */
 class PoseidonMerkleTree {
   constructor(depth, poseidonInstance) {
     this.depth = depth;
     this.poseidon = poseidonInstance;
 
-    // 初始化零值哈希
+    // Initialize zero value hashes
     this.zeros = [];
     let currentZero = BigInt(0);
     this.zeros.push(currentZero);
@@ -143,10 +143,10 @@ class PoseidonMerkleTree {
       this.zeros.push(currentZero);
     }
 
-    // 存储叶子节点
+    // Store leaf nodes
     this.leaves = [];
 
-    // 存储已填充的子树（用于增量更新）
+    // Store filled subtrees (for incremental updates)
     this.filledSubtrees = new Array(depth);
     for (let i = 0; i < depth; i++) {
       this.filledSubtrees[i] = this.zeros[i];
@@ -154,7 +154,7 @@ class PoseidonMerkleTree {
   }
 
   /**
-   * Poseidon 哈希函数
+   * Poseidon hash function
    */
   hash(left, right) {
     const result = this.poseidon([BigInt(left), BigInt(right)]);
@@ -162,7 +162,7 @@ class PoseidonMerkleTree {
   }
 
   /**
-   * 插入叶子节点
+   * Insert a leaf node
    */
   insert(leaf) {
     const index = this.leaves.length;
@@ -172,17 +172,17 @@ class PoseidonMerkleTree {
 
     this.leaves.push(BigInt(leaf));
 
-    // 更新 filledSubtrees（与合约逻辑一致）
+    // Update filledSubtrees (consistent with contract logic)
     let currentHash = BigInt(leaf);
     let currentIndex = index;
 
     for (let i = 0; i < this.depth; i++) {
       if (currentIndex % 2 === 0) {
-        // 左子节点
+        // Left child
         this.filledSubtrees[i] = currentHash;
         currentHash = BigInt(this.hash(currentHash, this.zeros[i]));
       } else {
-        // 右子节点
+        // Right child
         currentHash = BigInt(this.hash(this.filledSubtrees[i], currentHash));
       }
       currentIndex = Math.floor(currentIndex / 2);
@@ -192,7 +192,7 @@ class PoseidonMerkleTree {
   }
 
   /**
-   * 批量插入叶子节点
+   * Bulk insert leaf nodes
    */
   bulkInsert(leaves) {
     let lastRoot = null;
@@ -203,14 +203,14 @@ class PoseidonMerkleTree {
   }
 
   /**
-   * 获取当前 root
+   * Get current root
    */
   root() {
     if (this.leaves.length === 0) {
       return this.zeros[this.depth - 1];
     }
 
-    // 重新计算 root（基于当前的 filledSubtrees）
+    // Recompute root (based on current filledSubtrees)
     let currentHash = this.filledSubtrees[0];
     let currentIndex = this.leaves.length;
 
@@ -227,8 +227,8 @@ class PoseidonMerkleTree {
   }
 
   /**
-   * 生成 Merkle proof
-   * @param leafIndex 叶子节点的索引
+   * Generate Merkle proof
+   * @param leafIndex Leaf node index
    * @returns { pathElements, pathIndices, root, leaf }
    */
   generateProof(leafIndex) {
@@ -245,7 +245,7 @@ class PoseidonMerkleTree {
       const isLeft = currentIndex % 2 === 0;
 
       if (isLeft) {
-        // 当前节点是左子节点，sibling 是右子节点
+        // Current node is left child, sibling is right child
         const sibling =
           currentIndex + 1 < this.leaves.length && i === 0
             ? this.leaves[currentIndex + 1]
@@ -253,13 +253,13 @@ class PoseidonMerkleTree {
         pathElements.push(sibling.toString());
         pathIndices.push(0);
       } else {
-        // 当前节点是右子节点，sibling 是左子节点
+        // Current node is right child, sibling is left child
         const sibling = this.filledSubtrees[i];
         pathElements.push(sibling.toString());
         pathIndices.push(1);
       }
 
-      // 计算父节点哈希
+      // Compute parent node hash
       if (isLeft) {
         currentHash = BigInt(this.hash(currentHash, pathElements[i]));
       } else {
@@ -278,7 +278,7 @@ class PoseidonMerkleTree {
   }
 
   /**
-   * 验证 Merkle proof
+   * Verify Merkle proof
    */
   verifyProof(leaf, pathElements, pathIndices, root) {
     let currentHash = BigInt(leaf);
@@ -287,10 +287,10 @@ class PoseidonMerkleTree {
       const sibling = BigInt(pathElements[i]);
 
       if (pathIndices[i] === 0) {
-        // 当前节点是左子节点
+        // Current node is left child
         currentHash = BigInt(this.hash(currentHash, sibling));
       } else {
-        // 当前节点是右子节点
+        // Current node is right child
         currentHash = BigInt(this.hash(sibling, currentHash));
       }
     }
@@ -299,7 +299,7 @@ class PoseidonMerkleTree {
   }
 }
 
-// 导出
+// Export
 module.exports = {
   IncrementalMerkleTree,
   PoseidonMerkleTree,

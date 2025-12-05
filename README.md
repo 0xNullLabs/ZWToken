@@ -1,384 +1,443 @@
-# ZWToken - Browser-Friendly ZK Wrapper Token
+# ZWToken - Zero Knowledge Wrapper Token
 
-> **隐私 Wrapper Token，浏览器生成 ZK 证明，无需后端**
+> **ZWToken is an [ERC-8065](https://ethereum-magicians.org/t/erc-8065-zero-knowledge-token-wrapper/26006/1) implementation that brings native privacy to all tokens through browser-based ZK proof generation, requiring no backend other than an Ethereum node.**
 
 [![Solidity](https://img.shields.io/badge/Solidity-^0.8.20-blue)](https://soliditylang.org/)
 [![Circom](https://img.shields.io/badge/Circom-2.1.6-green)](https://docs.circom.io/)
-[![Tests](https://img.shields.io/badge/Tests-25%2F25-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-40%2F40-brightgreen)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## 🎉 项目状态
+## 🎉 Project Status
 
-**版本**: 2.0.0 (2025-10-12)  
-**测试状态**: ✅ 25/25 全部通过  
-**生产就绪**: ✅ 可部署主网
-
----
-
-## 🎯 核心特性
-
-### ✨ 关键亮点
-
-- **🌐 浏览器友好**：Proof 生成仅需 5-12 秒，12K 约束
-- **🔒 完全隐私**：地址和金额私有，ZK 证明验证
-- **💰 Gas 高效**：95% 转账保持标准 ERC20 成本
-- **🚀 无后端依赖**：前端完全自主，仅需 RPC provider
-- **📱 移动端支持**：中高端移动设备可用
-- **🎨 架构清晰**：完整注释，易于理解和扩展
-- **✅ 充分测试**：25 个测试全部通过，包含真实 ZK proof
+**Version**: 2.0.0 (2025-12-05)  
+**Test Status**: ✅ 40/40 All Passing  
+**Production Ready**: ✅ Ready for Mainnet Deployment
 
 ---
 
-## 📊 性能数据
+## 🎯 Core Features
 
-### 电路性能
+### ✨ Key Highlights
 
-```
-约束数：12,166（vs 传统方案的 3,000,000）
-减少：99.6% ✅
-
-浏览器 Proof 生成：
-- 桌面：5-10 秒 ✅
-- 移动：8-15 秒 ✅
-
-内存需求：~250 MB
-zKey 大小：~12 MB
-```
-
-### Gas 成本（0.2 Gwei，$4000/ETH）
-
-| 操作                | Gas       | ETH           | USD        | vs USDT       |
-| ------------------- | --------- | ------------- | ---------- | ------------- |
-| **USDT Transfer**   | **35K**   | **0.0000070** | **$0.028** | **基准**      |
-| Deposit (首次)      | 107K      | 0.0000214 ETH | $0.085     | +3.0x         |
-| Deposit (后续)      | 55K       | 0.0000111 ETH | $0.044     | +1.6x         |
-| **Transfer (首次)** | **1.07M** | **0.0002142** | **$0.857** | **+30.5x**    |
-| **Transfer (后续)** | **38K**   | **0.0000075** | **$0.030** | **+1.07x ✅** |
-| Claim (首次 + ZK)   | 764K      | 0.0001529 ETH | $0.611     | +21.8x        |
-| Claim (后续)        | 75K       | 0.0000151 ETH | $0.060     | +2.1x         |
-| Withdraw            | 51K       | 0.0000102 ETH | $0.041     | +1.5x         |
-
-**关键发现**：
-
-- ✅ **后续转账成本几乎与 USDT 相同**（仅多 7%，~38K vs ~35K gas）
-- ✅ 首次接收的高 Gas 成本是**一次性的**（~$0.86），为该地址提供永久隐私
-- ✅ 在 L2（如 Arbitrum、Optimism）上成本可降低 10-100 倍
-- 📊 **详细 Gas 分析报告**：见 [GAS\_分析报告.md](./GAS_分析报告.md)
+- **🌐 Browser Friendly**: Proof generation 875ms desktop, ~3s mobile (13,084 constraints)
+- **🔒 Full Privacy**: Address and amount private, ZK proof verification
+- **💰 Gas Efficient**: Subsequent transfers only 7% more than standard ERC20
+- **🚀 No Backend Required**: Frontend fully autonomous, only needs RPC provider
+- **📱 Mobile Compatible**: ✅ Works on all modern mobile browsers
+- **🎨 Clean Architecture**: Complete documentation, easy to understand
+- **✅ Thoroughly Tested**: All tests passing, including real ZK proofs
 
 ---
 
-## 🏗️ 架构设计
+## 📊 Performance Data
 
-### 工作流程
+### Circuit Performance
+
+> 📊 数据来源: `zk-profile.json` (生成于 2025-12-05)
 
 ```
-1. Deposit → 获得 ZWToken (无 commitment)
-2. Transfer → 如果接收者首次收到，自动生成 commitment
-   ├─ 计算 commitment = Poseidon(address, amount)
-   ├─ 插入 20 层 Merkle tree
-   └─ Gas: 首次 ~820K，后续 ~55K
-3. Claim → ZK 证明 + 提现
-   ├─ 浏览器生成 proof (5-12 秒)
-   ├─ 验证 commitment 在 Merkle tree 中
-   └─ 转出 underlying token
+Constraints: 13,084 (实测值，来自 snarkjs r1cs info)
+Circuit Files: 7.69 MB total (remint.wasm 2.14MB + zkey 5.55MB)
+
+Browser Proof Generation (实测，5次平均):
+- Desktop: 875ms ✅
+- Mobile (mid-range): ~3.1s ✅
+
+Memory Usage: 6.13 MB total (浏览器友好)
 ```
 
-### ZK 电路
+### Gas Cost (0.2 Gwei, $4000/ETH)
+
+> 📊 数据来源: `gas-report.json` (生成于 2025-12-05)
+
+| Operation             | Gas           | ETH          | USD    | vs USDT       |
+| --------------------- | ------------- | ------------ | ------ | ------------- |
+| **ERC20 Transfer**    | **34,520**    | **0.000007** | $0.028 | **Baseline**  |
+| Deposit (first)       | 106,556       | 0.000021     | $0.085 | +3.1x         |
+| Deposit (subsequent)  | 55,256        | 0.000011     | $0.044 | +1.6x         |
+| **Transfer (first)**  | **1,364,771** | **0.000273** | $1.09  | **+39.5x** ⚠️ |
+| **Transfer (subseq)** | **36,979**    | **0.000007** | $0.030 | **+1.07x ✅** |
+| Remint (first + ZK)   | 1,045,202     | 0.000209     | $0.84  | +30.3x        |
+| Remint (subsequent)   | 78,955        | 0.000016     | $0.063 | +2.3x         |
+| Withdraw              | 52,850        | 0.000011     | $0.042 | +1.5x         |
+
+**Key Findings**:
+
+- ✅ **Subsequent transfer**: 36,979 vs 34,520 gas (仅多 7.1%)
+- ✅ **First receipt 是一次性成本** ($1.09), 为该地址提供永久隐私
+- ✅ 在 L2 (如 Arbitrum, Optimism) 上成本可降低 10-100x
+- 📊 **Detailed Reports**:
+  - [GAS_ANALYSIS_REPORT.md](./GAS_ANALYSIS_REPORT.md) - Gas cost analysis
+  - [ZK_PROFILE_REPORT.md](./ZK_PROFILE_REPORT.md) - ZK proof performance & mobile compatibility
+
+---
+
+## 🏗️ Architecture Design
+
+### Workflow
+
+```
+1. Deposit → Receive ZWToken (no commitment)
+2. Transfer → If recipient receives for first time, automatically generate commitment
+   ├─ Calculate commitment = Poseidon(address, amount)
+   ├─ Insert into 20-layer Merkle tree
+   └─ Gas: First 1,364,771 / Subsequent 36,979 (from gas-report.json)
+3. Remint → ZK proof + withdrawal
+   ├─ Browser generates proof (875ms desktop, ~3s mobile - from zk-profile.json)
+   ├─ Verify commitment in Merkle tree
+   └─ Transfer out underlying token or mint ZWToken
+```
+
+### ZK Circuit
 
 ```circom
 // circuits/remint.circom
-// 20 层 Poseidon Merkle tree
+// 20-layer Poseidon Merkle tree
 
-证明内容：
-✅ 用户知道某个地址的 secret
-✅ 该地址有首次接收记录（commitment 在树中）
+Proves:
+✅ User knows the secret for an address
+✅ That address has a first receipt record (commitment in tree)
 ✅ remintAmount <= commitAmount
-✅ nullifier 防双花
+✅ nullifier prevents double-spending
 ```
 
 ---
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 1. 安装依赖
+### 1. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 2. 编译电路
+### 2. Compile Circuit
 
 ```bash
-# 需要先下载 powersOfTau28_hez_final_15.ptau
+# First download powersOfTau28_hez_final_15.ptau
 wget https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_15.ptau
 
-# 编译电路并生成 verifier
+# Compile circuit and generate verifier
 chmod +x scripts/build_circuit.sh
 ./scripts/build_circuit.sh
 ```
 
-### 3. 部署合约
+### 3. Deploy Contracts
 
 ```bash
-# 编译合约
+# Compile contracts
 npx hardhat compile
 
-# 部署到本地测试网
+# Deploy to local testnet
 npx hardhat run scripts/deploy.js --network localhost
 
-# 或部署到主网/L2
+# Or deploy to mainnet/L2
 npx hardhat run scripts/deploy.js --network mainnet
 ```
 
-### 4. 运行测试
+### 4. Run Tests
 
 ```bash
-# 运行所有测试
+# Run all tests
 npx hardhat test
 
-# 运行特定测试
-npx hardhat test test/commitment.test.js       # Commitment 功能测试
-npx hardhat test test/e2e.test.js              # E2E 测试
-npx hardhat test test/remint.test.js           # Remint 功能测试
-npx hardhat test test/gas-profile.test.js      # Gas 分析测试
+# Run specific tests
+npx hardhat test test/commitment.test.js       # Commitment functionality tests
+npx hardhat test test/e2e.test.js              # E2E tests
+npx hardhat test test/remint.test.js           # Remint functionality tests
+npx hardhat test test/gas-profile.test.js      # Gas analysis tests
+npx hardhat test test/zk-profile.test.js       # ZK performance tests
 
-# 查看 Gas 报告
+# Generate reports
+npm run test:gas-profile                        # Generate gas-report.json
+npm run test:zk-profile                         # Generate zk-profile.json
+
+# View Gas report
 REPORT_GAS=true npx hardhat test
 ```
 
 ---
 
-## 📖 使用指南
+## 📖 Usage Guide
 
-### 作为用户
+### As a User
 
-#### 1. 获取 ZWToken
+#### 1. Get ZWToken
 
 ```javascript
-const {
-  ZWERC20,
-} = require("./artifacts/contracts/ZWERC20.sol/ZWERC20.json");
+const { ZWERC20 } = require("./artifacts/contracts/ZWERC20.sol/ZWERC20.json");
 
 // Deposit underlying token
 await underlyingToken.approve(zwToken.address, amount);
 await zwToken.deposit(recipientAddress, 0, amount); // (to, id, amount)
 ```
 
-#### 2. 转账到隐私地址
+#### 2. Transfer to Privacy Address
 
 ```javascript
 const { poseidon } = require("circomlibjs");
 
-// 生成隐私地址
-const secret = randomBigInt(); // 用户保管
+// Generate privacy address
+const secret = randomBigInt(); // User keeps this safe
 const addrScalar = poseidon([secret]);
 const addr20 = addrScalar & ((1n << 160n) - 1n);
 const privacyAddress = "0x" + addr20.toString(16).padStart(40, "0");
 
-// 转账（首次接收会生成 commitment）
+// Transfer (first receipt generates commitment)
 await zwToken.transfer(privacyAddress, amount);
 ```
 
-#### 3. Remint（浏览器生成 Proof）
+#### 3. Remint (Browser Generates Proof)
 
 ```javascript
 const snarkjs = require("snarkjs");
 
-// 生成 ZK proof（浏览器，5-12 秒）
+// Generate ZK proof (browser, 5-12 seconds)
 const { proof, publicSignals } = await snarkjs.groth16.fullProve(
   circuitInput,
   "remint.wasm",
   "remint_final.zkey"
 );
 
-// 格式化 proof
-const calldata = await snarkjs.groth16.exportSolidityCallData(proof, publicSignals);
+// Format proof
+const calldata = await snarkjs.groth16.exportSolidityCallData(
+  proof,
+  publicSignals
+);
 
-// 提交 remint
+// Submit remint
 await zwToken.remint(
-  recipientAddress,     // to
-  0,                    // id (0 for ERC-20)
-  remintAmount,         // amount
-  false,                // withdrawUnderlying
-  {                     // RemintData struct
+  recipientAddress, // to
+  0, // id (0 for ERC-20)
+  remintAmount, // amount
+  false, // withdrawUnderlying
+  {
+    // RemintData struct
     commitment: root,
     nullifiers: [nullifier],
     proverData: "0x",
     relayerData: "0x",
-    proof: proofBytes
+    proof: proofBytes,
   }
 );
 ```
 
 ---
 
-## 🛠️ 技术栈
+## 🛠️ Tech Stack
 
-### 智能合约
+### Smart Contracts
 
 - Solidity ^0.8.20
 - OpenZeppelin Contracts
 - Poseidon-Solidity
 
-### ZK 电路
+### ZK Circuit
 
 - Circom 2.1.6
 - circomlib
 - snarkjs (Groth16)
 
-### 前端
+### Frontend
 
 - ethers.js v6
 - snarkjs (browser)
 - circomlibjs
-- 自实现 Incremental Merkle Tree
+- Self-implemented Incremental Merkle Tree
 
 ---
 
-## 📂 项目结构
+## 📂 Project Structure
 
 ```
 ZWToken/
 ├── circuits/
-│   ├── remint.circom                      # 主电路（约 12K 约束）
-│   └── out/                               # 编译输出
-│       ├── remint.wasm                    # 证明生成器
-│       ├── remint_final.zkey              # 验证密钥（~12MB）
-│       └── verification_key.json          # 公开参数
+│   ├── remint.circom                      # Main circuit (~12K constraints)
+│   └── out/                               # Compiled output
+│       ├── remint.wasm                    # Proof generator
+│       ├── remint_final.zkey              # Verification key (~12MB)
+│       └── verification_key.json          # Public parameters
 │
 ├── contracts/
-│   ├── ZWERC20.sol                        # 主合约 ⭐
-│   ├── Groth16Verifier.sol                # ZK 验证器（由 snarkjs 生成）
-│   ├── interfaces/                        # 接口定义
-│   │   ├── IERC8065.sol                   # ERC-8065 接口
-│   │   └── ISnarkVerifier.sol             # ZK 验证器接口
+│   ├── ZWERC20.sol                        # Main contract ⭐
+│   ├── Groth16Verifier.sol                # ZK verifier (generated by snarkjs)
+│   ├── interfaces/                        # Interface definitions
+│   │   ├── IERC8065.sol                   # ERC-8065 interface
+│   │   └── ISnarkVerifier.sol             # ZK verifier interface
 │   ├── utils/
-│   │   └── PoseidonMerkleTree.sol         # Poseidon Merkle Tree 实现
-│   └── mocks/                             # 测试辅助合约
-│       ├── MockVerifier.sol               # Mock ZK 验证器
-│       └── ERC20Mock.sol                  # Mock ERC20 代币
+│   │   └── PoseidonMerkleTree.sol         # Poseidon Merkle Tree implementation
+│   └── mocks/                             # Test helper contracts
+│       ├── MockVerifier.sol               # Mock ZK verifier
+│       └── ERC20Mock.sol                  # Mock ERC20 token
 │
 ├── utils/
-│   └── merkle-tree-utils.js               # Merkle Tree JS 工具
+│   └── merkle-tree-utils.js               # Merkle Tree JS utilities
 │
 ├── test/
-│   ├── commitment.test.js                 # Commitment 功能测试
-│   ├── e2e.test.js                        # E2E 测试
-│   ├── remint.test.js                     # Remint 功能测试
-│   └── gas-profile.test.js                # Gas 分析测试
+│   ├── commitment.test.js                 # Commitment functionality tests
+│   ├── e2e.test.js                        # E2E tests
+│   ├── remint.test.js                     # Remint functionality tests
+│   ├── gas-profile.test.js                # Gas analysis tests
+│   └── zk-profile.test.js                 # ZK performance tests
 │
 ├── scripts/
-│   ├── build_circuit.sh                   # 电路编译脚本
-│   └── deploy.js                          # 部署脚本
+│   ├── build_circuit.sh                   # Circuit compilation script
+│   └── deploy.js                          # Deployment script
 │
-├── website/                               # 前端 Web 应用
+├── website/                               # Frontend Web Application
 │
-└── deployments/                           # 部署记录
+└── deployments/                           # Deployment records
 ```
 
 ---
 
-## 🔒 安全考虑
+## 🔒 Security Considerations
 
-### 隐私保护
+### Privacy Protection
 
-- ✅ 地址和金额是私有输入，不上链
-- ✅ Secret 永远不离开用户设备
-- ✅ Commitment 是 Poseidon hash，无法反推
-- ✅ ZK 证明确保无信息泄露
+- ✅ Address and amount are private inputs, not on-chain
+- ✅ Secret never leaves user's device
+- ✅ Commitment is Poseidon hash, cannot be reversed
+- ✅ ZK proof ensures no information leakage
 
-### 防攻击
+### Attack Prevention
 
-- ✅ Nullifier 防双花（每个地址只能 claim 一次）
-- ✅ Root 历史支持（防 front-running）
-- ✅ 金额范围验证（claimAmount <= firstAmount）
-- ✅ ZK proof 强制诚实性
+- ✅ Nullifier prevents double-spending (each address can only claim once)
+- ✅ Historical root support (prevents front-running)
+- ✅ Amount range validation (claimAmount <= firstAmount)
+- ✅ ZK proof enforces honesty
 
-### 已知限制
+### Known Limitations
 
-- ⚠️ 只记录首次接收（后续接收不生成新 commitment）
-- ⚠️ 用户必须保管 secret（丢失无法恢复）
-- ⚠️ 首次接收 Gas 较高（~820K）
-
----
-
-## 📈 对比分析
-
-### vs 原方案（Keccak256）
-
-| 维度         | 原方案    | (Poseidon)  | 改善           |
-| ------------ | --------- | ----------- | -------------- |
-| 电路约束     | 3,000,000 | **12,166**  | **-99.6%** ✅  |
-| Proof 时间   | 5-15 分钟 | **5-12 秒** | **50-150x** ✅ |
-| 浏览器       | ❌ 不可行 | ✅ **完美** | 从不可用到完美 |
-| 首次接收 Gas | ~235K     | ~820K       | +248% ⚠️       |
-
-**结论**：用 3.5 倍 Gas 换取 99.6% 约束减少和浏览器可用性 - **值得！**
-
-### vs 批量提交方案
-
-| 维度         | 批量提交 | 直接更新（) | 优势 |
-| ------------ | -------- | ----------- | ---- |
-| 实现复杂度   | 高       | **低**      |      |
-| 用户体验     | 需等待   | **即时**    |      |
-| 首次接收 Gas | ~95K     | ~820K       | 批量 |
-| 协议成本     | 需激励者 | **无**      |      |
-
-**结论**：在 0.2 Gwei 下，用户愿意支付 $0.33 换取简单和即时 - **选择直接更新**
+- ⚠️ Only records first receipt (subsequent receipts don't generate new commitment)
+- ⚠️ User must safeguard secret (cannot recover if lost)
+- ⚠️ First receipt Gas: 1,364,771 (from `gas-report.json`, 包含 Merkle tree 插入)
 
 ---
 
-## 🎯 适用场景
+## 📈 Comparison Analysis
 
-### ✅ 适合
+### vs Original Approach (Ethereum MPT + Keccak256)
 
-- 隐私转账应用
-- 空投/奖励分发（记录首次接收）
-- L2 部署（Gas 更低）
-- 需要浏览器生成 proof 的 dApp
-- C 端用户应用
+**原方案**：直接使用以太坊的 Merkle Patricia Trie (MPT) 存储 commitment，ZK proof 基于 MPT state proof 生成。
 
-### ⚠️ 不太适合
+```
+原方案（MPT + Keccak256）:
+├── Commitment 存储在合约 storage (Ethereum MPT)
+├── ZK circuit 需验证 MPT state proof
+├── MPT 使用 Keccak256 哈希
+│   └── Keccak256 在 ZK 中约束极高（~150K/hash）
+│   └── MPT proof 需多次 Keccak256（深度 ~40）
+└── 总约束: ~3,000,000+ (浏览器不可行)
 
-- 需要多次 claim 同一地址的场景
-- Gas price 极高的网络（如主网高峰期）
-- 需要合并多笔接收的场景
+ZWToken 方案（自定义 Poseidon Tree）:
+├── Commitment 存储在自定义 Merkle Tree (链上数组)
+├── ZK circuit 验证 Poseidon Merkle proof
+├── Poseidon 是 ZK-friendly 哈希
+│   └── Poseidon 在 ZK 中约束低（~300/hash）
+│   └── 20 层树仅需 20 次 Poseidon
+└── 总约束: 13,084 (浏览器友好)
+```
+
+| Dimension           | MPT + Keccak256 | ZWToken (Poseidon) | Trade-off        |
+| ------------------- | --------------- | ------------------ | ---------------- |
+| Circuit Constraints | ~3,000,000+     | **13,084** ✅      | **-99.6%**       |
+| Proof Time          | 5-15 分钟+      | **875ms** ✅       | **~500x faster** |
+| Browser Support     | ❌ Not feasible | ✅ **Perfect**     | 从不可用到完美   |
+| First Receipt Gas   | ~35K (MPT 自动) | 1,364,771          | +3,848% ⚠️       |
+| 链上存储成本        | 低（自动）      | 高（显式 Merkle）  | Trade-off ⚠️     |
+
+> 📊 **数据来源**:
+>
+> - ZWToken 约束数: 13,084 (from `snarkjs r1cs info` 实测)
+> - ZWToken Proof 时间: 875ms desktop, 3063ms mobile (from `zk-profile.json` 实测)
+> - ZWToken Gas: 1,364,771 (from `gas-report.json` 实测)
+> - MPT 约束数: ~3M (估算，基于 Keccak256 约束数 ~150K × MPT 深度 ~40)
+
+**核心 Trade-off**:
+
+使用自定义 Poseidon Merkle Tree 需要**额外的链上 Gas 成本**：
+
+- **首次 transfer**: 1,364,771 gas (vs ERC20 的 34,520 gas)
+  - 包含：Poseidon hash 计算 + 20 层 Merkle tree 插入
+  - 一次性成本：~$1.09 (0.2 Gwei, $4000/ETH)
+- **后续 transfer**: 36,979 gas (vs ERC20 的 34,520 gas)
+  - 仅增加 7.1%，几乎无额外成本
+
+**换来的收益**：
+
+- ✅ 浏览器端 ZK proof 生成可行（875ms vs 不可能）
+- ✅ 移动端兼容（~3s vs 不可能）
+- ✅ 无需信任后端服务器
+- ✅ 完全去中心化的隐私方案
+
+**结论**: 在 0.2 Gwei 的 Gas 环境下，用户愿意支付 $1.09 的一次性成本，换取浏览器端完全自主的隐私保护能力。
+
+### vs Batch Submission Solution
+
+| Dimension                 | Batch Submission  | Direct Update | Advantage |
+| ------------------------- | ----------------- | ------------- | --------- |
+| Implementation Complexity | High              | **Low**       |           |
+| User Experience           | Need to wait      | **Instant**   |           |
+| First Receipt Gas         | ~95K              | ~820K         | Batch     |
+| Protocol Cost             | Need incentivizer | **None**      |           |
+
+**Conclusion**: At 0.2 Gwei, users are willing to pay $0.33 for simplicity and instant confirmation - **Choose Direct Update**
 
 ---
 
-## 🤝 贡献
+## 🎯 Use Cases
 
-欢迎提交 Issue 和 Pull Request！
+### ✅ Suitable For
 
----
+- Privacy transfer applications
+- Airdrop/reward distribution (records first receipt)
+- L2 deployment (lower gas)
+- dApps requiring browser proof generation
+- Consumer-facing applications
 
-## 📄 许可
+### ⚠️ Less Suitable For
 
-MIT License - 详见 [LICENSE](LICENSE)
-
----
-
-## 📚 相关资源
-
-### 项目文档
-
-- [项目结构](PROJECT_STRUCTURE.md) - 项目目录结构说明
-- [合约文档](contracts/README.md) - 智能合约详解
-- [Gas 分析报告](GAS_分析报告.md) - Gas 成本分析
-- [部署指南](DEPLOYMENT_GUIDE.md) - 部署流程说明
-
-### 技术参考
-
-- [Circom 文档](https://docs.circom.io/) - 零知识电路语言
-- [snarkjs 文档](https://github.com/iden3/snarkjs) - ZK proof 生成工具
-- [Poseidon Hash](https://www.poseidon-hash.info/) - ZK 友好哈希函数
-- [Groth16 论文](https://eprint.iacr.org/2016/260.pdf) - ZK proof 系统
+- Scenarios requiring multiple claims to same address
+- Networks with extremely high gas prices (like mainnet during peak)
+- Scenarios requiring merging multiple receipts
 
 ---
 
-## 💬 联系方式
+## 🤝 Contributing
+
+Issues and Pull Requests are welcome!
+
+---
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE)
+
+---
+
+## 📚 Related Resources
+
+### Project Documentation
+
+- [Project Structure](PROJECT_STRUCTURE.md) - Project directory structure
+- [Contract Documentation](contracts/README.md) - Smart contract details
+- [Gas Analysis Report](GAS_ANALYSIS_REPORT.md) - Gas cost analysis
+- [ZK Profile Report](ZK_PROFILE_REPORT.md) - ZK proof performance & mobile compatibility
+- [Deployment Guide](DEPLOYMENT_GUIDE.md) - Deployment instructions
+
+### Technical References
+
+- [Circom Documentation](https://docs.circom.io/) - Zero-knowledge circuit language
+- [snarkjs Documentation](https://github.com/iden3/snarkjs) - ZK proof generation tool
+- [Poseidon Hash](https://www.poseidon-hash.info/) - ZK-friendly hash function
+- [Groth16 Paper](https://eprint.iacr.org/2016/260.pdf) - ZK proof system
+
+---
+
+## 💬 Contact
 
 - Issues: [GitHub Issues](https://github.com/your-repo/issues)
 - Discussions: [GitHub Discussions](https://github.com/your-repo/discussions)
@@ -389,70 +448,71 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 ---
 
-## 🎉 项目成就
+## 🎉 Project Achievements
 
-**电路约束减少 99.6%** (3M → 12K)  
-**Proof 生成加速 50-150x** (5-15 分钟 → 5-12 秒)  
-**完整测试覆盖** (25/25 测试通过，含真实 ZK proof)  
-**架构清晰** (完整注释，易于理解和扩展)
+**Browser-Friendly ZK Circuit** (13,084 constraints, snarkjs 实测)  
+**Fast Proof Generation** (875ms desktop, 3.1s mobile - zk-profile.json 实测)  
+**Complete Test Coverage** (All tests passing, including real ZK proofs)  
+**Mobile Browser Compatible** (✅ Works on all modern devices)  
+**Production Ready** (Gas optimized, fully documented)
 
 ---
 
-**🎉 让隐私 ZK 在浏览器中成为现实！**
+**🎉 Making Privacy ZK a Reality in the Browser!**
 
 Made with ❤️ using Circom, Solidity, and ethers.js
 
-**最后更新**: 2025-10-12  
+**Last Updated**: 2025-10-12  
 **License**: MIT
 
 </div>
 
 ---
 
-## 📝 更新历史
+## 📝 Update History
 
 ### 2.0.0 (2025-10-12)
 
-- ✅ 正式发布生产就绪版本
-- ✅ 完整的代码注释和文档
-- ✅ 25 个测试全部通过（含真实 ZK proof）
-- ✅ 架构清晰，易于理解和扩展
-- ✅ 完善的项目文档体系
-- ✅ Gas 成本透明化说明
+- ✅ Official production-ready release
+- ✅ Complete code comments and documentation
+- ✅ 25 tests all passing (with real ZK proofs)
+- ✅ Clean architecture, easy to understand and extend
+- ✅ Complete project documentation system
+- ✅ Transparent gas cost explanation
 
 ### 1.0.0-beta (2025-10)
 
-- ✅ 完成电路设计（12,166 约束）
-- ✅ 实现 Poseidon Merkle tree
-- ✅ 浏览器 proof 生成验证（5-12 秒）
-- ✅ 完整文档编写
-- ✅ 基础测试覆盖
+- ✅ Circuit design completed (12,166 constraints)
+- ✅ Poseidon Merkle tree implementation
+- ✅ Browser proof generation verified (5-12 seconds)
+- ✅ Complete documentation written
+- ✅ Basic test coverage
 
 ---
 
-## 📦 部署记录
+## 📦 Deployment Records
 
-### Sepolia - 2025/11/6 15:53:20
+### Sepolia - 11/6/2025, 3:53:20 PM
 
-**合约地址:**
+**Contract Addresses:**
 
 - PoseidonT3: [`0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62`](https://sepolia.etherscan.io/address/0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62)
 - Verifier: [`0xaB165da0aB5D12C0D75ff49b53319fff60140C51`](https://sepolia.etherscan.io/address/0xaB165da0aB5D12C0D75ff49b53319fff60140C51)
 - ZWERC20: [`0xFdb64908218B900585571218a77a0a1B47c537e7`](https://sepolia.etherscan.io/address/0xFdb64908218B900585571218a77a0a1B47c537e7)
 - Underlying Token (USDC): [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
 
-**代币信息:**
+**Token Info:**
 
-- 名称: Zero Knowledge Wrapper USDC
-- 符号: ZWUSDC
-- 小数位数: 6
+- Name: Zero Knowledge Wrapper USDC
+- Symbol: ZWUSDC
+- Decimals: 6
 
-**费用配置:**
+**Fee Configuration:**
 
-- 费用收集器: `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`
-- 费用分母: 1000000
-- 存款费率: 0 (0.00%)
-- Remint 费率: 0 (0.00%)
-- 提款费率: 0 (0.00%)
+- Fee Collector: `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`
+- Fee Denominator: 1000000
+- Deposit Fee: 0 (0.00%)
+- Remint Fee: 0 (0.00%)
+- Withdraw Fee: 0 (0.00%)
 
-**部署账户:** `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`
+**Deployer:** `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`

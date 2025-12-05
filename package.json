@@ -18,25 +18,21 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "test:gas-profile": "hardhat test test/gas-profile.test.js",
+    "test:zk-profile": "hardhat test test/zk-profile.test.js",
     "circuit:build": "./scripts/build_circuit.sh",
     "deploy": "hardhat run scripts/deploy.js --network hardhat",
     "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
-    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
-    "build-inputs": "node client/build_inputs.js",
-    "submit-claim": "node client/submit_claim.js"
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^5.4.0",
-    "big-integer": "^1.6.52",
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.0.8",
     "dotenv": "^17.2.3",
     "ethers": "^6.11.1",
     "hardhat": "^2.22.9",
-    "minimist": "^1.2.8",
     "poseidon-solidity": "^0.0.5",
-    "rlp": "^3.0.0",
     "snarkjs": "^0.7.0"
   },
   "devDependencies": {}

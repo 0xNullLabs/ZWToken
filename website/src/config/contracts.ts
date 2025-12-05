@@ -1,27 +1,27 @@
 /**
- * 合约地址配置
- * 来自 deploy_log.txt
+ * Contract Address Configuration
+ * From deployment records
  */
 
 export const CONTRACT_ADDRESSES = {
-  // ZWToken 主合约 (ZWERC20 实现)
+  // ZWToken main contract (ZWERC20 implementation)
   ZWERC20: '0xFdb64908218B900585571218a77a0a1B47c537e7',
 
-  // 底层代币 (USDC)
+  // Underlying token (USDC)
   UnderlyingToken: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
 
-  // Groth16 验证器
+  // Groth16 verifier
   Verifier: '0xaB165da0aB5D12C0D75ff49b53319fff60140C51',
 
-  // PoseidonT3 库
+  // PoseidonT3 library
   PoseidonT3: '0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62',
 } as const;
 
 /**
- * 合约 ABI 定义
+ * Contract ABI Definitions
  */
 export const CONTRACT_ABIS = {
-  // ERC20 基础功能
+  // ERC20 basic functions
   ERC20: [
     'function approve(address spender, uint256 amount) external returns (bool)',
     'function allowance(address owner, address spender) external view returns (uint256)',
@@ -30,7 +30,7 @@ export const CONTRACT_ABIS = {
     'function decimals() external view returns (uint8)',
   ],
 
-  // ZWToken 合约 (ZWERC20 实现，IERC8065 标准)
+  // ZWToken contract (ZWERC20 implementation, IERC8065 standard)
   ZWERC20: [
     'function deposit(address to, uint256 id, uint256 amount) external payable',
     'function withdraw(address to, uint256 id, uint256 amount) external',
@@ -48,7 +48,7 @@ export const CONTRACT_ABIS = {
 } as const;
 
 /**
- * 代币信息
+ * Token Information
  */
 export const TOKEN_INFO = {
   name: 'Zero Knowledge Wrapper USDC',

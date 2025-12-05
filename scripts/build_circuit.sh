@@ -13,7 +13,7 @@ echo ""
 CIRCUIT_NAME="remint"
 CIRCUIT_FILE="circuits/${CIRCUIT_NAME}.circom"
 OUT_DIR="circuits/out"
-PTAU_FILE="powersOfTau28_hez_final_15.ptau"  # 22MB, 支持 32K 约束 (本电路 ~12K)
+PTAU_FILE="powersOfTau28_hez_final_15.ptau"  # 22MB, supports 32K constraints (this circuit ~12K)
 
 # Check if circuit file exists
 if [ ! -f "$CIRCUIT_FILE" ]; then

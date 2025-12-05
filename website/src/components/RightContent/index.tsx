@@ -18,66 +18,66 @@ export const Question = () => {
   const [circuitsLoaded, setCircuitsLoaded] = useState(false);
   const [circuitsProgress, setCircuitsProgress] = useState(0);
 
-  // 预加载电路文件
+  // Preload circuit files
   useEffect(() => {
     const preloadCircuits = async () => {
       try {
-        console.log('开始预加载电路文件...');
+        console.log('Starting to preload circuit files...');
         setCircuitsProgress(0);
-        
-        // 加载 wasm 文件
+
+        // Load wasm file
         const wasmResponse = await fetch('/circuits/remint.wasm');
         const wasmTotal = Number(wasmResponse.headers.get('content-length')) || 0;
         const wasmReader = wasmResponse.body?.getReader();
-        
+
         let wasmReceived = 0;
-        
+
         if (wasmReader) {
           while (true) {
             const { done, value } = await wasmReader.read();
             if (done) break;
-            
+
             wasmReceived += value.length;
-            
-            // 更新进度 (wasm 占 50%)
+
+            // Update progress (wasm takes 50%)
             if (wasmTotal > 0) {
               setCircuitsProgress(Math.floor((wasmReceived / wasmTotal) * 50));
             }
           }
         }
-        
-        console.log('Wasm 文件加载完成');
+
+        console.log('Wasm file loaded');
         setCircuitsProgress(50);
-        
-        // 加载 zkey 文件
+
+        // Load zkey file
         const zkeyResponse = await fetch('/circuits/remint_final.zkey');
         const zkeyTotal = Number(zkeyResponse.headers.get('content-length')) || 0;
         const zkeyReader = zkeyResponse.body?.getReader();
-        
+
         let zkeyReceived = 0;
-        
+
         if (zkeyReader) {
           while (true) {
             const { done, value } = await zkeyReader.read();
             if (done) break;
-            
+
             zkeyReceived += value.length;
-            
-            // 更新进度 (zkey 占 50%)
+
+            // Update progress (zkey takes 50%)
             if (zkeyTotal > 0) {
               setCircuitsProgress(50 + Math.floor((zkeyReceived / zkeyTotal) * 50));
             }
           }
         }
-        
-        console.log('Zkey 文件加载完成');
-        
+
+        console.log('Zkey file loaded');
+
         setCircuitsProgress(100);
         setCircuitsLoaded(true);
-        
-        console.log('✅ 所有电路文件预加载完成');
+
+        console.log('✅ All circuit files preloaded');
       } catch (error) {
-        console.error('预加载电路文件失败:', error);
+        console.error('Failed to preload circuit files:', error);
       }
     };
 
@@ -93,7 +93,7 @@ export const Question = () => {
         height: 26,
       }}
     >
-      {/* Circuits 状态显示 */}
+      {/* Circuits status display */}
       {!circuitsLoaded ? (
         <span
           style={{
@@ -115,8 +115,8 @@ export const Question = () => {
           Circuits:100%
         </span>
       )}
-      
-      {/* Question 图标 */}
+
+      {/* Question icon */}
       <QuestionCircleOutlined
         style={{ fontSize: '16px', cursor: 'pointer' }}
         onClick={() => {

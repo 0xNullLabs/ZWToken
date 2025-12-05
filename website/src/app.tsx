@@ -12,7 +12,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 /**
  * @name rootContainer
- * @description 在整个应用最外层包裹Web3Provider
+ * @description Wrap Web3Provider around the entire application
  */
 export function rootContainer(container: React.ReactNode) {
   return <Web3Provider>{container}</Web3Provider>;
@@ -29,19 +29,19 @@ export async function getInitialState(): Promise<{
   };
 }
 
-// ProLayout 支持的api https://procomponents.ant.design/components/layout
+// ProLayout supported API https://procomponents.ant.design/components/layout
 export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) => {
   return {
     actionsRender: () => [
-      <Question key="doc" />, 
+      <Question key="doc" />,
       <SelectLang key="SelectLang" />,
-      <ConnectWallet key="ConnectWallet" />
+      <ConnectWallet key="ConnectWallet" />,
     ],
     footerRender: () => <Footer />,
     menuHeaderRender: undefined,
-    // 自定义 403 页面
+    // Custom 403 page
     // unAccessible: <div>unAccessible</div>,
-    // 增加一个 loading 的状态
+    // Add a loading state
     childrenRender: (children) => {
       return (
         <>
@@ -67,9 +67,9 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
 };
 
 /**
- * @name request 配置，可以配置错误处理
- * 它基于 axios 和 ahooks 的 useRequest 提供了一套统一的网络请求和错误处理方案。
- * @doc https://umijs.org/docs/max/request#配置
+ * @name request configuration for error handling
+ * Based on axios and ahooks useRequest, provides unified network request and error handling.
+ * @doc https://umijs.org/docs/max/request#configuration
  */
 export const request = {
   ...errorConfig,

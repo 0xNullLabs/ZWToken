@@ -29,7 +29,7 @@ const web3Onboard = init({
   appMetadata: {
     name: 'ZWToken',
     icon: '<svg><!-- Your icon SVG --></svg>',
-    description: 'ZWToken - 浏览器友好的零知识证明隐私Token',
+    description: 'ZWToken - Browser-friendly Zero-Knowledge Proof Privacy Token',
     recommendedInjectedWallets: [
       { name: 'MetaMask', url: 'https://metamask.io' },
       { name: 'Coinbase', url: 'https://www.coinbase.com/wallet' },
@@ -54,4 +54,3 @@ const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
 };
 
 export default Web3Provider;
-

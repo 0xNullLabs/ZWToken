@@ -29,7 +29,7 @@ const ConnectWallet: React.FC = () => {
           icon: <UserOutlined />,
           label: (
             <div>
-              <div style={{ fontSize: 12, color: '#999' }}>地址</div>
+              <div style={{ fontSize: 12, color: '#999' }}>Address</div>
               <div>{formatAddress(wallet.accounts[0].address)}</div>
             </div>
           ),
@@ -39,8 +39,8 @@ const ConnectWallet: React.FC = () => {
           icon: <WalletOutlined />,
           label: (
             <div>
-              <div style={{ fontSize: 12, color: '#999' }}>网络</div>
-              <div>{connectedChain?.id ? `Chain ID: ${connectedChain.id}` : '未知网络'}</div>
+              <div style={{ fontSize: 12, color: '#999' }}>Network</div>
+              <div>{connectedChain?.id ? `Chain ID: ${connectedChain.id}` : 'Unknown Network'}</div>
             </div>
           ),
         },
@@ -50,7 +50,7 @@ const ConnectWallet: React.FC = () => {
         {
           key: 'disconnect',
           icon: <DisconnectOutlined />,
-          label: '断开连接',
+          label: 'Disconnect',
           onClick: handleDisconnect,
           danger: true,
         },
@@ -59,12 +59,7 @@ const ConnectWallet: React.FC = () => {
 
   if (!wallet) {
     return (
-      <Button
-        type="primary"
-        icon={<WalletOutlined />}
-        onClick={handleConnect}
-        loading={connecting}
-      >
+      <Button type="primary" icon={<WalletOutlined />} onClick={handleConnect} loading={connecting}>
         Connect Wallet
       </Button>
     );
@@ -73,13 +68,10 @@ const ConnectWallet: React.FC = () => {
   return (
     <Dropdown menu={{ items }} placement="bottomRight">
       <Button type="primary" icon={<WalletOutlined />}>
-        <Space>
-          {formatAddress(wallet.accounts[0].address)}
-        </Space>
+        <Space>{formatAddress(wallet.accounts[0].address)}</Space>
       </Button>
     </Dropdown>
   );
 };
 
 export default ConnectWallet;
-

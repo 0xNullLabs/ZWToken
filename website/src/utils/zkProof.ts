@@ -1,14 +1,14 @@
 /**
- * ZK Proof 生成工具
- * 参考 test/e2e.test.js 中的实现
+ * ZK Proof Generation Utility
+ * Reference: test/e2e.test.js implementation
  */
 
 import { buildPoseidon } from 'circomlibjs';
 import { ethers } from 'ethers';
 
 /**
- * Incremental Merkle Tree 实现
- * 使用 Poseidon hash（与合约和 e2e 测试一致）
+ * Incremental Merkle Tree Implementation
+ * Uses Poseidon hash (consistent with contract and e2e tests)
  */
 export class IncrementalMerkleTree {
   depth: number;
@@ -27,7 +27,7 @@ export class IncrementalMerkleTree {
     this.nextIndex = 0;
     this.poseidon = poseidon;
 
-    // 初始化零值（使用 Poseidon hash）
+    // Initialize zero values (using Poseidon hash)
     let currentZero = 0n;
     this.zeros[0] = currentZero;
     for (let i = 1; i < depth; i++) {
@@ -37,7 +37,7 @@ export class IncrementalMerkleTree {
     this.root = this.zeros[depth - 1];
   }
 
-  // Poseidon hash（使用 circomlibjs）
+  // Poseidon hash (using circomlibjs)
   private hash(left: bigint, right: bigint): bigint {
     const result = this.poseidon([left, right]);
     return BigInt(this.poseidon.F.toString(result));
@@ -78,19 +78,19 @@ export class IncrementalMerkleTree {
       pathIndices.push(isRight ? 1 : 0);
 
       if (isRight) {
-        // 当前节点是右子节点，sibling 是 filledSubtrees[i]
+        // Current node is right child, sibling is filledSubtrees[i]
         pathElements.push(this.filledSubtrees[i] || this.zeros[i]);
       } else {
-        // 当前节点是左子节点，需要计算右侧 sibling
+        // Current node is left child, need to compute right sibling
         const siblingIndex = currentIndex + 1;
         const levelSize = Math.pow(2, i);
         const siblingLeafStart = siblingIndex * levelSize;
 
         if (siblingLeafStart < this.nextIndex) {
-          // 有真实的右兄弟，需要重建它的子树
+          // Has real right sibling, need to rebuild its subtree
           pathElements.push(this._reconstructSubtree(siblingLeafStart, i));
         } else {
-          // 没有右兄弟，使用 zero
+          // No right sibling, use zero
           pathElements.push(this.zeros[i]);
         }
       }
@@ -101,11 +101,11 @@ export class IncrementalMerkleTree {
   }
 
   /**
-   * 重建子树的根哈希
+   * Rebuild subtree root hash
    */
   private _reconstructSubtree(leafIndex: number, level: number): bigint {
     if (level === 0) {
-      // 叶子层
+      // Leaf layer
       if (leafIndex < this.leaves.length) {
         return BigInt(this.leaves[leafIndex]);
       } else {
@@ -113,7 +113,7 @@ export class IncrementalMerkleTree {
       }
     }
 
-    // 递归构建左右子树
+    // Recursively build left and right subtrees
     const levelSize = Math.pow(2, level - 1);
     const leftChild = this._reconstructSubtree(leafIndex, level - 1);
     const rightChild = this._reconstructSubtree(leafIndex + levelSize, level - 1);
@@ -123,22 +123,22 @@ export class IncrementalMerkleTree {
 }
 
 /**
- * 从 Secret 生成隐私地址和相关参数
- * @param secret 用户秘密
+ * Derive privacy address and related parameters from Secret
+ * @param secret User secret
  * @param tokenId Token ID (0 for ERC-20)
  */
 export async function deriveFromSecret(secret: string, tokenId: bigint = 0n) {
   const poseidon = await buildPoseidon();
   const secretBigInt = BigInt(secret);
 
-  // 推导隐私地址：addrScalar = Poseidon(8065, tokenId, secret)
+  // Derive privacy address: addrScalar = Poseidon(8065, tokenId, secret)
   const addrScalar = poseidon.F.toString(poseidon([8065n, tokenId, secretBigInt]));
   const addr20 = BigInt(addrScalar) & ((1n << 160n) - 1n);
   const q = (BigInt(addrScalar) - addr20) / (1n << 160n);
 
   const privacyAddress = ethers.getAddress('0x' + addr20.toString(16).padStart(40, '0'));
 
-  // 生成 nullifier = Poseidon(addr20, secret)
+  // Generate nullifier = Poseidon(addr20, secret)
   const nullifier = poseidon.F.toString(poseidon([addr20, secretBigInt]));
 
   return {
@@ -152,12 +152,12 @@ export async function deriveFromSecret(secret: string, tokenId: bigint = 0n) {
 }
 
 /**
- * 分批获取链上的leafs（使用 getCommitLeaves API）
- * @param contract 合约实例
- * @param tokenId Token ID (ERC-20 固定为 0)
- * @param startIndex 起始索引
- * @param totalCount 总数量
- * @param batchSize 每批数量（默认100）
+ * Fetch leaves from chain in batches (using getCommitLeaves API)
+ * @param contract Contract instance
+ * @param tokenId Token ID (ERC-20 fixed to 0)
+ * @param startIndex Start index
+ * @param totalCount Total count
+ * @param batchSize Batch size (default 100)
  * @returns Array of {to, amount} objects
  */
 export async function getCommitLeavesInBatches(
@@ -188,15 +188,15 @@ export async function getCommitLeavesInBatches(
 }
 
 /**
- * 从链上重建 Merkle Tree
- * 与 e2e.test.js 逻辑完全一致
+ * Rebuild Merkle Tree from on-chain data
+ * Consistent with e2e.test.js logic
  */
 export async function rebuildMerkleTree(
   contract: ethers.Contract,
   poseidon: any,
   tokenId: number = 0,
 ): Promise<IncrementalMerkleTree> {
-  // 获取 leaf 数量
+  // Get leaf count
   const leafCount = await contract.getCommitLeafCount(0);
   console.log(`Found ${leafCount} commitment(s)`);
 
@@ -204,15 +204,15 @@ export async function rebuildMerkleTree(
     throw new Error('No commitments found on chain');
   }
 
-  // 分批获取所有 leafs
+  // Fetch all leaves in batches
   const leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
   console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
 
-  // 重建 Merkle tree（传入 poseidon 实例）
+  // Rebuild Merkle tree (pass poseidon instance)
   const tree = new IncrementalMerkleTree(20, poseidon);
   for (const leaf of leaves) {
-    // 计算 commitment = Poseidon(address, amount)
-    // 注意：这里直接使用 poseidon() 的返回值，它已经是 Field 元素
+    // Compute commitment = Poseidon(address, amount)
+    // Note: poseidon() returns a Field element directly
     const commitment = poseidon([BigInt(leaf.to), BigInt(leaf.amount)]);
     tree.insert(BigInt(poseidon.F.toString(commitment)));
   }
@@ -221,7 +221,7 @@ export async function rebuildMerkleTree(
 }
 
 /**
- * 查找用户的 commitment
+ * Find user's commitment
  */
 export async function findUserCommitment(
   contract: ethers.Contract,
@@ -233,7 +233,7 @@ export async function findUserCommitment(
     return null;
   }
 
-  // 分批获取所有 leafs
+  // Fetch all leaves in batches
   const leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
 
   for (let i = 0; i < leaves.length; i++) {
@@ -252,8 +252,8 @@ export async function findUserCommitment(
 }
 
 /**
- * 准备电路输入 (IERC8065 版本)
- * 参考 IERC8065 规范和更新后的电路
+ * Prepare circuit input (IERC8065 version)
+ * Reference: IERC8065 specification and updated circuit
  */
 export function prepareCircuitInput(params: {
   root: bigint;

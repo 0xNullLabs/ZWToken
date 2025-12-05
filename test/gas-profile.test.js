@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const fs = require("fs");
 
 /**
- * Helper: 将 Groth16 proof 编码为 bytes
+ * Helper: Encode Groth16 proof as bytes
  */
 function encodeProof(a, b, c) {
   const abiCoder = ethers.AbiCoder.defaultAbiCoder();
@@ -14,7 +14,7 @@ function encodeProof(a, b, c) {
 }
 
 /**
- * Helper: 将 relayerFee 编码为 relayerData bytes
+ * Helper: Encode relayerFee as relayerData bytes
  */
 function encodeRelayerData(relayerFee) {
   if (relayerFee === 0 || relayerFee === 0n) {
@@ -82,7 +82,7 @@ describe("Gas Profile Comparison", function () {
     const MockVerifier = await ethers.getContractFactory("MockVerifier");
     mockVerifier = await MockVerifier.deploy();
 
-    // Deploy ZWERC20 with linked PoseidonT3 library (使用完全限定名避免歧义)
+    // Deploy ZWERC20 with linked PoseidonT3 library (use fully qualified name to avoid ambiguity)
     const ZWERC20 = await ethers.getContractFactory(
       "contracts/ZWERC20.sol:ZWERC20",
       {
@@ -95,7 +95,7 @@ describe("Gas Profile Comparison", function () {
     zwToken = await ZWERC20.deploy(
       "Zero Knowledge Wrapper",
       "ZWK",
-      underlyingDecimals, // 从 underlying token 获取 decimals
+      underlyingDecimals, // Get decimals from underlying token
       await underlyingToken.getAddress(),
       await mockVerifier.getAddress(),
       owner.address, // feeCollector

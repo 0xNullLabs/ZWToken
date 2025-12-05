@@ -14,13 +14,13 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      // 默认本地测试，不 fork
+      // Default local testing, no fork
     },
-    // 连接到 Anvil 或其他本地节点
+    // Connect to Anvil or other local nodes
     localhost: {
       url: "http://127.0.0.1:8545",
     },
-    // Sepolia 测试网
+    // Sepolia testnet
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL,
       accounts: [process.env.PRIVATE_KEY],

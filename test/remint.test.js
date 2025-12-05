@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const { poseidon } = require("circomlibjs");
 
 /**
- * Helper: 将 Groth16 proof 编码为 bytes
+ * Helper: Encode Groth16 proof as bytes
  */
 function encodeProof(a, b, c) {
   const abiCoder = ethers.AbiCoder.defaultAbiCoder();
@@ -14,7 +14,7 @@ function encodeProof(a, b, c) {
 }
 
 /**
- * Helper: 将 relayerFee 编码为 relayerData bytes
+ * Helper: Encode relayerFee as relayerData bytes
  */
 function encodeRelayerData(relayerFee) {
   if (relayerFee === 0 || relayerFee === 0n) {
@@ -25,8 +25,8 @@ function encodeRelayerData(relayerFee) {
 }
 
 /**
- * ZWERC20 Remint 测试
- * 基于 IERC8065：Poseidon Merkle tree + 首次接收记录
+ * ZWERC20 Remint Test
+ * Based on IERC8065: Poseidon Merkle tree + first receipt recording
  */
 describe("ZWERC20 - Remint Test", function () {
   let zwToken, underlying, verifier, poseidonT3;
@@ -37,9 +37,9 @@ describe("ZWERC20 - Remint Test", function () {
   before(async function () {
     [deployer, alice, bob] = await ethers.getSigners();
 
-    console.log("\n🚀 部署合约...");
+    console.log("\n🚀 Deploying contracts...");
 
-    // 1. 部署 PoseidonT3 库
+    // 1. Deploy PoseidonT3 library
     const PoseidonT3 = await ethers.getContractFactory(
       "poseidon-solidity/PoseidonT3.sol:PoseidonT3"
     );
@@ -47,7 +47,7 @@ describe("ZWERC20 - Remint Test", function () {
     await poseidonT3.waitForDeployment();
     console.log("✅ PoseidonT3 deployed:", await poseidonT3.getAddress());
 
-    // 2. 部署底层 ERC20
+    // 2. Deploy underlying ERC20
     const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
     underlying = await ERC20Mock.deploy(
       "Underlying Token",
@@ -57,14 +57,14 @@ describe("ZWERC20 - Remint Test", function () {
     await underlying.waitForDeployment();
     console.log("✅ Underlying deployed:", await underlying.getAddress());
 
-    // 2. 部署 Mock Verifier（总是返回 true）
+    // 2. Deploy Mock Verifier (always returns true)
     const MockVerifier = await ethers.getContractFactory("MockVerifier");
     verifier = await MockVerifier.deploy();
     await verifier.waitForDeployment();
-    await verifier.setResult(true); // 设置总是返回 true
+    await verifier.setResult(true); // Set to always return true
     console.log("✅ Verifier deployed:", await verifier.getAddress());
 
-    // 3. 部署 ZWERC20 (使用完全限定名避免歧义)
+    // 3. Deploy ZWERC20 (use fully qualified name to avoid ambiguity)
     const ZWERC20 = await ethers.getContractFactory(
       "contracts/ZWERC20.sol:ZWERC20",
       {
@@ -77,7 +77,7 @@ describe("ZWERC20 - Remint Test", function () {
     zwToken = await ZWERC20.deploy(
       "ZK Wrapper Token",
       "ZWT",
-      underlyingDecimals, // 从 underlying token 获取 decimals
+      underlyingDecimals, // Get decimals from underlying token
       await underlying.getAddress(),
       await verifier.getAddress(),
       deployer.address, // feeCollector
@@ -89,18 +89,18 @@ describe("ZWERC20 - Remint Test", function () {
     await zwToken.waitForDeployment();
     console.log("✅ ZWERC20 deployed:", await zwToken.getAddress());
 
-    // 5. 分配 underlying token
+    // 5. Allocate underlying tokens
     await underlying.transfer(alice.address, ethers.parseEther("1000"));
     console.log("✅ Allocated tokens to Alice");
   });
 
-  it("完整流程：deposit → transfer to privacy address → remint → withdraw", async function () {
+  it("Full workflow: deposit → transfer to privacy address → remint → withdraw", async function () {
     console.log("\n" + "=".repeat(60));
-    console.log("📝 测试完整流程");
+    console.log("📝 Testing full workflow");
     console.log("=".repeat(60));
 
-    // ========== 阶段 1: Alice deposit ==========
-    console.log("\n📌 阶段 1: Alice deposit underlying token");
+    // ========== Phase 1: Alice deposit ==========
+    console.log("\n📌 Phase 1: Alice deposit underlying token");
 
     const depositAmount = ethers.parseEther("500");
     await underlying
@@ -112,16 +112,16 @@ describe("ZWERC20 - Remint Test", function () {
     console.log(`   Alice ZWT balance: ${ethers.formatEther(aliceBalance)}`);
     expect(aliceBalance).to.equal(depositAmount);
 
-    // 验证 deposit 不记录 commitment
+    // Verify deposit does not record commitment
     const commitmentCount1 = await zwToken.getCommitLeafCount(0);
     console.log(`   Commitment count: ${commitmentCount1}`);
-    expect(commitmentCount1).to.equal(0); // deposit 不记录
+    expect(commitmentCount1).to.equal(0); // deposit does not record
 
-    // ========== 阶段 2: 计算隐私地址并转账 ==========
-    console.log("\n📌 阶段 2: 计算隐私地址并转账");
+    // ========== Phase 2: Calculate privacy address and transfer ==========
+    console.log("\n📌 Phase 2: Calculate privacy address and transfer");
 
-    // 从 secret 推导隐私地址
-    const tokenId = 0n; // ERC-20 固定为 0
+    // Derive privacy address from secret
+    const tokenId = 0n; // ERC-20 fixed to 0
     const addrScalar = poseidon([8065n, tokenId, SECRET]);
     const addr20 = addrScalar & ((1n << 160n) - 1n);
     const privacyAddress = ethers.getAddress(
@@ -131,7 +131,7 @@ describe("ZWERC20 - Remint Test", function () {
     console.log(`   Secret: ${SECRET}`);
     console.log(`   Privacy address: ${privacyAddress}`);
 
-    // Alice 转账到隐私地址
+    // Alice transfers to privacy address
     const transferAmount = ethers.parseEther("200");
     const tx = await zwToken
       .connect(alice)
@@ -140,12 +140,12 @@ describe("ZWERC20 - Remint Test", function () {
 
     console.log(`   Transferred ${ethers.formatEther(transferAmount)} ZWT`);
 
-    // 验证转账触发了 commitment 记录
+    // Verify transfer triggered commitment recording
     const commitmentCount2 = await zwToken.getCommitLeafCount(0);
     console.log(`   Commitment count: ${commitmentCount2}`);
-    expect(commitmentCount2).to.equal(1); // 首次接收，应该记录
+    expect(commitmentCount2).to.equal(1); // First receipt, should record
 
-    // 验证 commitment 值（从存储中获取）
+    // Verify commitment value (get from storage)
     const [commitHashes, recipients, amounts] = await zwToken.getCommitLeaves(
       0,
       0,
@@ -162,26 +162,26 @@ describe("ZWERC20 - Remint Test", function () {
       }, amount: ${ethers.formatEther(storedCommitment.amount)}`
     );
 
-    // 验证隐私地址余额
+    // Verify privacy address balance
     const privacyBalance = await zwToken.balanceOf(privacyAddress);
     console.log(
       `   Privacy address balance: ${ethers.formatEther(privacyBalance)}`
     );
     expect(privacyBalance).to.equal(transferAmount);
 
-    // ========== 阶段 3: 构造 ZK proof 数据 ==========
-    console.log("\n📌 阶段 3: 构造 ZK proof 数据（模拟前端）");
+    // ========== Phase 3: Construct ZK proof data ==========
+    console.log("\n📌 Phase 3: Construct ZK proof data (simulating frontend)");
 
-    // 获取当前 root
+    // Get current root
     const root = await zwToken.root();
     console.log(`   Current root: ${root}`);
 
-    // 计算 nullifier = Poseidon(addr20, secret)
+    // Calculate nullifier = Poseidon(addr20, secret)
     const nullifier = poseidon([addr20, SECRET]);
     const nullifierHex = "0x" + nullifier.toString(16).padStart(64, "0");
     console.log(`   Nullifier: ${nullifierHex}`);
 
-    // Mock proof（实际应该由 snarkjs 生成）
+    // Mock proof (actual should be generated by snarkjs)
     const mockProof = {
       a: [1n, 2n],
       b: [
@@ -193,18 +193,18 @@ describe("ZWERC20 - Remint Test", function () {
 
     console.log(`   ✅ Proof data prepared (mocked)`);
 
-    // ========== 阶段 4: Bob 使用 ZK proof claim ==========
-    console.log("\n📌 阶段 4: Bob 使用 ZK proof claim");
+    // ========== Phase 4: Bob uses ZK proof to claim ==========
+    console.log("\n📌 Phase 4: Bob uses ZK proof to claim");
 
     const claimAmount = ethers.parseEther("150");
     console.log(`   Bob address: ${bob.address}`);
     console.log(`   Claim amount: ${ethers.formatEther(claimAmount)}`);
 
-    // 验证 Bob 的初始状态
+    // Verify Bob's initial state
     const bobBalanceBefore = await zwToken.balanceOf(bob.address);
     expect(bobBalanceBefore).to.equal(0);
 
-    // Bob 提交 remint
+    // Bob submits remint
     const proofBytes = encodeProof(mockProof.a, mockProof.b, mockProof.c);
     const relayerData = encodeRelayerData(0);
     const claimTx = await zwToken.remint(
@@ -222,16 +222,16 @@ describe("ZWERC20 - Remint Test", function () {
       }
     );
 
-    // 验证 Reminted 事件
+    // Verify Reminted event
     await expect(claimTx)
       .to.emit(zwToken, "Reminted")
       .withArgs(deployer.address, bob.address, 0, claimAmount, false);
 
-    // 验证 commitment 被创建（Bob 首次接收）
+    // Verify commitment was created (Bob's first receipt)
     const leafCountAfterClaim = await zwToken.getCommitLeafCount(0);
     expect(leafCountAfterClaim).to.equal(2); // 1 from privacy address + 1 from claim
 
-    // 验证最新的 commitment 数据
+    // Verify latest commitment data
     const [claimCommitHashes, claimRecipients, claimAmounts] =
       await zwToken.getCommitLeaves(0, 1, 1);
     expect(claimRecipients[0]).to.equal(bob.address);
@@ -241,13 +241,13 @@ describe("ZWERC20 - Remint Test", function () {
     console.log(`   Bob ZWT balance: ${ethers.formatEther(bobBalanceAfter)}`);
     expect(bobBalanceAfter).to.equal(claimAmount);
 
-    // 验证 commitment 增加
+    // Verify commitment count increased
     const commitmentCount3 = await zwToken.getCommitLeafCount(0);
     console.log(`   Commitment count: ${commitmentCount3}`);
     expect(commitmentCount3).to.equal(2); // privacy address + bob
 
-    // ========== 阶段 5: Bob withdraw underlying token ==========
-    console.log("\n📌 阶段 5: Bob withdraw underlying token");
+    // ========== Phase 5: Bob withdraw underlying token ==========
+    console.log("\n📌 Phase 5: Bob withdraw underlying token");
 
     const bobUnderlyingBefore = await underlying.balanceOf(bob.address);
     console.log(
@@ -267,8 +267,8 @@ describe("ZWERC20 - Remint Test", function () {
     expect(bobUnderlyingAfter).to.equal(bobUnderlyingBefore + claimAmount);
     expect(bobZWTAfter).to.equal(0);
 
-    // ========== 阶段 6: 测试防重放 ==========
-    console.log("\n📌 阶段 6: 测试防重放");
+    // ========== Phase 6: Test replay prevention ==========
+    console.log("\n📌 Phase 6: Test replay prevention");
 
     await expect(
       zwToken.remint(
@@ -287,20 +287,20 @@ describe("ZWERC20 - Remint Test", function () {
       )
     ).to.be.revertedWithCustomError(zwToken, "NullifierUsed");
 
-    console.log("   ✅ 防重放验证通过");
+    console.log("   ✅ Replay prevention verified");
 
     console.log("\n" + "=".repeat(60));
-    console.log("✅ 完整流程测试通过！");
+    console.log("✅ Full workflow test passed!");
     console.log("=".repeat(60));
   });
 
-  it("测试 remint 到已有余额的地址", async function () {
+  it("Test remint to address with existing balance", async function () {
     console.log("\n" + "=".repeat(60));
-    console.log("📝 测试 claim 到已有余额的地址");
+    console.log("📝 Test claim to address with existing balance");
     console.log("=".repeat(60));
 
-    // 使用新的 secret
-    const tokenId = 0n; // ERC-20 固定为 0
+    // Use new secret
+    const tokenId = 0n; // ERC-20 fixed to 0
     const SECRET2 = 987654321n;
     const addrScalar2 = poseidon([8065n, tokenId, SECRET2]);
     const addr20_2 = addrScalar2 & ((1n << 160n) - 1n);
@@ -308,15 +308,15 @@ describe("ZWERC20 - Remint Test", function () {
       "0x" + addr20_2.toString(16).padStart(40, "0")
     );
 
-    console.log(`\n📌 准备：Alice 转账到新隐私地址`);
+    console.log(`\n📌 Preparation: Alice transfers to new privacy address`);
     console.log(`   Privacy address 2: ${privacyAddress2}`);
 
-    // Alice 转账到新隐私地址
+    // Alice transfers to new privacy address
     const transferAmount2 = ethers.parseEther("100");
     await zwToken.connect(alice).transfer(privacyAddress2, transferAmount2);
     console.log(`   ✅ Transferred ${ethers.formatEther(transferAmount2)} ZWT`);
 
-    // 获取当前状态
+    // Get current state
     const commitmentCountBefore = await zwToken.getCommitLeafCount(0);
     const root2 = await zwToken.root();
     const nullifier2 = poseidon([addr20_2]);
@@ -324,8 +324,8 @@ describe("ZWERC20 - Remint Test", function () {
 
     console.log(`   Current commitment count: ${commitmentCountBefore}`);
 
-    // Bob 再次 claim（这次不应该增加新 commitment，因为 Bob 已经有记录了）
-    console.log(`\n📌 Bob 再次 claim（不应增加 commitment）`);
+    // Bob claims again (should not add new commitment since Bob already has record)
+    console.log(`\n📌 Bob claims again (should not add commitment)`);
 
     const claimAmount2 = ethers.parseEther("50");
     const bobBalanceBefore = await zwToken.balanceOf(bob.address);
@@ -342,7 +342,7 @@ describe("ZWERC20 - Remint Test", function () {
       c: [15n, 16n],
     };
 
-    // Bob remint（不应该 emit CommitmentAdded）
+    // Bob remint (should not emit CommitmentAdded)
     const proofBytes2 = encodeProof(mockProof2.a, mockProof2.b, mockProof2.c);
     const relayerData2 = encodeRelayerData(0);
     const claimTx = await zwToken.remint(
@@ -360,38 +360,40 @@ describe("ZWERC20 - Remint Test", function () {
       }
     );
 
-    // 应该 emit Reminted
+    // Should emit Reminted
     await expect(claimTx)
       .to.emit(zwToken, "Reminted")
       .withArgs(deployer.address, bob.address, 0, claimAmount2, false);
 
-    // 不应该创建新的 commitment（Bob 已经有记录）
+    // Should not create new commitment (Bob already has record)
     const leafCountAfterSecondClaim = await zwToken.getCommitLeafCount(0);
-    expect(leafCountAfterSecondClaim).to.equal(3); // 应该仍然是 3 个 commitment（没有为 Bob 创建新的）
+    expect(leafCountAfterSecondClaim).to.equal(3); // Should still be 3 commitments (no new one for Bob)
     console.log("   ✅ No new commitment created (as expected)");
 
-    // 验证余额增加
+    // Verify balance increased
     const bobBalanceAfter = await zwToken.balanceOf(bob.address);
     console.log(`   Bob balance after: ${ethers.formatEther(bobBalanceAfter)}`);
     expect(bobBalanceAfter).to.equal(bobBalanceBefore + claimAmount2);
 
-    // 验证 commitment count 不变
+    // Verify commitment count unchanged
     const commitmentCountAfter = await zwToken.getCommitLeafCount(0);
     console.log(`   Commitment count after: ${commitmentCountAfter}`);
     expect(commitmentCountAfter).to.equal(commitmentCountBefore);
 
     console.log("\n" + "=".repeat(60));
-    console.log("✅ 测试通过：claim 到已有地址不增加 commitment");
+    console.log(
+      "✅ Test passed: claim to existing address does not add commitment"
+    );
     console.log("=".repeat(60));
   });
 
-  it("测试 Merkle root 历史支持", async function () {
+  it("Test Merkle root history support", async function () {
     console.log("\n" + "=".repeat(60));
-    console.log("📝 测试 Merkle root 历史支持");
+    console.log("📝 Test Merkle root history support");
     console.log("=".repeat(60));
 
-    // 使用新的 secret
-    const tokenId = 0n; // ERC-20 固定为 0
+    // Use new secret
+    const tokenId = 0n; // ERC-20 fixed to 0
     const SECRET3 = 111111111n;
     const addrScalar3 = poseidon([8065n, tokenId, SECRET3]);
     const addr20_3 = addrScalar3 & ((1n << 160n) - 1n);
@@ -399,17 +401,17 @@ describe("ZWERC20 - Remint Test", function () {
       "0x" + addr20_3.toString(16).padStart(40, "0")
     );
 
-    console.log(`\n📌 步骤 1: 记录旧 root`);
+    console.log(`\n📌 Step 1: Record old root`);
 
-    // Alice 转账到隐私地址 3
+    // Alice transfers to privacy address 3
     const transferAmount3 = ethers.parseEther("80");
     await zwToken.connect(alice).transfer(privacyAddress3, transferAmount3);
 
     const oldRoot = await zwToken.root();
     console.log(`   Old root: ${oldRoot}`);
 
-    // 再转一笔给其他地址，更新 root
-    console.log(`\n📌 步骤 2: 更新 root（转账给新地址）`);
+    // Transfer another amount to new address, update root
+    console.log(`\n📌 Step 2: Update root (transfer to new address)`);
 
     const SECRET4 = 222222222n;
     const addrScalar4 = poseidon([SECRET4]);
@@ -426,8 +428,8 @@ describe("ZWERC20 - Remint Test", function () {
     console.log(`   New root: ${newRoot}`);
     expect(newRoot).to.not.equal(oldRoot);
 
-    // 使用旧 root 进行 claim
-    console.log(`\n📌 步骤 3: 使用旧 root claim（应该成功）`);
+    // Use old root to claim
+    console.log(`\n📌 Step 3: Claim using old root (should succeed)`);
 
     const nullifier3 = poseidon([addr20_3]);
     const nullifierHex3 = "0x" + nullifier3.toString(16).padStart(64, "0");
@@ -441,10 +443,10 @@ describe("ZWERC20 - Remint Test", function () {
       c: [23n, 24n],
     };
 
-    // 使用 deployer remint（新地址）
+    // Use deployer to remint (new address)
     const claimAmount3 = ethers.parseEther("60");
 
-    // 应该成功（oldRoot 仍然有效）
+    // Should succeed (oldRoot is still valid)
     const proofBytes3 = encodeProof(mockProof3.a, mockProof3.b, mockProof3.c);
     const relayerData3 = encodeRelayerData(0);
     await expect(
@@ -455,7 +457,7 @@ describe("ZWERC20 - Remint Test", function () {
         false, // withdrawUnderlying
         {
           // RemintData struct
-          commitment: oldRoot, // 使用旧 root
+          commitment: oldRoot, // Use old root
           nullifiers: [nullifierHex3],
           proverData: "0x",
           relayerData: relayerData3,
@@ -471,7 +473,7 @@ describe("ZWERC20 - Remint Test", function () {
     expect(deployerBalance).to.equal(claimAmount3);
 
     console.log("\n" + "=".repeat(60));
-    console.log("✅ 测试通过：支持历史 root");
+    console.log("✅ Test passed: historical root supported");
     console.log("=".repeat(60));
   });
 });

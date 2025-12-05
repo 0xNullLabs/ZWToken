@@ -1,6 +1,6 @@
 // remint.circom
-// ZK 电路：证明用户可以 remint 其首次接收的 ZWToken
-// 使用 Poseidon hash（ZK 友好）+ 20 层 Merkle tree
+// ZK Circuit: Proves user can remint their first received ZWToken
+// Uses Poseidon hash (ZK friendly) + 20-layer Merkle tree
 
 pragma circom 2.1.6;
 
@@ -9,8 +9,8 @@ include "circomlib/circuits/bitify.circom";
 include "circomlib/circuits/comparators.circom";
 
 /**
- * Poseidon Merkle Tree 包含性证明
- * 验证某个 leaf 在 Merkle tree 中
+ * Poseidon Merkle Tree Inclusion Proof
+ * Verifies that a leaf is in the Merkle tree
  */
 template PoseidonMerkleProof(levels) {
     signal input leaf;
@@ -25,13 +25,13 @@ template PoseidonMerkleProof(levels) {
     component selectors[levels];
     
     for (var i = 0; i < levels; i++) {
-        // 根据 pathIndices[i] 决定 left/right
+        // Determine left/right based on pathIndices[i]
         selectors[i] = Selector();
         selectors[i].index <== pathIndices[i];
         selectors[i].value[0] <== hashes[i];
         selectors[i].value[1] <== pathElements[i];
         
-        // 计算父节点哈希
+        // Compute parent node hash
         hashers[i] = Poseidon(2);
         hashers[i].inputs[0] <== selectors[i].outL;
         hashers[i].inputs[1] <== selectors[i].outR;
@@ -39,13 +39,13 @@ template PoseidonMerkleProof(levels) {
         hashes[i + 1] <== hashers[i].out;
     }
     
-    // 验证最终 root 匹配
+    // Verify final root matches
     root === hashes[levels];
 }
 
 /**
- * 选择器：根据 index 决定 left/right 顺序
- * 使用二次约束实现
+ * Selector: Determines left/right order based on index
+ * Implemented using quadratic constraints
  */
 template Selector() {
     signal input index;        // 0 or 1
@@ -53,14 +53,14 @@ template Selector() {
     signal output outL;        // left child
     signal output outR;        // right child
     
-    // 🔒 安全约束：确保 index 只能是 0 或 1
-    // 防止攻击者使用任意值绕过 Merkle proof 验证
+    // 🔒 Security constraint: Ensure index can only be 0 or 1
+    // Prevents attackers from bypassing Merkle proof verification with arbitrary values
     index * (1 - index) === 0;
     
     // index === 0: outL = current, outR = sibling
     // index === 1: outL = sibling, outR = current
     
-    // 使用二次约束实现
+    // Implemented using quadratic constraints
     signal diff;
     diff <== value[1] - value[0];
     
@@ -69,54 +69,54 @@ template Selector() {
 }
 
 /**
- * 主电路：证明用户可以 remint 其首次接收的 ZWToken
+ * Main Circuit: Proves user can remint their first received ZWToken
  * 
- * 证明内容：
- * 1. 用户知道某个地址的 secret
- * 2. 该地址首次接收了 commitAmount 个 ZWToken
- * 3. commitment = Poseidon(addr20, commitAmount) 在 Merkle tree 中
+ * Proof content:
+ * 1. User knows the secret for a certain address
+ * 2. That address first received commitAmount ZWTokens
+ * 3. commitment = Poseidon(addr20, commitAmount) is in the Merkle tree
  * 4. remintAmount <= commitAmount
- * 5. nullifier = Poseidon(addr20, secret) 正确（防双花且保护隐私）
- * 6. 绑定 to, withdrawUnderlying, relayerDataHash 到约束系统
+ * 5. nullifier = Poseidon(addr20, secret) is correct (prevents double-spending and protects privacy)
+ * 6. Binds to, withdrawUnderlying, relayerDataHash to the constraint system
  * 
- * 安全保证：
- * - 所有 public inputs 必须参与约束，防止验证时篡改
- * - to, withdrawUnderlying, relayerDataHash 通过 Poseidon 哈希绑定
- * - 若 proof 生成时与验证时的 public inputs 不一致，验证将失败
+ * Security Guarantees:
+ * - All public inputs must participate in constraints to prevent tampering during verification
+ * - to, withdrawUnderlying, relayerDataHash are bound via Poseidon hash
+ * - If public inputs differ between proof generation and verification, verification will fail
  * 
- * 隐私保护：
- * - 隐私地址推导：addrScalar = Poseidon(8065, id, secret)
- * - addr20 = addrScalar & 0xFFFF...FFFF (隐式包含 8065 和 id 信息)
- * - Commitment 计算：Poseidon(addr20, commitAmount)
- * - Nullifier 计算：Poseidon(addr20, secret)
- * - 观察者即使知道 addr20，不知道 secret 也无法计算 nullifier
- * - 观察者无法从 nullifier 反推出 addr20 或 secret
- * - 不同 id 产生不同 addr20，确保跨 token 隔离
+ * Privacy Protection:
+ * - Privacy address derivation: addrScalar = Poseidon(8065, id, secret)
+ * - addr20 = addrScalar & 0xFFFF...FFFF (implicitly contains 8065 and id information)
+ * - Commitment calculation: Poseidon(addr20, commitAmount)
+ * - Nullifier calculation: Poseidon(addr20, secret)
+ * - Even if observer knows addr20, they cannot compute nullifier without secret
+ * - Observer cannot reverse nullifier to get addr20 or secret
+ * - Different ids produce different addr20, ensuring cross-token isolation
  */
 template Remint(TREE_DEPTH, TWO160) {
     // ========== PUBLIC INPUTS ==========
     signal input root;                  // Merkle root (commitment)
-    signal input nullifier;             // 防双花标识
-    signal input to;                    // 接收地址
-    signal input remintAmount;          // Remint 金额
+    signal input nullifier;             // Double-spending prevention identifier
+    signal input to;                    // Recipient address
+    signal input remintAmount;          // Remint amount
     signal input id;                    // Token ID (must be 0 for ERC-20)
     signal input withdrawUnderlying;    // 1 = withdraw underlying, 0 = mint ZWToken
     signal input relayerFee;            // Relayer fee (basis points, e.g., 100 = 1%)
     
     // ========== PRIVATE INPUTS ==========
-    signal input secret;            // 用户秘密
-    signal input addr20;            // 隐私地址（160 bits）
-    signal input commitAmount;      // 首次接收金额（commitment 中的金额）
-    signal input q;                 // addr20 推导的商
+    signal input secret;            // User secret
+    signal input addr20;            // Privacy address (160 bits)
+    signal input commitAmount;      // First received amount (amount in commitment)
+    signal input q;                 // Quotient from addr20 derivation
     
     // Merkle proof
     signal input pathElements[TREE_DEPTH];
     signal input pathIndices[TREE_DEPTH];
     
-    // ========== 1. 推导和验证隐私地址 ==========
+    // ========== 1. Derive and Verify Privacy Address ==========
     
-    // secret 有着 chain id, contract address 的重放保护
-    // 计算 addrScalar = Poseidon(8065, id, secret)
+    // secret has replay protection from chain id and contract address
+    // Compute addrScalar = Poseidon(8065, id, secret)
     component posAddr = Poseidon(3);
     posAddr.inputs[0] <== 8065;
     posAddr.inputs[1] <== id;
@@ -125,17 +125,17 @@ template Remint(TREE_DEPTH, TWO160) {
     signal addrScalar;
     addrScalar <== posAddr.out;
     
-    // 验证 addr20 是 addrScalar 的低 160 位
+    // Verify addr20 is the lower 160 bits of addrScalar
     // addrScalar = addr20 + q * 2^160
     component n2b = Num2Bits(160);
-    n2b.in <== addr20;  // 确保 addr20 < 2^160
+    n2b.in <== addr20;  // Ensure addr20 < 2^160
     
     addrScalar === addr20 + q * TWO160;
     
-    // ========== 2. 计算 Commitment ==========
+    // ========== 2. Compute Commitment ==========
     
     // commitment = Poseidon(addr20, commitAmount)
-    // Note: addr20 已经从 Poseidon(8065, id, secret) 推导，隐式包含 id 信息
+    // Note: addr20 is derived from Poseidon(8065, id, secret), implicitly containing id info
     component commitmentHasher = Poseidon(2);
     commitmentHasher.inputs[0] <== addr20;
     commitmentHasher.inputs[1] <== commitAmount;
@@ -143,7 +143,7 @@ template Remint(TREE_DEPTH, TWO160) {
     signal commitment;
     commitment <== commitmentHasher.out;
     
-    // ========== 3. 验证 Merkle Proof ==========
+    // ========== 3. Verify Merkle Proof ==========
     
     component merkleProof = PoseidonMerkleProof(TREE_DEPTH);
     merkleProof.leaf <== commitment;
@@ -154,7 +154,7 @@ template Remint(TREE_DEPTH, TWO160) {
         merkleProof.pathIndices[i] <== pathIndices[i];
     }
     
-    // ========== 4. 验证 remint 金额 ==========
+    // ========== 4. Verify Remint Amount ==========
     
     // remintAmount <= commitAmount
     component leq = LessEqThan(252);
@@ -162,23 +162,23 @@ template Remint(TREE_DEPTH, TWO160) {
     leq.in[1] <== commitAmount;
     leq.out === 1;
     
-    // ========== 5. 验证 Nullifier ==========
+    // ========== 5. Verify Nullifier ==========
     
     // nullifier = Poseidon(addr20, secret)
-    // Note: addr20 已经从 Poseidon(8065, id, secret) 推导，隐式包含 8065 和 id 信息
-    // 每个 (addr20, secret) 组合只能 remint 一次
+    // Note: addr20 is derived from Poseidon(8065, id, secret), implicitly containing 8065 and id info
+    // Each (addr20, secret) combination can only remint once
     component nullifierHasher = Poseidon(2);
     nullifierHasher.inputs[0] <== addr20;
     nullifierHasher.inputs[1] <== secret;
     
     nullifier === nullifierHasher.out;
     
-    // ========== 6. 绑定未约束的 public inputs ==========
-    // to, withdrawUnderlying, relayerFee 必须参与约束
-    // 否则攻击者可以在验证时篡改这些值而 proof 仍然有效
-    // 通过 Poseidon 哈希将它们绑定到约束系统中
+    // ========== 6. Bind Unconstrained Public Inputs ==========
+    // to, withdrawUnderlying, relayerFee must participate in constraints
+    // Otherwise attackers can tamper these values during verification while proof remains valid
+    // Bind them to the constraint system via Poseidon hash
     
-    // 🔒 安全约束：确保 withdrawUnderlying 只能是 0 或 1
+    // 🔒 Security constraint: Ensure withdrawUnderlying can only be 0 or 1
     withdrawUnderlying * (1 - withdrawUnderlying) === 0;
     
     component publicInputsHasher = Poseidon(3);
@@ -186,18 +186,17 @@ template Remint(TREE_DEPTH, TWO160) {
     publicInputsHasher.inputs[1] <== withdrawUnderlying;
     publicInputsHasher.inputs[2] <== relayerFee;
     
-    // 计算绑定哈希（<== 创建约束，确保这些 public inputs 参与 R1CS）
+    // Compute binding hash (<== creates constraint, ensuring these public inputs participate in R1CS)
     signal publicInputsBinding;
     publicInputsBinding <== publicInputsHasher.out;
 }
 
-// 实例化主电路
-// 参数：
-// - TREE_DEPTH: 20（支持 2^20 = 1,048,576 个地址）
-// - TWO160: 2^160（地址空间大小）
+// Instantiate main circuit
+// Parameters:
+// - TREE_DEPTH: 20 (supports 2^20 = 1,048,576 addresses)
+// - TWO160: 2^160 (address space size)
 
 component main {public [root, nullifier, to, remintAmount, id, withdrawUnderlying, relayerFee]} = Remint(
     20,  // TREE_DEPTH
     1461501637330902918203684832716283019655932542976  // 2^160
 );
-

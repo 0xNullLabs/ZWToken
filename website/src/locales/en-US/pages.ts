@@ -2,45 +2,47 @@ export default {
   // ZWToken pages
   'pages.zwtoken.title': 'ZWToken - Make privacy a native feature of every token',
   'pages.zwtoken.subtitle': 'Privacy Transfer System Based on Zero-Knowledge Proofs',
-  'pages.zwtoken.connectWallet': '⚠️ Please click the "Connect Wallet" button in the upper right corner to connect your wallet',
-  
+  'pages.zwtoken.connectWallet':
+    '⚠️ Please click the "Connect Wallet" button in the upper right corner to connect your wallet',
+
   // Balance
   'pages.zwtoken.balance.usdc': 'USDC Balance',
   'pages.zwtoken.balance.zwusdc': 'ZWUSDC Balance',
   'pages.zwtoken.balance.clickToConnect': 'Connect Wallet',
-  
+
   // Faucet
   'pages.zwtoken.faucet.tip': 'Need test tokens? Get them from faucet:',
   'pages.zwtoken.faucet.eth': 'ETH Faucet',
   'pages.zwtoken.faucet.usdc': 'USDC Faucet',
-  
+
   // Tabs
-  'pages.zwtoken.tab.deposit': '💰 Deposit',
-  'pages.zwtoken.tab.withdraw': '💳 Withdraw',
+  'pages.zwtoken.tab.deposit': '💰 Wrap',
+  'pages.zwtoken.tab.withdraw': '💳 Unwrap',
   'pages.zwtoken.tab.transfer': '🔄 Transfer',
   'pages.zwtoken.tab.remint': '🎁 Remint',
   'pages.zwtoken.tab.burn': '🔥 Burn',
   'pages.zwtoken.tab.wrap': '💰 Wrap',
   'pages.zwtoken.tab.unwrap': '💳 Unwrap',
-  
-  // Deposit
+
+  // Wrap
   'pages.zwtoken.deposit.amount': 'Wrap Amount',
   'pages.zwtoken.deposit.amount.placeholder': 'Enter wrap amount',
   'pages.zwtoken.deposit.amount.required': 'Please enter wrap amount',
   'pages.zwtoken.deposit.amount.min': 'Amount must be greater than 0',
   'pages.zwtoken.deposit.currentAllowance': 'Current Allowance',
-  'pages.zwtoken.deposit.button': 'Deposit',
+  'pages.zwtoken.deposit.button': 'Wrap',
   'pages.zwtoken.deposit.reset': 'Reset',
   'pages.zwtoken.deposit.tip.title': '💡 Tips',
   'pages.zwtoken.deposit.tip.1': '• Wrap will convert your underlying token to ZWToken',
   'pages.zwtoken.deposit.tip.2': '• After wrapping, you can make privacy transfers',
-  'pages.zwtoken.deposit.tip.3': '• Please ensure you have approved the contract to use your tokens',
+  'pages.zwtoken.deposit.tip.3':
+    '• Please ensure you have approved the contract to use your tokens',
   'pages.zwtoken.deposit.approving': 'Approving...',
   'pages.zwtoken.deposit.submitting': 'Transaction submitting...',
   'pages.zwtoken.deposit.success': 'Wrap successful!',
   'pages.zwtoken.deposit.failed': 'Wrap failed',
-  
-  // Withdraw
+
+  // Unwrap
   'pages.zwtoken.withdraw.amount': 'Unwrap Amount',
   'pages.zwtoken.withdraw.amount.placeholder': 'Enter unwrap amount',
   'pages.zwtoken.withdraw.amount.required': 'Please enter unwrap amount',
@@ -54,7 +56,7 @@ export default {
   'pages.zwtoken.withdraw.submitting': 'Transaction submitting...',
   'pages.zwtoken.withdraw.success': 'Unwrap successful!',
   'pages.zwtoken.withdraw.failed': 'Unwrap failed',
-  
+
   // Transfer
   'pages.zwtoken.transfer.targetAddress': 'Target Address',
   'pages.zwtoken.transfer.targetAddress.placeholder': '0x... or click Burn to generate',
@@ -68,9 +70,11 @@ export default {
   'pages.zwtoken.transfer.button': 'Transfer',
   'pages.zwtoken.transfer.reset': 'Reset',
   'pages.zwtoken.transfer.tip.title': '💡 Tips',
-  'pages.zwtoken.transfer.tip.1': '• You can enter target address directly or generate burn address from Secret via Burn button',
+  'pages.zwtoken.transfer.tip.1':
+    '• You can enter target address directly or generate burn address from Secret via Burn button',
   'pages.zwtoken.transfer.tip.2': '• Burn address is derived from Secret using Poseidon hash',
-  'pages.zwtoken.transfer.tip.3': '• First transfer to a new address will automatically generate commitment',
+  'pages.zwtoken.transfer.tip.3':
+    '• First transfer to a new address will automatically generate commitment',
   'pages.zwtoken.transfer.tip.4': "• Recipient's address and amount are private",
   'pages.zwtoken.transfer.submitting': 'Transaction submitting...',
   'pages.zwtoken.transfer.success': 'Transfer successful!',
@@ -85,7 +89,8 @@ export default {
   'pages.zwtoken.transfer.secretModal.secret.placeholder': 'Enter numeric Secret (e.g., 123456789)',
   'pages.zwtoken.transfer.secretModal.secret.required': 'Please enter Secret',
   'pages.zwtoken.transfer.secretModal.secret.invalid': 'Secret must be numeric',
-  'pages.zwtoken.transfer.secretModal.tip': '💡 Generate burn address from Secret using Poseidon hash. Keep your Secret safe',
+  'pages.zwtoken.transfer.secretModal.tip':
+    '💡 Generate burn address from Secret using Poseidon hash. Keep your Secret safe',
   'pages.zwtoken.transfer.secretModal.option1': 'Option 1: Enter Secret Manually',
   'pages.zwtoken.transfer.secretModal.option2': 'Option 2: Generate By Signature',
   'pages.zwtoken.transfer.secretModal.confirm': 'Confirm',
@@ -102,9 +107,11 @@ export default {
   'pages.zwtoken.transfer.secretModal.seedList.checking': 'Checking...',
   'pages.zwtoken.transfer.secretModal.seedList.failed': 'Query Failed',
   'pages.zwtoken.transfer.secretModal.seedList.available': 'Available',
-  'pages.zwtoken.transfer.secretModal.seedList.hasAmount': 'This address already has amount, cannot be used again',
-  'pages.zwtoken.transfer.secretModal.seedList.tip': 'Tip: Burn Address with existing amount cannot be reused. Please select Secret with 0 amount',
-  
+  'pages.zwtoken.transfer.secretModal.seedList.hasAmount':
+    'This address already has amount, cannot be used again',
+  'pages.zwtoken.transfer.secretModal.seedList.tip':
+    'Tip: Burn Address with existing amount cannot be reused. Please select Secret with 0 amount',
+
   // Remint
   'pages.zwtoken.remint.secret': 'Secret',
   'pages.zwtoken.remint.secret.placeholder': 'Enter or Select Your Secret',
@@ -121,10 +128,12 @@ export default {
   'pages.zwtoken.remint.button': 'Generate Proof and Remint',
   'pages.zwtoken.remint.reset': 'Reset',
   'pages.zwtoken.remint.tip.title': '💡 Tips',
-  'pages.zwtoken.remint.tip.1': '• Reminting requires generating ZK proof, takes about 10-30 seconds',
+  'pages.zwtoken.remint.tip.1':
+    '• Reminting requires generating ZK proof, takes about 10-30 seconds',
   'pages.zwtoken.remint.tip.2': '• Secret is the private key used to generate the burn address',
   'pages.zwtoken.remint.tip.3': '• Remint amount cannot exceed the first received amount',
-  'pages.zwtoken.remint.tip.4': '• Each address can only remint once (double-spending prevention via nullifier)',
+  'pages.zwtoken.remint.tip.4':
+    '• Each address can only remint once (double-spending prevention via nullifier)',
   'pages.zwtoken.remint.preparing': 'Preparing...',
   'pages.zwtoken.remint.rebuildingTree': 'Rebuilding Merkle tree from chain...',
   'pages.zwtoken.remint.findingCommitment': 'Finding commitment...',
@@ -134,12 +143,14 @@ export default {
   'pages.zwtoken.remint.submitting': 'Transaction submitting...',
   'pages.zwtoken.remint.success': 'Remint successful!',
   'pages.zwtoken.remint.failed': 'Remint failed',
-  'pages.zwtoken.remint.needImplement': 'Remint function requires ZK proof generation logic integration, please refer to project documentation',
+  'pages.zwtoken.remint.needImplement':
+    'Remint function requires ZK proof generation logic integration, please refer to project documentation',
   'pages.zwtoken.remint.nullifierUsed': 'This Secret has been used, cannot remint again',
   'pages.zwtoken.remint.rootMismatch': 'Merkle root mismatch, please refresh and retry',
   'pages.zwtoken.remint.commitmentNotFound': 'Commitment not found for this Secret, please verify',
   'pages.zwtoken.remint.amountExceeded': 'Remint amount exceeds first receipt amount',
-  'pages.zwtoken.remint.zkProofNeeded': '✅ Preparation completed! snarkjs integration needed to complete remint',
+  'pages.zwtoken.remint.zkProofNeeded':
+    '✅ Preparation completed! snarkjs integration needed to complete remint',
   'pages.zwtoken.remint.generateBySeed': 'Generate By Seed',
   'pages.zwtoken.remint.select': 'Select',
   'pages.zwtoken.remint.selectSecretBySeed': 'Select Secret',
@@ -154,17 +165,18 @@ export default {
   'pages.zwtoken.remint.seedModal.checking': 'Checking...',
   'pages.zwtoken.remint.seedModal.failed': 'Query Failed',
   'pages.zwtoken.remint.withdrawUnderlying': 'Unwrap ZWUSDC to USDC',
-  
-  // Deposit Directly Burn
-  'pages.zwtoken.deposit.directBurn': 'Directly Burn (Warp to a burn address)',
+
+  // Wrap Directly Burn
+  'pages.zwtoken.deposit.directBurn': 'Directly Burn (Wrap to a burn address)',
   'pages.zwtoken.deposit.targetAddress': 'Burn Address',
   'pages.zwtoken.deposit.targetAddress.required': 'Please enter a burn address or generate one',
   'pages.zwtoken.deposit.targetAddress.placeholder': 'Enter or generate burn address',
   'pages.zwtoken.deposit.generateBySeed': 'Generate By Seed',
-  'pages.zwtoken.deposit.directBurnNote': 'Note: When Directly Burn is enabled, tokens will be deposited to the specified Burn Address. Only the holder of the corresponding Secret can Remint them.',
+  'pages.zwtoken.deposit.directBurnNote':
+    'Note: When Directly Burn is enabled, tokens will be deposited to the specified Burn Address. Only the holder of the corresponding Secret can Remint them.',
   'pages.zwtoken.deposit.privacyAddressGenerated': 'Burn Address generated and filled',
   'pages.zwtoken.deposit.secretSelected': 'Secret selected',
-  
+
   // Burn (Simple Mode)
   'pages.zwtoken.burn.title': 'Burn',
   'pages.zwtoken.burn.button': 'Burn',
@@ -178,45 +190,57 @@ export default {
   'pages.zwtoken.burn.generate': 'Generate',
   'pages.zwtoken.burn.tip.title': '💡 Usage Tips',
   'pages.zwtoken.burn.tip.what': 'What is Simple Mode Burn?',
-  'pages.zwtoken.burn.tip.whatDesc': 'Simple Mode Burn will wrap your underlying token (USDC) and automatically burn the wrapped ZW token to a burn address (black hole address). This provides maximum privacy protection.',
+  'pages.zwtoken.burn.tip.whatDesc':
+    'Simple Mode Burn will wrap your underlying token (USDC) and automatically burn the wrapped ZW token to a burn address (black hole address). This provides maximum privacy protection.',
   'pages.zwtoken.burn.tip.how': 'How to use:',
-  'pages.zwtoken.burn.tip.step1': '1. Generate a Burn Address using your secret (or create one manually). Keep your secret safe - you\'ll need it to remint later.',
-  'pages.zwtoken.burn.tip.step2': '2. The burned tokens can only be reminted using the correct secret that was used to generate the burn address.',
-  'pages.zwtoken.burn.tip.step3': '3. Your tokens are now in a privacy-protected state and can be reminted anonymously at any time.',
-  
+  'pages.zwtoken.burn.tip.step1':
+    "1. Generate a Burn Address using your secret (or create one manually). Keep your secret safe - you'll need it to remint later.",
+  'pages.zwtoken.burn.tip.step2':
+    '2. The burned tokens can only be reminted using the correct secret that was used to generate the burn address.',
+  'pages.zwtoken.burn.tip.step3':
+    '3. Your tokens are now in a privacy-protected state and can be reminted anonymously at any time.',
+
   // Common messages
   'pages.zwtoken.message.secretSelected': 'Secret selected',
-  'pages.zwtoken.message.privacyAddressZeroBalance': 'Burn Address has zero balance. Tokens may have been transferred already.',
-  'pages.zwtoken.message.seedGeneratedQuerying': 'Seed generated successfully! Querying amounts and status...',
+  'pages.zwtoken.message.privacyAddressZeroBalance':
+    'Burn Address has zero balance. Tokens may have been transferred already.',
+  'pages.zwtoken.message.seedGeneratedQuerying':
+    'Seed generated successfully! Querying amounts and status...',
   'pages.zwtoken.message.queryCompleted': 'Amount and status query completed!',
-  'pages.zwtoken.message.approveSuccess': 'Approve successful! You can now Deposit',
-  
+  'pages.zwtoken.message.approveSuccess': 'Approve successful! You can now Wrap',
+
   // Table columns
   'pages.zwtoken.table.isClaimed': 'IsClaimed',
   'pages.zwtoken.table.isReminted': 'IsReminted',
   'pages.zwtoken.table.claimed': 'Claimed',
   'pages.zwtoken.table.reminted': 'Reminted',
   'pages.zwtoken.table.available': 'Available',
-  
+
   // Remint parameters
   'pages.zwtoken.remint.parameters': 'Remint Parameters:',
-  'pages.zwtoken.remint.withdrawUnderlyingDesc': '- Unwrap ZWUSDC to USDC: If checked, directly unwrap ZWUSDC to USDC; otherwise remint ZWUSDC',
-  
+  'pages.zwtoken.remint.withdrawUnderlyingDesc':
+    '- Unwrap ZWUSDC to USDC: If checked, directly unwrap ZWUSDC to USDC; otherwise remint ZWUSDC',
+
   // Simple Mode Remint Tips
   'pages.zwtoken.remint.simpleMode.tip.title': '💡 Usage Tips',
   'pages.zwtoken.remint.simpleMode.tip.what': 'What is Simple Mode Remint?',
-  'pages.zwtoken.remint.simpleMode.tip.whatDesc': 'Simple Mode Remint will remint your ZW tokens using your secret and automatically unwrap them to the underlying token (USDC). The recipient will receive USDC directly.',
+  'pages.zwtoken.remint.simpleMode.tip.whatDesc':
+    'Simple Mode Remint will remint your ZW tokens using your secret and automatically unwrap them to the underlying token (USDC). The recipient will receive USDC directly.',
   'pages.zwtoken.remint.simpleMode.tip.how': 'How to use:',
-  'pages.zwtoken.remint.simpleMode.tip.step1': '1. Enter the secret that you used when burning the tokens. This proves ownership without revealing your identity.',
-  'pages.zwtoken.remint.simpleMode.tip.step2': '2. The recipient address (default: your current wallet) will receive the unwrapped underlying tokens (USDC) directly.',
-  'pages.zwtoken.remint.simpleMode.tip.step3': '3. You can remint any amount up to the first receipt amount recorded in the commitment.',
+  'pages.zwtoken.remint.simpleMode.tip.step1':
+    '1. Enter the secret that you used when burning the tokens. This proves ownership without revealing your identity.',
+  'pages.zwtoken.remint.simpleMode.tip.step2':
+    '2. The recipient address (default: your current wallet) will receive the unwrapped underlying tokens (USDC) directly.',
+  'pages.zwtoken.remint.simpleMode.tip.step3':
+    '3. You can remint any amount up to the first receipt amount recorded in the commitment.',
   'pages.zwtoken.remint.simpleMode.tip.note': 'Note:',
-  'pages.zwtoken.remint.simpleMode.tip.noteDesc': 'In Simple Mode, the "Withdraw Underlying" option is automatically enabled, so you will receive USDC directly instead of ZWUSDC. This provides a seamless experience.',
+  'pages.zwtoken.remint.simpleMode.tip.noteDesc':
+    'In Simple Mode, the "Withdraw Underlying" option is automatically enabled, so you will receive USDC directly instead of ZWUSDC. This provides a seamless experience.',
 
   // Common
   'pages.zwtoken.error.connectWallet': 'Please connect wallet first',
   'pages.zwtoken.error.targetAddressRequired': 'Please generate or enter Target Address first',
-  
+
   'pages.layouts.userLayout.title':
     'Ant Design is the most influential web design specification in Xihu district',
   'pages.login.accountLogin.tab': 'Account Login',

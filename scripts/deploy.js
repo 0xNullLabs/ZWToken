@@ -4,38 +4,38 @@ const fs = require("fs");
 const path = require("path");
 
 /**
- * 保存部署记录到 JSON 文件（递增式，不删除历史记录）
+ * Save deployment record to JSON file (incremental, preserves history)
  */
 function saveDeploymentRecord(deploymentInfo) {
   const deploymentsDir = path.join(__dirname, "..", "deployments");
 
-  // 确保 deployments 目录存在
+  // Ensure deployments directory exists
   if (!fs.existsSync(deploymentsDir)) {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
 
-  // 生成文件名：deployment-{network}-{timestamp}.json
+  // Generate filename: deployment-{network}-{timestamp}.json
   const timestamp = Date.now();
   const filename = `deployment-${deploymentInfo.network}-${timestamp}.json`;
   const filepath = path.join(deploymentsDir, filename);
 
-  // 保存部署信息
+  // Save deployment info
   fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
-  console.log(`\n📝 部署信息已保存: deployments/${filename}`);
+  console.log(`\n📝 Deployment info saved: deployments/${filename}`);
 
-  // 同时保存一个 latest.json 指向最新部署
+  // Also save a latest.json pointing to the latest deployment
   const latestFilepath = path.join(
     deploymentsDir,
     `latest-${deploymentInfo.network}.json`
   );
   fs.writeFileSync(latestFilepath, JSON.stringify(deploymentInfo, null, 2));
   console.log(
-    `📝 最新部署信息: deployments/latest-${deploymentInfo.network}.json`
+    `📝 Latest deployment info: deployments/latest-${deploymentInfo.network}.json`
   );
 }
 
 /**
- * 获取区块浏览器 URL
+ * Get block explorer URL
  */
 function getExplorerUrl(network) {
   const explorers = {
@@ -50,30 +50,30 @@ function getExplorerUrl(network) {
     polygonMumbai: "https://mumbai.polygonscan.com",
     bsc: "https://bscscan.com",
     bscTestnet: "https://testnet.bscscan.com",
-    hardhat: null, // 本地网络无浏览器
+    hardhat: null, // Local network has no explorer
     localhost: null,
   };
   return explorers[network] || null;
 }
 
 /**
- * 更新 README.md 的部署记录（递增式，追加新记录）
+ * Update README.md deployment records (incremental, appends new records)
  */
 function updateReadmeDeployment(deploymentInfo) {
   const readmePath = path.join(__dirname, "..", "README.md");
   let readme = fs.readFileSync(readmePath, "utf-8");
 
-  // 生成部署记录的 Markdown 内容
+  // Generate deployment record Markdown content
   const deploymentDate = new Date(deploymentInfo.timestamp).toLocaleString(
-    "zh-CN",
+    "en-US",
     {
-      timeZone: "Asia/Shanghai",
+      timeZone: "UTC",
     }
   );
 
   const explorerBaseUrl = getExplorerUrl(deploymentInfo.network);
 
-  // 根据是否有区块浏览器生成不同格式的链接
+  // Generate different link formats based on whether explorer exists
   const formatAddress = (address, label) => {
     if (explorerBaseUrl) {
       return `- ${label}: [\`${address}\`](${explorerBaseUrl}/address/${address})`;
@@ -88,7 +88,7 @@ function updateReadmeDeployment(deploymentInfo) {
     deploymentInfo.network.slice(1)
   } - ${deploymentDate}
 
-**合约地址:**
+**Contract Addresses:**
 ${formatAddress(deploymentInfo.addresses.poseidonT3, "PoseidonT3")}
 ${formatAddress(deploymentInfo.addresses.verifier, "Verifier")}
 ${formatAddress(deploymentInfo.addresses.zwToken, "ZWERC20")}
@@ -97,84 +97,85 @@ ${formatAddress(
   `Underlying Token (${deploymentInfo.tokenInfo.underlyingSymbol})`
 )}
 
-**代币信息:**
-- 名称: ${deploymentInfo.tokenInfo.name}
-- 符号: ${deploymentInfo.tokenInfo.symbol}
-- 小数位数: ${deploymentInfo.tokenInfo.decimals}
+**Token Info:**
+- Name: ${deploymentInfo.tokenInfo.name}
+- Symbol: ${deploymentInfo.tokenInfo.symbol}
+- Decimals: ${deploymentInfo.tokenInfo.decimals}
 
-**费用配置:**
-- 费用收集器: \`${deploymentInfo.feeConfig.feeCollector}\`
-- 费用分母: ${deploymentInfo.feeConfig.feeDenominator}
-- 存款费率: ${deploymentInfo.feeConfig.depositFee} (${(
+**Fee Configuration:**
+- Fee Collector: \`${deploymentInfo.feeConfig.feeCollector}\`
+- Fee Denominator: ${deploymentInfo.feeConfig.feeDenominator}
+- Deposit Fee: ${deploymentInfo.feeConfig.depositFee} (${(
     (Number(deploymentInfo.feeConfig.depositFee) * 100) /
     Number(deploymentInfo.feeConfig.feeDenominator)
   ).toFixed(2)}%)
-- Remint 费率: ${deploymentInfo.feeConfig.remintFee} (${(
+- Remint Fee: ${deploymentInfo.feeConfig.remintFee} (${(
     (Number(deploymentInfo.feeConfig.remintFee) * 100) /
     Number(deploymentInfo.feeConfig.feeDenominator)
   ).toFixed(2)}%)
-- 提款费率: ${deploymentInfo.feeConfig.withdrawFee} (${(
+- Withdraw Fee: ${deploymentInfo.feeConfig.withdrawFee} (${(
     (Number(deploymentInfo.feeConfig.withdrawFee) * 100) /
     Number(deploymentInfo.feeConfig.feeDenominator)
   ).toFixed(2)}%)
 
-**部署账户:** \`${deploymentInfo.deployer}\`
+**Deployer:** \`${deploymentInfo.deployer}\`
 `;
 
-  // 查找或创建"部署记录"章节
-  const deploymentSectionRegex = /## 📦 部署记录[\s\S]*?(?=\n## |\n---\n|$)/;
+  // Find or create "Deployment Records" section
+  const deploymentSectionRegex =
+    /## 📦 Deployment Records[\s\S]*?(?=\n## |\n---\n|$)/;
 
   if (readme.match(deploymentSectionRegex)) {
-    // 如果已存在"部署记录"章节，在其后追加新记录
+    // If "Deployment Records" section exists, append new record after it
     readme = readme.replace(
       deploymentSectionRegex,
       (match) => match + "\n" + newDeploymentSection
     );
   } else {
-    // 如果不存在"部署记录"章节，在文件末尾添加
-    const deploymentChapter = `\n---\n\n## 📦 部署记录\n${newDeploymentSection}`;
+    // If "Deployment Records" section doesn't exist, add at end of file
+    const deploymentChapter = `\n---\n\n## 📦 Deployment Records\n${newDeploymentSection}`;
     readme = readme.trimEnd() + "\n" + deploymentChapter + "\n";
   }
 
   fs.writeFileSync(readmePath, readme);
-  console.log(`📝 README.md 已更新部署记录`);
+  console.log(`📝 README.md deployment records updated`);
 }
 
 /**
- * ZWERC20 生产环境部署脚本
+ * ZWERC20 Production Deployment Script
  *
- * 部署顺序：
- * 1. PoseidonT3 库（ZK 友好的哈希函数）
- * 2. 使用现有的底层 ERC20 代币
- * 3. Groth16Verifier (ZK proof 验证器)
- * 4. ZWERC20 (主合约，链接 PoseidonT3)
+ * Deployment order:
+ * 1. PoseidonT3 library (ZK-friendly hash function)
+ * 2. Use existing underlying ERC20 token
+ * 3. Groth16Verifier (ZK proof verifier)
+ * 4. ZWERC20 (main contract, linked with PoseidonT3)
  *
- * 环境变量要求：
- * - UNDERLYING_TOKEN_ADDRESS: 底层 ERC20 代币地址（必需）
- * - PRIVATE_KEY: 部署账户私钥（必需）
- * - SEPOLIA_RPC_URL (或其他网络): RPC URL（必需）
+ * Required environment variables:
+ * - UNDERLYING_TOKEN_ADDRESS: Underlying ERC20 token address (required)
+ * - PRIVATE_KEY: Deployer account private key (required)
+ * - SEPOLIA_RPC_URL (or other network): RPC URL (required)
  *
- * 可选环境变量（费用配置）：
- * - FEE_COLLECTOR: 费用收集器地址（默认：deployer.address）
- * - FEE_DENOMINATOR: 费用分母，10000 = 100%（默认：10000，提供 0.01% 精度）
- * - DEPOSIT_FEE: 存款费率，单位 basis points，基于 FEE_DENOMINATOR（默认：0）
- * - REMINT_FEE: Remint 费率，单位 basis points，基于 FEE_DENOMINATOR（默认：0）
- * - WITHDRAW_FEE: 提款费率，单位 basis points，基于 FEE_DENOMINATOR（默认：0）
+ * Optional environment variables (fee configuration):
+ * - FEE_COLLECTOR: Fee collector address (default: deployer.address)
+ * - FEE_DENOMINATOR: Fee denominator, 10000 = 100% (default: 10000, provides 0.01% precision)
+ * - DEPOSIT_FEE: Deposit fee rate in basis points (default: 0)
+ * - REMINT_FEE: Remint fee rate in basis points (default: 0)
+ * - WITHDRAW_FEE: Withdraw fee rate in basis points (default: 0)
  */
 async function main() {
   console.log("\n" + "=".repeat(80));
-  console.log("🚀 开始部署 ZWERC20 合约");
+  console.log("🚀 Starting ZWERC20 Contract Deployment");
   console.log("=".repeat(80));
 
   const [deployer] = await ethers.getSigners();
-  console.log("\n📍 部署账户:", deployer.address);
+  console.log("\n📍 Deployer Account:", deployer.address);
 
   const balance = await ethers.provider.getBalance(deployer.address);
-  console.log("💰 账户余额:", ethers.formatEther(balance), "ETH");
+  console.log("💰 Account Balance:", ethers.formatEther(balance), "ETH");
 
-  // ========== 1. 部署 PoseidonT3 库 ==========
+  // ========== 1. Deploy PoseidonT3 Library ==========
   console.log("\n" + "─".repeat(80));
-  console.log("📦 步骤 1/4: 部署 PoseidonT3 库");
+  console.log("📦 Step 1/4: Deploying PoseidonT3 Library");
   console.log("─".repeat(80));
 
   const PoseidonT3 = await ethers.getContractFactory(
@@ -184,35 +185,41 @@ async function main() {
   await poseidonT3.waitForDeployment();
   const poseidonT3Address = await poseidonT3.getAddress();
 
-  console.log("✅ PoseidonT3 已部署至:", poseidonT3Address);
+  console.log("✅ PoseidonT3 deployed to:", poseidonT3Address);
 
-  // ========== 2. 配置底层 ERC20 代币 ==========
+  // ========== 2. Configure Underlying ERC20 Token ==========
   console.log("\n" + "─".repeat(80));
-  console.log("📦 步骤 2/4: 配置底层 ERC20 代币");
+  console.log("📦 Step 2/4: Configuring Underlying ERC20 Token");
   console.log("─".repeat(80));
 
   const underlyingAddress = process.env.UNDERLYING_TOKEN_ADDRESS;
 
   if (!underlyingAddress) {
-    console.error("❌ 未配置底层代币地址！");
-    console.error("请设置环境变量：export UNDERLYING_TOKEN_ADDRESS=0x...");
-    throw new Error("必须配置 UNDERLYING_TOKEN_ADDRESS 环境变量");
+    console.error("❌ Underlying token address not configured!");
+    console.error(
+      "Please set environment variable: export UNDERLYING_TOKEN_ADDRESS=0x..."
+    );
+    throw new Error(
+      "UNDERLYING_TOKEN_ADDRESS environment variable is required"
+    );
   }
 
-  // 验证地址格式
+  // Validate address format
   if (!ethers.isAddress(underlyingAddress)) {
-    throw new Error("UNDERLYING_TOKEN_ADDRESS 必须是有效的以太坊地址");
+    throw new Error(
+      "UNDERLYING_TOKEN_ADDRESS must be a valid Ethereum address"
+    );
   }
 
-  // 验证合约存在
+  // Verify contract exists
   const code = await ethers.provider.getCode(underlyingAddress);
   if (code === "0x") {
-    throw new Error("UNDERLYING_TOKEN_ADDRESS 地址上没有合约");
+    throw new Error("No contract found at UNDERLYING_TOKEN_ADDRESS");
   }
 
-  console.log("✅ 使用底层代币:", underlyingAddress);
+  console.log("✅ Using underlying token:", underlyingAddress);
 
-  // 读取代币信息（必须成功）
+  // Read token info (must succeed)
   const underlying = await ethers.getContractAt(
     "IERC20Metadata",
     underlyingAddress
@@ -220,12 +227,12 @@ async function main() {
   const underlyingName = await underlying.name();
   const underlyingSymbol = await underlying.symbol();
 
-  console.log("   名称:", underlyingName);
-  console.log("   符号:", underlyingSymbol);
+  console.log("   Name:", underlyingName);
+  console.log("   Symbol:", underlyingSymbol);
 
-  // ========== 3. 部署 Groth16Verifier ==========
+  // ========== 3. Deploy Groth16Verifier ==========
   console.log("\n" + "─".repeat(80));
-  console.log("📦 步骤 3/4: 部署 Groth16Verifier");
+  console.log("📦 Step 3/4: Deploying Groth16Verifier");
   console.log("─".repeat(80));
 
   const Groth16Verifier = await ethers.getContractFactory("Groth16Verifier");
@@ -233,12 +240,12 @@ async function main() {
   await verifier.waitForDeployment();
   const verifierAddress = await verifier.getAddress();
 
-  console.log("✅ Groth16Verifier 已部署至:", verifierAddress);
-  console.log("   类型: 真实 ZK Proof 验证器");
+  console.log("✅ Groth16Verifier deployed to:", verifierAddress);
+  console.log("   Type: Real ZK Proof Verifier");
 
-  // ========== 4. 部署 ZWERC20 ==========
+  // ========== 4. Deploy ZWERC20 ==========
   console.log("\n" + "─".repeat(80));
-  console.log("📦 步骤 4/4: 部署 ZWERC20 (主合约)");
+  console.log("📦 Step 4/4: Deploying ZWERC20 (Main Contract)");
   console.log("─".repeat(80));
 
   const ZWERC20 = await ethers.getContractFactory("ZWERC20", {
@@ -251,7 +258,7 @@ async function main() {
   const zwTokenSymbol = "ZW" + underlyingSymbol;
   const underlyingDecimals = await underlying.decimals();
 
-  // 费用配置（可通过环境变量设置，默认为 0）
+  // Fee configuration (can be set via environment variables, defaults to 0)
   const feeCollector = process.env.FEE_COLLECTOR || deployer.address;
   const feeDenominator = process.env.FEE_DENOMINATOR || 10000; // 10000 = 100%, 0.01% precision
   const depositFee = process.env.DEPOSIT_FEE || 0; // 0 = 0%
@@ -273,48 +280,48 @@ async function main() {
   await zwToken.waitForDeployment();
   const zwTokenAddress = await zwToken.getAddress();
 
-  console.log("✅ ZWERC20 已部署至:", zwTokenAddress);
-  console.log("   名称:", zwTokenName);
-  console.log("   符号:", zwTokenSymbol);
-  console.log("   小数位数:", underlyingDecimals);
-  console.log("   底层代币:", underlyingAddress);
-  console.log("   验证器:", verifierAddress);
-  console.log("   费用收集器:", feeCollector);
+  console.log("✅ ZWERC20 deployed to:", zwTokenAddress);
+  console.log("   Name:", zwTokenName);
+  console.log("   Symbol:", zwTokenSymbol);
+  console.log("   Decimals:", underlyingDecimals);
+  console.log("   Underlying Token:", underlyingAddress);
+  console.log("   Verifier:", verifierAddress);
+  console.log("   Fee Collector:", feeCollector);
   console.log(
-    "   费用分母:",
+    "   Fee Denominator:",
     feeDenominator,
     "(",
     (100 / feeDenominator) * 100,
     "% precision)"
   );
   console.log(
-    "   存款费率:",
+    "   Deposit Fee:",
     depositFee,
     "bp (",
     (depositFee * 100) / feeDenominator,
     "%)"
   );
   console.log(
-    "   Remint 费率:",
+    "   Remint Fee:",
     remintFee,
     "bp (",
     (remintFee * 100) / feeDenominator,
     "%)"
   );
   console.log(
-    "   提款费率:",
+    "   Withdraw Fee:",
     withdrawFee,
     "bp (",
     (withdrawFee * 100) / feeDenominator,
     "%)"
   );
 
-  // ========== 部署总结 ==========
+  // ========== Deployment Summary ==========
   console.log("\n" + "=".repeat(80));
-  console.log("🎉 部署完成！");
+  console.log("🎉 Deployment Complete!");
   console.log("=".repeat(80));
 
-  console.log("\n📋 合约地址汇总：");
+  console.log("\n📋 Contract Address Summary:");
   console.log("─".repeat(80));
   console.log("PoseidonT3:        ", poseidonT3Address);
   console.log("Underlying Token:  ", underlyingAddress);
@@ -322,7 +329,7 @@ async function main() {
   console.log("ZWERC20:           ", zwTokenAddress);
   console.log("─".repeat(80));
 
-  // ========== 保存部署记录 ==========
+  // ========== Save Deployment Record ==========
   const deploymentInfo = {
     network: hre.network.name,
     timestamp: new Date().toISOString(),
@@ -349,15 +356,17 @@ async function main() {
     },
   };
 
-  // 保存部署信息到 JSON 文件
+  // Save deployment info to JSON file
   saveDeploymentRecord(deploymentInfo);
 
-  // 更新 README.md 的部署记录
+  // Update README.md deployment records
   updateReadmeDeployment(deploymentInfo);
 
-  console.log("\n✅ 部署记录已保存到 deployments/ 目录和 README.md");
+  console.log(
+    "\n✅ Deployment records saved to deployments/ directory and README.md"
+  );
 
-  // 返回部署的合约地址供测试使用
+  // Return deployed contract addresses for testing
   return {
     poseidonT3: poseidonT3Address,
     underlying: underlyingAddress,
@@ -366,12 +375,12 @@ async function main() {
   };
 }
 
-// 如果直接运行此脚本
+// If running this script directly
 if (require.main === module) {
   main()
     .then(() => process.exit(0))
     .catch((error) => {
-      console.error("\n❌ 部署失败:", error);
+      console.error("\n❌ Deployment failed:", error);
       process.exit(1);
     });
 }

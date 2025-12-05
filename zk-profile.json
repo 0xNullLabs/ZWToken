@@ -1,0 +1,95 @@
+{
+  "circuit": {
+    "name": "remint.circom",
+    "description": "Privacy-preserving remint circuit with Poseidon Merkle proof",
+    "constraints": 13084,
+    "wires": 13109,
+    "privateInputs": 44,
+    "publicInputs": 7
+  },
+  "files": {
+    "wasm": {
+      "path": "circuits/out/remint_js/remint.wasm",
+      "sizeBytes": 2239488,
+      "sizeMB": 2.14
+    },
+    "zkey": {
+      "path": "circuits/out/remint_0000.zkey",
+      "sizeBytes": 5822396,
+      "sizeMB": 5.55
+    },
+    "vkey": {
+      "path": "circuits/out/verification_key.json",
+      "sizeBytes": 4021,
+      "sizeKB": 3.93
+    },
+    "totalDownloadMB": 7.69
+  },
+  "proofGeneration": {
+    "output": {
+      "proofJsonSize": 720,
+      "publicSignalsCount": 7,
+      "estimatedTxBytes": 944
+    },
+    "runs": 5,
+    "times": [
+      789,
+      821,
+      848,
+      860,
+      979
+    ],
+    "average": 859,
+    "min": 789,
+    "max": 979,
+    "median": 848,
+    "unit": "ms"
+  },
+  "memory": {
+    "averageHeapIncreaseMB": 0.06,
+    "averageExternalIncreaseMB": 2.01,
+    "totalIncreaseMB": 2.07
+  },
+  "mobileAssessment": {
+    "desktopAvgMs": 859,
+    "estimates": {
+      "highEnd": {
+        "multiplier": 2.5,
+        "estimatedMs": 2148,
+        "devices": [
+          "iPhone 14 Pro",
+          "Samsung S23",
+          "Google Pixel 7"
+        ]
+      },
+      "midRange": {
+        "multiplier": 3.5,
+        "estimatedMs": 3007,
+        "devices": [
+          "iPhone 12",
+          "Samsung A53",
+          "OnePlus 9"
+        ]
+      },
+      "lowEnd": {
+        "multiplier": 5,
+        "estimatedMs": 4295,
+        "devices": [
+          "iPhone X",
+          "Samsung A32",
+          "Older devices"
+        ]
+      }
+    },
+    "memoryRequirement": {
+      "baselineMB": 7.69,
+      "runtimeMB": 2.07,
+      "totalMB": 9.76
+    },
+    "feasibility": {
+      "highEnd": "✅ Excellent",
+      "midRange": "✅ Good",
+      "lowEnd": "⚠️ Acceptable"
+    }
+  }
+}

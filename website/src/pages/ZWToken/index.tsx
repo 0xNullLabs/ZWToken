@@ -25,8 +25,8 @@ const SEPOLIA_CHAIN_ID = 11155111;
 const ZWToken: React.FC = () => {
   const intl = useIntl();
   const [{ wallet }, connect] = useConnectWallet();
-  const [simpleDepositForm] = Form.useForm(); // Simple Mode Burn 表单
-  const [advancedDepositForm] = Form.useForm(); // Advanced Mode Wrap 表单
+  const [simpleDepositForm] = Form.useForm(); // Simple Mode Burn form
+  const [advancedDepositForm] = Form.useForm(); // Advanced Mode Wrap form
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
   const [remintForm] = Form.useForm();
@@ -1086,7 +1086,7 @@ const ZWToken: React.FC = () => {
     return parseFloat(allowance) < advancedDepositAmount;
   }, [advancedDepositAmount, allowance]);
 
-  // Simple Mode Deposit (Burn) - 必须有 targetAddress
+  // Simple Mode Deposit (Burn) - targetAddress is required
   const handleSimpleDeposit = async (values: { amount: number; targetAddress: string }) => {
     console.log('🔵 [Simple Mode] handleSimpleDeposit called with:', values);
 
@@ -1164,7 +1164,7 @@ const ZWToken: React.FC = () => {
       
       let errorMessage = error.message || 'Unknown error';
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-        errorMessage = '用户取消了交易';
+        errorMessage = 'User rejected the transaction';
       }
       
       message.error(
@@ -1176,7 +1176,7 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Advanced Mode Deposit (Wrap) - targetAddress 可选
+  // Advanced Mode Deposit (Wrap) - targetAddress is optional
   const handleAdvancedDeposit = async (values: { amount: number; targetAddress?: string }) => {
     console.log('🟢 [Advanced Mode] handleAdvancedDeposit called with:', {
       ...values,
@@ -1188,7 +1188,7 @@ const ZWToken: React.FC = () => {
       return;
     }
 
-    // 如果启用了 directBurn，必须提供 targetAddress
+    // If directBurn is enabled, targetAddress is required
     if (directBurn && !values.targetAddress) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.targetAddressRequired' }));
       return;
@@ -1267,7 +1267,7 @@ const ZWToken: React.FC = () => {
       
       let errorMessage = error.message || 'Unknown error';
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-        errorMessage = '用户取消了交易';
+        errorMessage = 'User rejected the transaction';
       }
       
       message.error(
@@ -1507,10 +1507,8 @@ const ZWToken: React.FC = () => {
         id: 0n,
         withdrawUnderlying: withdrawUnderlying,
         relayerFee: BigInt(relayerFee), // Convert to BigInt
-        remintAmount: BigInt(claimAmount),
         secret,
         addr20,
-        commitAmount: userCommitment.amount,
         commitAmount: userCommitment.amount,
         q,
         merkleProof,
@@ -1527,8 +1525,6 @@ const ZWToken: React.FC = () => {
         // Use circuit to generate real ZK proof (if preloaded, browser will read from cache)
         const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
           circuitInput,
-          '/circuits/remint.wasm',
-          '/circuits/remint_final.zkey',
           '/circuits/remint.wasm',
           '/circuits/remint_final.zkey',
         );
@@ -1556,7 +1552,6 @@ const ZWToken: React.FC = () => {
         );
 
         // === Step 7: Submit remint transaction ===
-        // === 步骤 7: 提交 remint 交易 ===
         message.destroy();
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.submitting' }), 0);
         console.log('Step 7: Submitting remint transaction...');
@@ -1573,7 +1568,7 @@ const ZWToken: React.FC = () => {
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.submitting' }), 0);
         console.log('Step 7: Submitting remint transaction...');
 
-        // 编码 proof 为 bytes
+        // Encode proof as bytes
         const abiCoder = new ethers.AbiCoder();
         const proofBytes = abiCoder.encode(
           ['uint256[2]', 'uint256[2][2]', 'uint256[2]'],
