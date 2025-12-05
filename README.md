@@ -341,13 +341,13 @@ ZWToken Approach (Custom Poseidon Tree):
 └── Total constraints: 13,084 (browser-friendly)
 ```
 
-| Dimension              | MPT + Keccak256      | ZWToken (Poseidon) | Trade-off              |
-| ---------------------- | -------------------- | ------------------ | ---------------------- |
-| Circuit Constraints    | ~3,000,000+          | **13,084** ✅      | **-99.6%**             |
-| Proof Time             | 5-15 minutes+        | **875ms** ✅       | **~500x faster**       |
-| Browser Support        | ❌ Not feasible      | ✅ **Perfect**     | From infeasible to perfect |
-| First Receipt Gas      | ~35K (MPT automatic) | 1,364,771          | +3,848% ⚠️             |
-| On-chain Storage Cost  | Low (automatic)      | High (explicit Merkle) | Trade-off ⚠️       |
+| Dimension             | MPT + Keccak256      | ZWToken (Poseidon)     | Trade-off                  |
+| --------------------- | -------------------- | ---------------------- | -------------------------- |
+| Circuit Constraints   | ~3,000,000+          | **13,084** ✅          | **-99.6%**                 |
+| Proof Time            | 5-15 minutes+        | **875ms** ✅           | **~500x faster**           |
+| Browser Support       | ❌ Not feasible      | ✅ **Perfect**         | From infeasible to perfect |
+| First Receipt Gas     | ~35K (MPT automatic) | 1,364,771              | +3,848% ⚠️                 |
+| On-chain Storage Cost | Low (automatic)      | High (explicit Merkle) | Trade-off ⚠️               |
 
 > 📊 **Data Sources**:
 >
