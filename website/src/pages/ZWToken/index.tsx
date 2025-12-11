@@ -1314,7 +1314,6 @@ const ZWToken: React.FC = () => {
       // withdraw(address to, uint256 id, uint256 amount)
       const signerAddress = await signer.getAddress();
       const tx = await contract.withdraw(signerAddress, 0, withdrawAmount);
-      const tx = await contract.withdraw(account, 0, withdrawAmount);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.withdraw.submitting' }), 0);
       await tx.wait();
@@ -1557,28 +1556,9 @@ const ZWToken: React.FC = () => {
         console.log('Step 7: Submitting remint transaction...');
 
         const tx = await contract.remint(
-          proofBytes,
-          localRoot,
-          nullifierHex,
-          values.recipient,
-          0, // id (ERC-20 fixed to 0)
-          remintAmount, // BigInt from parseUnits
-          withdrawUnderlying, // boolean
-          relayerFee // relayerFee is already number type
-        message.loading(intl.formatMessage({ id: 'pages.zwtoken.claim.submitting' }), 0);
-        console.log('Step 7: Submitting remint transaction...');
-
-        // Encode proof as bytes
-        const abiCoder = new ethers.AbiCoder();
-        const proofBytes = abiCoder.encode(
-          ['uint256[2]', 'uint256[2][2]', 'uint256[2]'],
-          [solidityProof.a, solidityProof.b, solidityProof.c],
-        );
-
-        const tx = await contract.remint(
           values.recipient, // to
           0, // id (ERC-20)
-          claimAmount, // amount
+          remintAmount, // amount
           false, // withdrawUnderlying
           {
             // RemintData struct
