@@ -5,16 +5,16 @@
 
 export const CONTRACT_ADDRESSES = {
   // ZWToken main contract (ZWERC20 implementation)
-  ZWERC20: '0xFdb64908218B900585571218a77a0a1B47c537e7',
+  ZWERC20: '0x95E31020C1fc1E58695F811e082BE25a243Dcb73',
 
   // Underlying token (USDC)
   UnderlyingToken: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
 
   // Groth16 verifier
-  Verifier: '0xaB165da0aB5D12C0D75ff49b53319fff60140C51',
+  Verifier: '0x7581A7E697587B2588fDde57e278B244A27DeAB4',
 
   // PoseidonT3 library
-  PoseidonT3: '0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62',
+  PoseidonT3: '0x0305de4B19eaae16947d8b7bec64d29A86B22189',
 } as const;
 
 /**

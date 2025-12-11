@@ -1149,7 +1149,7 @@ const ZWToken: React.FC = () => {
         signer,
       );
       
-      const tx = await zwTokenContract.depositTo(values.targetAddress, 0, depositAmountBigInt);
+      const tx = await zwTokenContract.deposit(values.targetAddress, 0, depositAmountBigInt);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
       await tx.wait();
@@ -1251,7 +1251,7 @@ const ZWToken: React.FC = () => {
       
       // Determine to address: use targetAddress if provided (burn mode), otherwise use account
       const toAddress = values.targetAddress || account;
-      const tx = await zwTokenContract.depositTo(toAddress, 0, depositAmountBigInt);
+      const tx = await zwTokenContract.deposit(toAddress, 0, depositAmountBigInt);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
       await tx.wait();
