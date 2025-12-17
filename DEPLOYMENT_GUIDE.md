@@ -191,7 +191,81 @@ FEE_DENOMINATOR=1000000       # Default: 1000000 (0.01% precision)
 DEPOSIT_FEE=0                 # Default: 0
 REMINT_FEE=0                  # Default: 0
 WITHDRAW_FEE=0                # Default: 0
+
+# Optional (Etherscan verification)
+ETHERSCAN_API_KEY=your_api_key # Get from https://etherscan.io/apis
+                               # If set, contracts will be automatically verified
 ```
+
+### Etherscan Contract Verification
+
+The deployment script includes automatic Etherscan verification. When `ETHERSCAN_API_KEY` is set, the script will:
+
+1. **Wait for block confirmations** (20 seconds) to ensure contracts are indexed
+2. **Verify PoseidonT3 Library** - Simple library contract
+3. **Verify Groth16Verifier** - ZK proof verifier contract
+4. **Verify ZWERC20** - Main contract with library linking
+
+**Verification Output Example**:
+
+```
+================================================================================
+🔍 Verifying Contracts on Etherscan
+================================================================================
+
+⏳ Waiting for block confirmations...
+
+────────────────────────────────────────────────────────────────────────────────
+📦 Verifying PoseidonT3 Library
+────────────────────────────────────────────────────────────────────────────────
+✅ PoseidonT3 verified: https://sepolia.etherscan.io/address/0x0305...
+
+────────────────────────────────────────────────────────────────────────────────
+📦 Verifying Groth16Verifier
+────────────────────────────────────────────────────────────────────────────────
+✅ Groth16Verifier verified: https://sepolia.etherscan.io/address/0x7581...
+
+────────────────────────────────────────────────────────────────────────────────
+📦 Verifying ZWERC20 (with library linking)
+────────────────────────────────────────────────────────────────────────────────
+✅ ZWERC20 verified: https://sepolia.etherscan.io/address/0x95E3...
+
+================================================================================
+✅ Contract Verification Complete!
+================================================================================
+```
+
+**Manual Verification** (if automatic verification fails):
+
+If automatic verification fails, the script will provide manual verification commands:
+
+```bash
+# For ZWERC20 (with library linking)
+npx hardhat verify --network sepolia \
+  <ZWERC20_ADDRESS> \
+  "<TOKEN_NAME>" "<TOKEN_SYMBOL>" \
+  <DECIMALS> \
+  <UNDERLYING_ADDRESS> \
+  <VERIFIER_ADDRESS> \
+  <FEE_COLLECTOR> \
+  <FEE_DENOMINATOR> \
+  <DEPOSIT_FEE> <REMINT_FEE> <WITHDRAW_FEE> \
+  --libraries PoseidonT3:<POSEIDON_ADDRESS>
+
+# For Groth16Verifier (no constructor args)
+npx hardhat verify --network sepolia <VERIFIER_ADDRESS>
+
+# For PoseidonT3 (no constructor args)
+npx hardhat verify --network sepolia <POSEIDON_ADDRESS>
+```
+
+**Getting Etherscan API Key**:
+
+1. Go to [Etherscan.io](https://etherscan.io/)
+2. Create an account or log in
+3. Navigate to [API Keys](https://etherscan.io/apis)
+4. Create a new API key
+5. Add it to your `.env` file as `ETHERSCAN_API_KEY`
 
 ### Troubleshooting
 
@@ -225,9 +299,10 @@ chmod +w deployments/
 ## 🔒 Security Recommendations
 
 1. **Do not commit .env file** - Ensure `.gitignore` includes `.env`
-2. **Verify contract code** - Verify contracts on block explorer after deployment
-3. **Small amount testing** - Test functionality with small amounts first
-4. **Multisig wallet** - Recommend using multisig wallet as owner in production
+2. **Verify contract code** - Contracts are automatically verified if `ETHERSCAN_API_KEY` is set
+3. **Manual verification** - If automatic verification fails, use the provided manual commands
+4. **Small amount testing** - Test functionality with small amounts first
+5. **Multisig wallet** - Recommend using multisig wallet as owner in production
 
 ## 📚 Related Documentation
 

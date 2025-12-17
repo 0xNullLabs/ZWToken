@@ -133,9 +133,23 @@ npx hardhat compile
 # Deploy to local testnet
 npx hardhat run scripts/deploy.js --network localhost
 
+# Deploy to Sepolia (with automatic Etherscan verification)
+npm run deploy:sepolia
+
 # Or deploy to mainnet/L2
 npx hardhat run scripts/deploy.js --network mainnet
 ```
+
+**Etherscan Verification**:
+
+The deployment script automatically verifies contracts on Etherscan if `ETHERSCAN_API_KEY` is set in your `.env` file:
+
+```bash
+# Add to .env file
+ETHERSCAN_API_KEY=your_etherscan_api_key_here
+```
+
+Get your API key from [Etherscan](https://etherscan.io/apis). After deployment, contracts will be automatically verified. If verification fails, the script will provide manual verification commands.
 
 ### 4. Run Tests
 
@@ -623,6 +637,31 @@ Made with ❤️ using Circom, Solidity, and ethers.js
 - PoseidonT3: [`0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62`](https://sepolia.etherscan.io/address/0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62)
 - Verifier: [`0xaB165da0aB5D12C0D75ff49b53319fff60140C51`](https://sepolia.etherscan.io/address/0xaB165da0aB5D12C0D75ff49b53319fff60140C51)
 - ZWERC20: [`0xFdb64908218B900585571218a77a0a1B47c537e7`](https://sepolia.etherscan.io/address/0xFdb64908218B900585571218a77a0a1B47c537e7)
+- Underlying Token (USDC): [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
+
+**Token Info:**
+
+- Name: Zero Knowledge Wrapper USDC
+- Symbol: ZWUSDC
+- Decimals: 6
+
+**Fee Configuration:**
+
+- Fee Collector: `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`
+- Fee Denominator: 1000000
+- Deposit Fee: 0 (0.00%)
+- Remint Fee: 0 (0.00%)
+- Withdraw Fee: 0 (0.00%)
+
+**Deployer:** `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`
+
+### Sepolia - 12/11/2025, 10:20:39 AM
+
+**Contract Addresses:**
+
+- PoseidonT3: [`0x0305de4B19eaae16947d8b7bec64d29A86B22189`](https://sepolia.etherscan.io/address/0x0305de4B19eaae16947d8b7bec64d29A86B22189)
+- Verifier: [`0x7581A7E697587B2588fDde57e278B244A27DeAB4`](https://sepolia.etherscan.io/address/0x7581A7E697587B2588fDde57e278B244A27DeAB4)
+- ZWERC20: [`0x95E31020C1fc1E58695F811e082BE25a243Dcb73`](https://sepolia.etherscan.io/address/0x95E31020C1fc1E58695F811e082BE25a243Dcb73)
 - Underlying Token (USDC): [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
 
 **Token Info:**

@@ -161,6 +161,10 @@ ${formatAddress(
  * - DEPOSIT_FEE: Deposit fee rate in basis points (default: 0)
  * - REMINT_FEE: Remint fee rate in basis points (default: 0)
  * - WITHDRAW_FEE: Withdraw fee rate in basis points (default: 0)
+ *
+ * Optional environment variables (Etherscan verification):
+ * - ETHERSCAN_API_KEY: Etherscan API key for contract verification (optional)
+ *   If set, contracts will be automatically verified after deployment
  */
 async function main() {
   console.log("\n" + "=".repeat(80));
@@ -365,6 +369,131 @@ async function main() {
   console.log(
     "\n✅ Deployment records saved to deployments/ directory and README.md"
   );
+
+  // ========== Verify Contracts on Etherscan ==========
+  const explorerBaseUrl = getExplorerUrl(hre.network.name);
+  const shouldVerify = explorerBaseUrl && process.env.ETHERSCAN_API_KEY;
+
+  if (shouldVerify) {
+    console.log("\n" + "=".repeat(80));
+    console.log("🔍 Verifying Contracts on Etherscan");
+    console.log("=".repeat(80));
+
+    // Wait for a few blocks to ensure contracts are indexed
+    console.log("\n⏳ Waiting for block confirmations...");
+    await new Promise((resolve) => setTimeout(resolve, 20000)); // Wait 20 seconds
+
+    try {
+      // 1. Verify PoseidonT3 Library
+      console.log("\n" + "─".repeat(80));
+      console.log("📦 Verifying PoseidonT3 Library");
+      console.log("─".repeat(80));
+      try {
+        await hre.run("verify:verify", {
+          address: poseidonT3Address,
+          constructorArguments: [],
+        });
+        console.log(
+          "✅ PoseidonT3 verified:",
+          `${explorerBaseUrl}/address/${poseidonT3Address}`
+        );
+      } catch (error) {
+        if (error.message.includes("Already Verified")) {
+          console.log("ℹ️  PoseidonT3 already verified");
+        } else {
+          console.log("⚠️  PoseidonT3 verification failed:", error.message);
+        }
+      }
+
+      // 2. Verify Groth16Verifier
+      console.log("\n" + "─".repeat(80));
+      console.log("📦 Verifying Groth16Verifier");
+      console.log("─".repeat(80));
+      try {
+        await hre.run("verify:verify", {
+          address: verifierAddress,
+          constructorArguments: [],
+        });
+        console.log(
+          "✅ Groth16Verifier verified:",
+          `${explorerBaseUrl}/address/${verifierAddress}`
+        );
+      } catch (error) {
+        if (error.message.includes("Already Verified")) {
+          console.log("ℹ️  Groth16Verifier already verified");
+        } else {
+          console.log(
+            "⚠️  Groth16Verifier verification failed:",
+            error.message
+          );
+        }
+      }
+
+      // 3. Verify ZWERC20 (with library linking)
+      console.log("\n" + "─".repeat(80));
+      console.log("📦 Verifying ZWERC20 (with library linking)");
+      console.log("─".repeat(80));
+      try {
+        await hre.run("verify:verify", {
+          address: zwTokenAddress,
+          constructorArguments: [
+            zwTokenName,
+            zwTokenSymbol,
+            underlyingDecimals,
+            underlyingAddress,
+            verifierAddress,
+            feeCollector,
+            feeDenominator,
+            depositFee,
+            remintFee,
+            withdrawFee,
+          ],
+          libraries: {
+            PoseidonT3: poseidonT3Address,
+          },
+        });
+        console.log(
+          "✅ ZWERC20 verified:",
+          `${explorerBaseUrl}/address/${zwTokenAddress}`
+        );
+      } catch (error) {
+        if (error.message.includes("Already Verified")) {
+          console.log("ℹ️  ZWERC20 already verified");
+        } else {
+          console.log("⚠️  ZWERC20 verification failed:", error.message);
+          console.log("   You can verify manually with:");
+          console.log(
+            `   npx hardhat verify --network ${hre.network.name} ${zwTokenAddress} "${zwTokenName}" "${zwTokenSymbol}" ${underlyingDecimals} ${underlyingAddress} ${verifierAddress} ${feeCollector} ${feeDenominator} ${depositFee} ${remintFee} ${withdrawFee} --libraries PoseidonT3:${poseidonT3Address}`
+          );
+        }
+      }
+
+      console.log("\n" + "=".repeat(80));
+      console.log("✅ Contract Verification Complete!");
+      console.log("=".repeat(80));
+    } catch (error) {
+      console.log(
+        "\n⚠️  Verification process encountered an error:",
+        error.message
+      );
+      console.log("   You can verify contracts manually using:");
+      console.log(
+        `   npx hardhat verify --network ${hre.network.name} <CONTRACT_ADDRESS> [CONSTRUCTOR_ARGS]`
+      );
+    }
+  } else {
+    if (!explorerBaseUrl) {
+      console.log(
+        "\nℹ️  Skipping verification: No explorer for network",
+        hre.network.name
+      );
+    } else if (!process.env.ETHERSCAN_API_KEY) {
+      console.log("\nℹ️  Skipping verification: ETHERSCAN_API_KEY not set");
+      console.log(
+        "   Set ETHERSCAN_API_KEY in .env to enable automatic verification"
+      );
+    }
+  }
 
   // Return deployed contract addresses for testing
   return {
