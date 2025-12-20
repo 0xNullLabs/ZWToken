@@ -1,4 +1,4 @@
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import { GithubOutlined } from '@ant-design/icons';
 import { SelectLang as UmiSelectLang } from '@umijs/max';
 import React, { useState, useEffect } from 'react';
 
@@ -116,11 +116,11 @@ export const Question = () => {
         </span>
       )}
 
-      {/* Question icon */}
-      <QuestionCircleOutlined
+      {/* GitHub icon */}
+      <GithubOutlined
         style={{ fontSize: '16px', cursor: 'pointer' }}
         onClick={() => {
-          window.open('https://github.com/your-repo/ZWToken');
+          window.open('https://github.com/0xNullLabs/ZWToken/');
         }}
       />
     </div>

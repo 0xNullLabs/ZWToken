@@ -1,4 +1,4 @@
-import { GithubOutlined } from '@ant-design/icons';
+import { GithubOutlined, TwitterOutlined, MessageOutlined } from '@ant-design/icons';
 import { DefaultFooter } from '@ant-design/pro-components';
 import React from 'react';
 
@@ -10,11 +10,35 @@ const Footer: React.FC = () => {
       }}
       links={[
         {
-          key: 'ZWToken',
-          title: 'ZWToken',
-          href: 'https://pro.ant.design',
+          key: 'github',
+          title: (
+            <>
+              <GithubOutlined /> Github
+            </>
+          ),
+          href: 'https://github.com/0xNullLabs/ZWToken',
           blankTarget: true,
-        }
+        },
+        {
+          key: 'x',
+          title: (
+            <>
+              <TwitterOutlined /> X
+            </>
+          ),
+          href: 'https://twitter.com/wallet_aa',
+          blankTarget: true,
+        },
+        {
+          key: 'telegram',
+          title: (
+            <>
+              <MessageOutlined /> Telegram
+            </>
+          ),
+          href: 'https://t.me/+Ikw1vZGdx1MyY2Ix',
+          blankTarget: true,
+        },
       ]}
     />
   );
