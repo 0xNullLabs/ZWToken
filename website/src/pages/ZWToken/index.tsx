@@ -2463,7 +2463,7 @@ const ZWToken: React.FC = () => {
                     height: '100%',
                     border: 0
                   }}
-                  src="https://www.youtube.com/embed/aH_Q9idI2Uw?si=4B99x1e1WapJRQe2" 
+                  src="https://www.youtube.com/embed/aH_Q9idI2Uw?si=4B99x1e1WapJRQe2&cc_load_policy=1" 
                   title="YouTube video player" 
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                   referrerPolicy="strict-origin-when-cross-origin" 
