@@ -2442,6 +2442,36 @@ const ZWToken: React.FC = () => {
               </TabPane>
             </Tabs>
           </TabPane>
+
+          {/* Tutorial Tab */}
+          <TabPane tab="Tutorial" key="tutorial">
+            <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 0' }}>
+              <div style={{ 
+                position: 'relative', 
+                paddingBottom: '56.25%', /* 16:9 aspect ratio */
+                height: 0,
+                overflow: 'hidden',
+                maxWidth: '100%',
+                background: '#000'
+              }}>
+                <iframe 
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 0
+                  }}
+                  src="https://www.youtube.com/embed/aH_Q9idI2Uw?si=4B99x1e1WapJRQe2" 
+                  title="YouTube video player" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  referrerPolicy="strict-origin-when-cross-origin" 
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </TabPane>
         </Tabs>
       </Card>
 
