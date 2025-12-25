@@ -77,13 +77,18 @@ export class IncrementalMerkleTree {
       const isRight = currentIndex % 2 === 1;
       pathIndices.push(isRight ? 1 : 0);
 
+      const levelSize = Math.pow(2, i);
+
       if (isRight) {
-        // Current node is right child, sibling is filledSubtrees[i]
-        pathElements.push(this.filledSubtrees[i] || this.zeros[i]);
+        // Current node is right child, need to compute left sibling
+        // Note: Cannot use filledSubtrees[i] because it may have been overwritten
+        // by subsequent insertions. Must reconstruct the actual sibling subtree.
+        const siblingIndex = currentIndex - 1;
+        const siblingLeafStart = siblingIndex * levelSize;
+        pathElements.push(this._reconstructSubtree(siblingLeafStart, i));
       } else {
         // Current node is left child, need to compute right sibling
         const siblingIndex = currentIndex + 1;
-        const levelSize = Math.pow(2, i);
         const siblingLeafStart = siblingIndex * levelSize;
 
         if (siblingLeafStart < this.nextIndex) {
@@ -197,7 +202,7 @@ export async function rebuildMerkleTree(
   tokenId: number = 0,
 ): Promise<IncrementalMerkleTree> {
   // Get leaf count
-  const leafCount = await contract.getCommitLeafCount(0);
+  const leafCount = await contract.getCommitLeafCount(tokenId);
   console.log(`Found ${leafCount} commitment(s)`);
 
   if (leafCount === 0n) {
@@ -205,7 +210,7 @@ export async function rebuildMerkleTree(
   }
 
   // Fetch all leaves in batches
-  const leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
+  const leaves = await getCommitLeavesInBatches(contract, tokenId, 0, leafCount, 100);
   console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
 
   // Rebuild Merkle tree (pass poseidon instance)
@@ -227,14 +232,15 @@ export async function findUserCommitment(
   contract: ethers.Contract,
   privacyAddress: string,
   poseidon: any,
+  tokenId: number = 0,
 ): Promise<{ commitment: bigint; amount: bigint; index: number } | null> {
-  const leafCount = await contract.getCommitLeafCount(0);
+  const leafCount = await contract.getCommitLeafCount(tokenId);
   if (leafCount === 0n) {
     return null;
   }
 
   // Fetch all leaves in batches
-  const leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
+  const leaves = await getCommitLeavesInBatches(contract, tokenId, 0, leafCount, 100);
 
   for (let i = 0; i < leaves.length; i++) {
     const leaf = leaves[i];

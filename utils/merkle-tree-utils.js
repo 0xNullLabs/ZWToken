@@ -72,13 +72,18 @@ class IncrementalMerkleTree {
       const isRight = currentIndex % 2 === 1;
       pathIndices.push(isRight ? 1 : 0);
 
+      const levelSize = Math.pow(2, i);
+
       if (isRight) {
-        // Current node is right child, sibling is filledSubtrees[i]
-        pathElements.push(this.filledSubtrees[i] || this.zeros[i]);
+        // Current node is right child, need to compute left sibling
+        // Note: Cannot use filledSubtrees[i] because it may have been overwritten
+        // by subsequent insertions. Must reconstruct the actual sibling subtree.
+        const siblingIndex = currentIndex - 1;
+        const siblingLeafStart = siblingIndex * levelSize;
+        pathElements.push(this._reconstructSubtree(siblingLeafStart, i));
       } else {
         // Current node is left child, need to compute right sibling
         const siblingIndex = currentIndex + 1;
-        const levelSize = Math.pow(2, i);
         const siblingLeafStart = siblingIndex * levelSize;
 
         if (siblingLeafStart < this.nextIndex) {

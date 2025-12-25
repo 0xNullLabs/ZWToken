@@ -696,4 +696,454 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       console.log("=".repeat(70));
     });
   });
+
+  /**
+   * Merkle Proof Correctness Test for Older Commitments
+   *
+   * This test verifies that getProof() works correctly for older commitments
+   * after subsequent commitments have been inserted.
+   *
+   * Bug scenario (before fix):
+   * - filledSubtrees[i] only stores the LAST left subtree at each level
+   * - When proving an older leaf that is a right child, filledSubtrees[i]
+   *   may have been overwritten by subsequent insertions
+   * - This caused incorrect Merkle proofs and verification failures
+   *
+   * Fix: Always use _reconstructSubtree() to compute siblings, never rely
+   * on filledSubtrees for proof generation.
+   */
+  describe("Merkle Proof for Older Commitments", function () {
+    let zwToken2, underlying2, verifier2, poseidonT3_2;
+    let user1, user2, user3, user4;
+
+    // Different secrets for different users
+    const SECRET_USER1 = 111111111n;
+    const SECRET_USER2 = 222222222n;
+    const SECRET_USER3 = 333333333n;
+
+    before(async function () {
+      this.timeout(60000);
+
+      console.log("\n" + "=".repeat(70));
+      console.log("🔧 Setting up Merkle Proof Correctness Test");
+      console.log("=".repeat(70));
+
+      [, , , user1, user2, user3, user4] = await ethers.getSigners();
+
+      // Deploy fresh contracts for isolated testing
+      const PoseidonT3 = await ethers.getContractFactory(
+        "poseidon-solidity/PoseidonT3.sol:PoseidonT3"
+      );
+      poseidonT3_2 = await PoseidonT3.deploy();
+      await poseidonT3_2.waitForDeployment();
+
+      const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
+      underlying2 = await ERC20Mock.deploy(
+        "Test Token",
+        "TEST",
+        ethers.parseEther("1000000")
+      );
+      await underlying2.waitForDeployment();
+
+      const Groth16Verifier = await ethers.getContractFactory(
+        "Groth16Verifier"
+      );
+      verifier2 = await Groth16Verifier.deploy();
+      await verifier2.waitForDeployment();
+
+      const ZWERC20 = await ethers.getContractFactory(
+        "contracts/ZWERC20.sol:ZWERC20",
+        {
+          libraries: {
+            PoseidonT3: await poseidonT3_2.getAddress(),
+          },
+        }
+      );
+      zwToken2 = await ZWERC20.deploy(
+        "Test ZWT",
+        "TZWT",
+        18,
+        await underlying2.getAddress(),
+        await verifier2.getAddress(),
+        user1.address,
+        10000,
+        0,
+        0,
+        0
+      );
+      await zwToken2.waitForDeployment();
+
+      // Allocate tokens to users
+      await underlying2.transfer(user1.address, ethers.parseEther("10000"));
+      await underlying2.transfer(user2.address, ethers.parseEther("10000"));
+      await underlying2.transfer(user3.address, ethers.parseEther("10000"));
+
+      console.log("   ✅ Fresh contracts deployed for isolated testing");
+    });
+
+    it("Should correctly prove the FIRST commitment after multiple insertions", async function () {
+      this.timeout(180000);
+
+      console.log("\n" + "=".repeat(70));
+      console.log(
+        "🧪 Test: Prove older commitment (index 0) after 3 insertions"
+      );
+      console.log("=".repeat(70));
+
+      const tokenId = 0n;
+
+      // ========== Step 1: Create 3 commitments ==========
+      console.log("\n📌 Step 1: Create 3 commitments");
+
+      // User1's privacy address and commitment (this will be at index 0)
+      const addrScalar1 = poseidon([8065n, tokenId, SECRET_USER1]);
+      const addr20_1 = addrScalar1 & ((1n << 160n) - 1n);
+      const q1 = (addrScalar1 - addr20_1) / (1n << 160n);
+      const privacyAddr1 = ethers.getAddress(
+        "0x" + addr20_1.toString(16).padStart(40, "0")
+      );
+
+      // User2's privacy address (index 1)
+      const addrScalar2 = poseidon([8065n, tokenId, SECRET_USER2]);
+      const addr20_2 = addrScalar2 & ((1n << 160n) - 1n);
+      const privacyAddr2 = ethers.getAddress(
+        "0x" + addr20_2.toString(16).padStart(40, "0")
+      );
+
+      // User3's privacy address (index 2)
+      const addrScalar3 = poseidon([8065n, tokenId, SECRET_USER3]);
+      const addr20_3 = addrScalar3 & ((1n << 160n) - 1n);
+      const privacyAddr3 = ethers.getAddress(
+        "0x" + addr20_3.toString(16).padStart(40, "0")
+      );
+
+      // Deposit and transfer to create commitments
+      const amount1 = ethers.parseEther("100");
+      const amount2 = ethers.parseEther("200");
+      const amount3 = ethers.parseEther("300");
+
+      // User1 deposits and transfers to their privacy address (commitment 0)
+      await underlying2
+        .connect(user1)
+        .approve(await zwToken2.getAddress(), amount1);
+      await zwToken2.connect(user1).deposit(user1.address, 0, amount1);
+      await zwToken2.connect(user1).transfer(privacyAddr1, amount1);
+      console.log(
+        `   ✅ Commitment 0: User1 -> ${privacyAddr1} (${ethers.formatEther(
+          amount1
+        )} tokens)`
+      );
+
+      // User2 deposits and transfers to their privacy address (commitment 1)
+      await underlying2
+        .connect(user2)
+        .approve(await zwToken2.getAddress(), amount2);
+      await zwToken2.connect(user2).deposit(user2.address, 0, amount2);
+      await zwToken2.connect(user2).transfer(privacyAddr2, amount2);
+      console.log(
+        `   ✅ Commitment 1: User2 -> ${privacyAddr2} (${ethers.formatEther(
+          amount2
+        )} tokens)`
+      );
+
+      // User3 deposits and transfers to their privacy address (commitment 2)
+      await underlying2
+        .connect(user3)
+        .approve(await zwToken2.getAddress(), amount3);
+      await zwToken2.connect(user3).deposit(user3.address, 0, amount3);
+      await zwToken2.connect(user3).transfer(privacyAddr3, amount3);
+      console.log(
+        `   ✅ Commitment 2: User3 -> ${privacyAddr3} (${ethers.formatEther(
+          amount3
+        )} tokens)`
+      );
+
+      const commitCount = await zwToken2.getCommitLeafCount(0);
+      console.log(`   Total commitments: ${commitCount}`);
+      expect(commitCount).to.equal(3);
+
+      // ========== Step 2: Rebuild Merkle tree ==========
+      console.log("\n📌 Step 2: Rebuild Merkle tree from chain");
+
+      const leafCount = await zwToken2.getCommitLeafCount(0);
+      const [, recipients, amounts] = await zwToken2.getCommitLeaves(
+        0,
+        0,
+        leafCount
+      );
+
+      const tree = new IncrementalMerkleTree(20);
+      for (let i = 0; i < recipients.length; i++) {
+        const commitment = poseidon([
+          BigInt(recipients[i]),
+          BigInt(amounts[i]),
+        ]);
+        tree.insert(commitment);
+        console.log(
+          `   Leaf ${i}: addr=${recipients[i].slice(
+            0,
+            10
+          )}..., amount=${ethers.formatEther(amounts[i])}`
+        );
+      }
+
+      const onchainRoot = await zwToken2.root();
+      const localRoot = "0x" + tree.root.toString(16).padStart(64, "0");
+      console.log(`   On-chain root: ${onchainRoot}`);
+      console.log(`   Local root:    ${localRoot}`);
+      expect(localRoot).to.equal(onchainRoot);
+
+      // ========== Step 3: Prove User1's commitment (index 0, the OLDEST one) ==========
+      console.log(
+        "\n📌 Step 3: Generate proof for commitment at index 0 (oldest)"
+      );
+
+      // This is the critical test case:
+      // - Commitment 0 is at index 0 (left child at level 0)
+      // - Its sibling at level 0 is commitment 1 (index 1)
+      // - After inserting commitment 2, filledSubtrees[0] = commitment2's hash
+      // - If we incorrectly used filledSubtrees[0], we'd get wrong sibling
+      // - The fix ensures we reconstruct the correct sibling (commitment 1)
+
+      const commitment1 = poseidon([addr20_1, BigInt(amount1)]);
+      const commitmentIndex = tree.leaves.findIndex(
+        (leaf) => BigInt(leaf) === commitment1
+      );
+      console.log(`   User1's commitment index: ${commitmentIndex}`);
+      expect(commitmentIndex).to.equal(0);
+
+      const merkleProof = tree.getProof(commitmentIndex);
+      console.log(
+        `   Merkle proof path elements: ${merkleProof.pathElements.length}`
+      );
+      console.log(
+        `   Path indices (first 5): [${merkleProof.pathIndices
+          .slice(0, 5)
+          .join(", ")}]`
+      );
+
+      // ========== Step 4: Generate ZK proof ==========
+      console.log("\n📌 Step 4: Generate ZK proof for User1");
+
+      const nullifier1 = poseidon([addr20_1, SECRET_USER1]);
+      const remintAmount = ethers.parseEther("50");
+
+      const circuitInput = {
+        root: tree.root,
+        nullifier: nullifier1,
+        to: BigInt(user4.address),
+        remintAmount: BigInt(remintAmount),
+        id: tokenId,
+        withdrawUnderlying: 0n,
+        relayerFee: 0n,
+        secret: SECRET_USER1,
+        addr20: addr20_1,
+        commitAmount: BigInt(amount1),
+        q: q1,
+        pathElements: merkleProof.pathElements.map((e) => BigInt(e)),
+        pathIndices: merkleProof.pathIndices,
+      };
+
+      console.log("   ⏳ Generating ZK proof...");
+      const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
+        circuitInput,
+        wasmPath,
+        zkeyPath
+      );
+      console.log("   ✅ ZK proof generated");
+
+      // ========== Step 5: Submit and verify ==========
+      console.log("\n📌 Step 5: Submit remint transaction");
+
+      const calldata = await snarkjs.groth16.exportSolidityCallData(
+        zkProof,
+        publicSignals
+      );
+      const calldataJson = JSON.parse("[" + calldata + "]");
+      const proofBytes = encodeProof(
+        calldataJson[0],
+        calldataJson[1],
+        calldataJson[2]
+      );
+
+      const user4BalanceBefore = await zwToken2.balanceOf(user4.address);
+      console.log(
+        `   User4 balance before: ${ethers.formatEther(user4BalanceBefore)}`
+      );
+
+      await expect(
+        zwToken2.remint(user4.address, 0, remintAmount, false, {
+          commitment: localRoot,
+          nullifiers: ["0x" + nullifier1.toString(16).padStart(64, "0")],
+          proverData: "0x",
+          relayerData: "0x",
+          proof: proofBytes,
+        })
+      ).to.emit(zwToken2, "Reminted");
+
+      const user4BalanceAfter = await zwToken2.balanceOf(user4.address);
+      console.log(
+        `   User4 balance after: ${ethers.formatEther(user4BalanceAfter)}`
+      );
+      expect(user4BalanceAfter).to.equal(remintAmount);
+
+      console.log("\n" + "=".repeat(70));
+      console.log("🎉 Older Commitment Proof Test PASSED!");
+      console.log("   - Successfully proved commitment at index 0");
+      console.log("   - After 2 subsequent insertions (indices 1 and 2)");
+      console.log("   - Merkle proof correctly reconstructed sibling subtrees");
+      console.log("=".repeat(70));
+    });
+
+    it("Should correctly prove a RIGHT CHILD commitment after more insertions", async function () {
+      this.timeout(180000);
+
+      console.log("\n" + "=".repeat(70));
+      console.log(
+        "🧪 Test: Prove right-child commitment after subsequent insertions"
+      );
+      console.log("=".repeat(70));
+
+      // Now we have 4 commitments (from previous test + user4 from remint)
+      // Let's add one more and then prove commitment at index 1 (right child at level 0)
+
+      const tokenId = 0n;
+
+      // ========== Step 1: Check current state ==========
+      console.log("\n📌 Step 1: Check current commitment count");
+      const currentCount = await zwToken2.getCommitLeafCount(0);
+      console.log(`   Current commitment count: ${currentCount}`);
+
+      // Commitment at index 1 is User2's privacy address (right child at level 0)
+      // Its left sibling is commitment 0 (User1's privacy address)
+      // After the previous test, filledSubtrees[0] might have been overwritten
+
+      // ========== Step 2: Rebuild tree and prove index 1 ==========
+      console.log("\n📌 Step 2: Rebuild Merkle tree");
+
+      const leafCount = await zwToken2.getCommitLeafCount(0);
+      const [, recipients, amounts] = await zwToken2.getCommitLeaves(
+        0,
+        0,
+        leafCount
+      );
+
+      const tree = new IncrementalMerkleTree(20);
+      for (let i = 0; i < recipients.length; i++) {
+        const commitment = poseidon([
+          BigInt(recipients[i]),
+          BigInt(amounts[i]),
+        ]);
+        tree.insert(commitment);
+      }
+
+      const onchainRoot = await zwToken2.root();
+      const localRoot = "0x" + tree.root.toString(16).padStart(64, "0");
+      expect(localRoot).to.equal(onchainRoot);
+      console.log(`   Tree rebuilt with ${leafCount} leaves`);
+
+      // ========== Step 3: Prove commitment at index 1 (RIGHT child) ==========
+      console.log(
+        "\n📌 Step 3: Generate proof for commitment at index 1 (right child)"
+      );
+
+      // User2's commitment is at index 1
+      const addrScalar2 = poseidon([8065n, tokenId, SECRET_USER2]);
+      const addr20_2 = addrScalar2 & ((1n << 160n) - 1n);
+      const q2 = (addrScalar2 - addr20_2) / (1n << 160n);
+      const amount2 = ethers.parseEther("200");
+
+      const commitment2 = poseidon([addr20_2, BigInt(amount2)]);
+      const commitmentIndex = tree.leaves.findIndex(
+        (leaf) => BigInt(leaf) === commitment2
+      );
+      console.log(`   User2's commitment index: ${commitmentIndex}`);
+      expect(commitmentIndex).to.equal(1); // Should be index 1 (right child at level 0)
+
+      const merkleProof = tree.getProof(commitmentIndex);
+      console.log(
+        `   Path indices[0]: ${merkleProof.pathIndices[0]} (1 = right child)`
+      );
+      expect(merkleProof.pathIndices[0]).to.equal(1); // Confirm it's a right child
+
+      // Verify the sibling is correct (should be commitment at index 0, NOT a later one)
+      const expectedSibling = poseidon([
+        BigInt(recipients[0]), // User1's privacy address
+        BigInt(amounts[0]),
+      ]);
+      expect(merkleProof.pathElements[0]).to.equal(expectedSibling);
+      console.log(
+        `   ✅ Sibling at level 0 is correct (commitment 0, not a later one)`
+      );
+
+      // ========== Step 4: Generate and verify ZK proof ==========
+      console.log("\n📌 Step 4: Generate and submit ZK proof");
+
+      const nullifier2 = poseidon([addr20_2, SECRET_USER2]);
+      const remintAmount = ethers.parseEther("100");
+
+      const circuitInput = {
+        root: tree.root,
+        nullifier: nullifier2,
+        to: BigInt(user4.address),
+        remintAmount: BigInt(remintAmount),
+        id: tokenId,
+        withdrawUnderlying: 0n,
+        relayerFee: 0n,
+        secret: SECRET_USER2,
+        addr20: addr20_2,
+        commitAmount: BigInt(amount2),
+        q: q2,
+        pathElements: merkleProof.pathElements.map((e) => BigInt(e)),
+        pathIndices: merkleProof.pathIndices,
+      };
+
+      console.log("   ⏳ Generating ZK proof...");
+      const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
+        circuitInput,
+        wasmPath,
+        zkeyPath
+      );
+      console.log("   ✅ ZK proof generated");
+
+      const calldata = await snarkjs.groth16.exportSolidityCallData(
+        zkProof,
+        publicSignals
+      );
+      const calldataJson = JSON.parse("[" + calldata + "]");
+      const proofBytes = encodeProof(
+        calldataJson[0],
+        calldataJson[1],
+        calldataJson[2]
+      );
+
+      const user4BalanceBefore = await zwToken2.balanceOf(user4.address);
+
+      await expect(
+        zwToken2.remint(user4.address, 0, remintAmount, false, {
+          commitment: localRoot,
+          nullifiers: ["0x" + nullifier2.toString(16).padStart(64, "0")],
+          proverData: "0x",
+          relayerData: "0x",
+          proof: proofBytes,
+        })
+      ).to.emit(zwToken2, "Reminted");
+
+      const user4BalanceAfter = await zwToken2.balanceOf(user4.address);
+      console.log(
+        `   User4 received: ${ethers.formatEther(
+          user4BalanceAfter - user4BalanceBefore
+        )}`
+      );
+
+      console.log("\n" + "=".repeat(70));
+      console.log("🎉 Right Child Commitment Proof Test PASSED!");
+      console.log(
+        "   - Successfully proved commitment at index 1 (right child)"
+      );
+      console.log("   - Merkle proof correctly identified sibling at index 0");
+      console.log("   - Did NOT use stale filledSubtrees value");
+      console.log("=".repeat(70));
+    });
+  });
 });
