@@ -1555,17 +1555,23 @@ const ZWToken: React.FC = () => {
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.remint.submitting' }), 0);
         console.log('Step 7: Submitting remint transaction...');
 
+        // Encode relayerData if relayerFee > 0
+        let relayerData = '0x';
+        if (relayerFee > 0) {
+          relayerData = abiCoder.encode(['uint256'], [relayerFee]);
+        }
+
         const tx = await contract.remint(
           values.recipient, // to
           0, // id (ERC-20)
           remintAmount, // amount
-          false, // withdrawUnderlying
+          withdrawUnderlying, // Use the actual value from form
           {
             // RemintData struct
             commitment: localRoot,
             nullifiers: [nullifierHex],
             proverData: '0x',
-            relayerData: '0x',
+            relayerData: relayerData,
             proof: proofBytes,
           },
         );

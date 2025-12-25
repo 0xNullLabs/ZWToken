@@ -1145,5 +1145,140 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       console.log("   - Did NOT use stale filledSubtrees value");
       console.log("=".repeat(70));
     });
+
+    it("Should correctly remint with withdrawUnderlying=true", async function () {
+      this.timeout(180000);
+
+      console.log("\n" + "=".repeat(70));
+      console.log("🧪 Test: Remint with withdrawUnderlying=true");
+      console.log("=".repeat(70));
+
+      const tokenId = 0n;
+      const SECRET_NEW = 444444444n;
+
+      // Create a fresh commitment for this test
+      const addrScalarNew = poseidon([8065n, tokenId, SECRET_NEW]);
+      const addr20New = addrScalarNew & ((1n << 160n) - 1n);
+      const qNew = (addrScalarNew - addr20New) / (1n << 160n);
+      const privacyAddrNew = ethers.getAddress(
+        "0x" + addr20New.toString(16).padStart(40, "0")
+      );
+
+      // Fund and create commitment
+      const commitAmount = ethers.parseEther("500");
+      await underlying2
+        .connect(user3)
+        .approve(await zwToken2.getAddress(), commitAmount);
+      await zwToken2.connect(user3).deposit(user3.address, 0, commitAmount);
+      await zwToken2.connect(user3).transfer(privacyAddrNew, commitAmount);
+      console.log(
+        `   Created new commitment: ${privacyAddrNew} (${ethers.formatEther(
+          commitAmount
+        )} tokens)`
+      );
+
+      // Rebuild tree
+      const leafCount = await zwToken2.getCommitLeafCount(0);
+      const [, recipients, amounts] = await zwToken2.getCommitLeaves(
+        0,
+        0,
+        leafCount
+      );
+
+      const tree = new IncrementalMerkleTree(20);
+      for (let i = 0; i < recipients.length; i++) {
+        const commitment = poseidon([
+          BigInt(recipients[i]),
+          BigInt(amounts[i]),
+        ]);
+        tree.insert(commitment);
+      }
+
+      const onchainRoot = await zwToken2.root();
+      const localRoot = "0x" + tree.root.toString(16).padStart(64, "0");
+      expect(localRoot).to.equal(onchainRoot);
+
+      // Find the new commitment
+      const commitmentNew = poseidon([addr20New, BigInt(commitAmount)]);
+      const commitmentIndex = tree.leaves.findIndex(
+        (leaf) => BigInt(leaf) === commitmentNew
+      );
+      console.log(`   Commitment index: ${commitmentIndex}`);
+      expect(commitmentIndex).to.be.greaterThanOrEqual(0);
+
+      const merkleProof = tree.getProof(commitmentIndex);
+      const nullifierNew = poseidon([addr20New, SECRET_NEW]);
+      const remintAmount = ethers.parseEther("200");
+
+      // Generate proof with withdrawUnderlying=true (1n)
+      const circuitInput = {
+        root: tree.root,
+        nullifier: nullifierNew,
+        to: BigInt(user4.address),
+        remintAmount: BigInt(remintAmount),
+        id: tokenId,
+        withdrawUnderlying: 1n, // TRUE - withdraw underlying instead of minting
+        relayerFee: 0n,
+        secret: SECRET_NEW,
+        addr20: addr20New,
+        commitAmount: BigInt(commitAmount),
+        q: qNew,
+        pathElements: merkleProof.pathElements.map((e) => BigInt(e)),
+        pathIndices: merkleProof.pathIndices,
+      };
+
+      console.log("   ⏳ Generating ZK proof with withdrawUnderlying=1...");
+      const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
+        circuitInput,
+        wasmPath,
+        zkeyPath
+      );
+      console.log("   ✅ ZK proof generated");
+      console.log(
+        `   Public signal [5] withdrawUnderlying: ${publicSignals[5]}`
+      );
+
+      const calldata = await snarkjs.groth16.exportSolidityCallData(
+        zkProof,
+        publicSignals
+      );
+      const calldataJson = JSON.parse("[" + calldata + "]");
+      const proofBytes = encodeProof(
+        calldataJson[0],
+        calldataJson[1],
+        calldataJson[2]
+      );
+
+      // Check user4's underlying balance before
+      const user4UnderlyingBefore = await underlying2.balanceOf(user4.address);
+      console.log(
+        `   User4 underlying before: ${ethers.formatEther(
+          user4UnderlyingBefore
+        )}`
+      );
+
+      // Submit remint with withdrawUnderlying=true
+      await expect(
+        zwToken2.remint(user4.address, 0, remintAmount, true, {
+          commitment: localRoot,
+          nullifiers: ["0x" + nullifierNew.toString(16).padStart(64, "0")],
+          proverData: "0x",
+          relayerData: "0x",
+          proof: proofBytes,
+        })
+      ).to.emit(zwToken2, "Reminted");
+
+      const user4UnderlyingAfter = await underlying2.balanceOf(user4.address);
+      console.log(
+        `   User4 underlying after: ${ethers.formatEther(user4UnderlyingAfter)}`
+      );
+      expect(user4UnderlyingAfter - user4UnderlyingBefore).to.equal(
+        remintAmount
+      );
+
+      console.log("\n" + "=".repeat(70));
+      console.log("🎉 withdrawUnderlying=true Test PASSED!");
+      console.log("=".repeat(70));
+    });
   });
 });
