@@ -19,6 +19,7 @@ export const CONTRACT_ADDRESSES = {
 
 /**
  * Contract ABI Definitions
+ * Based on ERC-8065 specification
  */
 export const CONTRACT_ABIS = {
   // ERC20 basic functions
@@ -32,11 +33,14 @@ export const CONTRACT_ABIS = {
 
   // ZWToken contract (ZWERC20 implementation, IERC8065 standard)
   ZWERC20: [
-    'function deposit(address to, uint256 id, uint256 amount) external payable',
-    'function withdraw(address to, uint256 id, uint256 amount) external',
-    'function remint(address to, uint256 id, uint256 amount, bool redeem, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bytes proof) data) external',
+    // Core IERC8065 functions
+    'function deposit(address to, uint256 id, uint256 amount, bytes data) external payable',
+    'function withdraw(address to, uint256 id, uint256 amount, bytes data) external',
+    'function remint(address to, uint256 id, uint256 amount, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bool redeem, bytes proof) data) external',
+    // ERC20 functions
     'function transfer(address to, uint256 amount) external returns (bool)',
     'function balanceOf(address account) external view returns (uint256)',
+    // Query functions
     'function root() external view returns (bytes32)',
     'function getCommitLeafCount(uint256 id) external view returns (uint256)',
     'function getCommitLeaves(uint256 id, uint256 startIndex, uint256 length) external view returns (bytes32[] memory commitHashes, address[] memory recipients, uint256[] memory amounts)',
@@ -44,6 +48,13 @@ export const CONTRACT_ABIS = {
     'function hasCommitment(uint256 id, bytes32 commitment) external view returns (bool)',
     'function hasFirstReceiptRecorded(address account) external view returns (bool)',
     'function nullifierUsed(bytes32 nullifier) external view returns (bool)',
+    // Preview functions (optional)
+    'function previewDeposit(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',
+    'function previewWithdraw(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',
+    'function previewRemint(address to, uint256 id, uint256 amount, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bool redeem, bytes proof) data) external view returns (uint256)',
+    // Fee config (not in IERC8065, but useful)
+    'function getFeeConfig() external view returns (uint256 depositFee, uint256 remintFee, uint256 withdrawFee, uint256 feeDenominator)',
+    'function getUnderlying() external view returns (address)',
   ],
 } as const;
 

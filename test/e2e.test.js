@@ -140,7 +140,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
     await underlying
       .connect(alice)
       .approve(await zwToken.getAddress(), depositAmount);
-    await zwToken.connect(alice).deposit(alice.address, 0, depositAmount);
+    await zwToken.connect(alice).deposit(alice.address, 0, depositAmount, "0x");
 
     const aliceBalance = await zwToken.balanceOf(alice.address);
     console.log(`   Alice ZWT balance: ${ethers.formatEther(aliceBalance)}`);
@@ -335,13 +335,13 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       bob.address, // to
       0, // id
       remintAmountValue, // amount
-      false, // redeem
       {
         // RemintData struct
         commitment: localRoot,
         nullifiers: [nullifierHex],
         proverData: "0x",
         relayerData: relayerData,
+        redeem: false,
         proof: proofBytes,
       }
     );
@@ -372,13 +372,13 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
         bob.address, // to
         0, // id
         remintAmountValue, // amount
-        false, // redeem
         {
           // RemintData struct
           commitment: localRoot,
           nullifiers: [nullifierHex],
           proverData: "0x",
           relayerData: relayerData,
+          redeem: false,
           proof: proofBytes,
         }
       )
@@ -389,7 +389,9 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
     // ========== Phase 9: Bob withdraw ==========
     console.log("\n📌 Phase 9: Bob withdraw underlying token");
 
-    await zwToken.connect(bob).withdraw(bob.address, 0, remintAmountValue); // (to, id, amount)
+    await zwToken
+      .connect(bob)
+      .withdraw(bob.address, 0, remintAmountValue, "0x"); // (to, id, amount, data)
 
     const bobUnderlyingBalance = await underlying.balanceOf(bob.address);
     console.log(
@@ -443,7 +445,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
         .approve(await zwToken.getAddress(), ethers.parseEther("5000"));
       await zwToken
         .connect(alice)
-        .deposit(alice.address, 0, ethers.parseEther("3000"));
+        .deposit(alice.address, 0, ethers.parseEther("3000"), "0x");
 
       // Derive privacy address
       const tokenId = 0n;
@@ -549,12 +551,12 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
           deployer.address, // Tampered! Was bob.address
           0,
           validCircuitInput.remintAmount,
-          false,
           {
             commitment: validProof.localRoot,
             nullifiers: [validProof.nullifierHex],
             proverData: "0x",
             relayerData: validProof.relayerData,
+            redeem: false,
             proof: proofBytes,
           }
         )
@@ -577,19 +579,14 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       console.log(`   Tampered redeem: true`);
 
       await expect(
-        zwToken.remint(
-          bob.address,
-          0,
-          validCircuitInput.remintAmount,
-          true, // Tampered! Was false
-          {
-            commitment: validProof.localRoot,
-            nullifiers: [validProof.nullifierHex],
-            proverData: "0x",
-            relayerData: validProof.relayerData,
-            proof: proofBytes,
-          }
-        )
+        zwToken.remint(bob.address, 0, validCircuitInput.remintAmount, {
+          commitment: validProof.localRoot,
+          nullifiers: [validProof.nullifierHex],
+          proverData: "0x",
+          relayerData: validProof.relayerData,
+          redeem: true, // Tampered! Was false
+          proof: proofBytes,
+        })
       ).to.be.revertedWithCustomError(zwToken, "InvalidProof");
 
       console.log(
@@ -610,11 +607,12 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       console.log(`   Tampered relayerFee: 500`);
 
       await expect(
-        zwToken.remint(bob.address, 0, validCircuitInput.remintAmount, false, {
+        zwToken.remint(bob.address, 0, validCircuitInput.remintAmount, {
           commitment: validProof.localRoot,
           nullifiers: [validProof.nullifierHex],
           proverData: "0x",
           relayerData: tamperedRelayerData, // Tampered! Causes wrong relayerFee to be parsed
+          redeem: false,
           proof: proofBytes,
         })
       ).to.be.revertedWithCustomError(zwToken, "InvalidProof");
@@ -645,12 +643,12 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
           bob.address,
           0,
           tamperedAmount, // Tampered!
-          false,
           {
             commitment: validProof.localRoot,
             nullifiers: [validProof.nullifierHex],
             proverData: "0x",
             relayerData: validProof.relayerData,
+            redeem: false,
             proof: proofBytes,
           }
         )
@@ -672,11 +670,12 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       const bobBalanceBefore = await zwToken.balanceOf(bob.address);
 
       await expect(
-        zwToken.remint(bob.address, 0, validCircuitInput.remintAmount, false, {
+        zwToken.remint(bob.address, 0, validCircuitInput.remintAmount, {
           commitment: validProof.localRoot,
           nullifiers: [validProof.nullifierHex],
           proverData: "0x",
           relayerData: validProof.relayerData,
+          redeem: false,
           proof: proofBytes,
         })
       ).to.emit(zwToken, "Reminted");
@@ -826,7 +825,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       await underlying2
         .connect(user1)
         .approve(await zwToken2.getAddress(), amount1);
-      await zwToken2.connect(user1).deposit(user1.address, 0, amount1);
+      await zwToken2.connect(user1).deposit(user1.address, 0, amount1, "0x");
       await zwToken2.connect(user1).transfer(privacyAddr1, amount1);
       console.log(
         `   ✅ Commitment 0: User1 -> ${privacyAddr1} (${ethers.formatEther(
@@ -838,7 +837,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       await underlying2
         .connect(user2)
         .approve(await zwToken2.getAddress(), amount2);
-      await zwToken2.connect(user2).deposit(user2.address, 0, amount2);
+      await zwToken2.connect(user2).deposit(user2.address, 0, amount2, "0x");
       await zwToken2.connect(user2).transfer(privacyAddr2, amount2);
       console.log(
         `   ✅ Commitment 1: User2 -> ${privacyAddr2} (${ethers.formatEther(
@@ -850,7 +849,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       await underlying2
         .connect(user3)
         .approve(await zwToken2.getAddress(), amount3);
-      await zwToken2.connect(user3).deposit(user3.address, 0, amount3);
+      await zwToken2.connect(user3).deposit(user3.address, 0, amount3, "0x");
       await zwToken2.connect(user3).transfer(privacyAddr3, amount3);
       console.log(
         `   ✅ Commitment 2: User3 -> ${privacyAddr3} (${ethers.formatEther(
@@ -972,11 +971,12 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       );
 
       await expect(
-        zwToken2.remint(user4.address, 0, remintAmount, false, {
+        zwToken2.remint(user4.address, 0, remintAmount, {
           commitment: localRoot,
           nullifiers: ["0x" + nullifier1.toString(16).padStart(64, "0")],
           proverData: "0x",
           relayerData: "0x",
+          redeem: false,
           proof: proofBytes,
         })
       ).to.emit(zwToken2, "Reminted");
@@ -1120,11 +1120,12 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       const user4BalanceBefore = await zwToken2.balanceOf(user4.address);
 
       await expect(
-        zwToken2.remint(user4.address, 0, remintAmount, false, {
+        zwToken2.remint(user4.address, 0, remintAmount, {
           commitment: localRoot,
           nullifiers: ["0x" + nullifier2.toString(16).padStart(64, "0")],
           proverData: "0x",
           relayerData: "0x",
+          redeem: false,
           proof: proofBytes,
         })
       ).to.emit(zwToken2, "Reminted");
@@ -1169,7 +1170,9 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       await underlying2
         .connect(user3)
         .approve(await zwToken2.getAddress(), commitAmount);
-      await zwToken2.connect(user3).deposit(user3.address, 0, commitAmount);
+      await zwToken2
+        .connect(user3)
+        .deposit(user3.address, 0, commitAmount, "0x");
       await zwToken2.connect(user3).transfer(privacyAddrNew, commitAmount);
       console.log(
         `   Created new commitment: ${privacyAddrNew} (${ethers.formatEther(
@@ -1257,11 +1260,12 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
 
       // Submit remint with redeem=true
       await expect(
-        zwToken2.remint(user4.address, 0, remintAmount, true, {
+        zwToken2.remint(user4.address, 0, remintAmount, {
           commitment: localRoot,
           nullifiers: ["0x" + nullifierNew.toString(16).padStart(64, "0")],
           proverData: "0x",
           relayerData: "0x",
+          redeem: true,
           proof: proofBytes,
         })
       ).to.emit(zwToken2, "Reminted");

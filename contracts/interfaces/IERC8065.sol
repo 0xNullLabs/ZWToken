@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
  * @title IERC8065
  * @notice Interface for Zero-Knowledge Wrapper Tokens
  * @dev Defines the standard interface for privacy-preserving wrapped tokens
+ *      Based on ERC-8065 specification
  */
 interface IERC8065 {
     
@@ -16,6 +17,7 @@ interface IERC8065 {
      * @param nullifiers Array of unique nullifiers used to prevent double-remint
      * @param proverData Generic data for prover (reserved for future use)
      * @param relayerData Generic data for relayer, can contain fee information. Hash is used in ZK proof.
+     * @param redeem If true, withdraws the equivalent underlying token instead of reminting ZWToken
      * @param proof Zero-knowledge proof bytes verifying ownership of the provable burn address
      */
     struct RemintData {
@@ -23,6 +25,7 @@ interface IERC8065 {
         bytes32[] nullifiers;
         bytes proverData;
         bytes relayerData;
+        bool redeem;
         bytes proof;
     }
     
@@ -38,30 +41,30 @@ interface IERC8065 {
     event CommitmentUpdated(uint256 indexed id, bytes32 indexed commitment, address indexed to, uint256 amount);
     
     /**
-     * @notice Emitted when underlying tokens are deposited and ZWToken is minted
+     * @notice Emitted when underlying tokens are deposited and ZWToken is minted to the recipient
      * @param from The address sending the underlying tokens
-     * @param to The address receiving the minted ZWToken
+     * @param to The address receiving the minted ZWToken (after fees)
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
-     * @param amount The amount of tokens deposited/minted
+     * @param amount The net amount of ZWToken minted to `to` after deducting applicable fees
      */
     event Deposited(address indexed from, address indexed to, uint256 indexed id, uint256 amount);
     
     /**
-     * @notice Emitted when ZWToken is burned to redeem underlying tokens
+     * @notice Emitted when ZWToken is burned to redeem underlying tokens to the recipient
      * @param from The address burning the ZWToken
-     * @param to The address receiving the underlying tokens
+     * @param to The address receiving the redeemed underlying tokens (after fees)
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
-     * @param amount The amount of tokens withdrawn/redeemed
+     * @param amount The net amount of underlying tokens received by `to` after deducting applicable fees
      */
     event Withdrawn(address indexed from, address indexed to, uint256 indexed id, uint256 amount);
     
     /**
-     * @notice Emitted upon successful reminting of ZWToken via a zero-knowledge proof
-     * @param from The address initiating the remint function
-     * @param to The address receiving the reminted ZWToken
+     * @notice Emitted upon successful reminting of ZWToken or withdrawal of underlying tokens via a zero-knowledge proof
+     * @param from The address initiating the remint operation
+     * @param to The address receiving the reminted ZWToken or withdrawn underlying tokens (after fees)
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
-     * @param amount The amount of ZWToken reminted
-     * @param redeem If true, withdraws the equivalent underlying token instead of reminting ZWToken
+     * @param amount The net amount of ZWToken or underlying tokens received by `to` after all applicable fees have been deducted
+     * @param redeem If true, withdraws the equivalent underlying tokens instead of reminting ZWToken
      */
     event Reminted(address indexed from, address indexed to, uint256 indexed id, uint256 amount, bool redeem);
     
@@ -75,16 +78,18 @@ interface IERC8065 {
      * @param to The address that will receive the minted ZWTokens.
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
      * @param amount The amount of the underlying asset to deposit.
+     * @param data Additional data for extensibility, such as fee information, callback data, or metadata.
      */
-    function deposit(address to, uint256 id, uint256 amount) external payable;
+    function deposit(address to, uint256 id, uint256 amount, bytes calldata data) external payable;
     
     /**
      * @notice Withdraw underlying tokens by burning ZWToken
      * @param to The recipient address that will receive the underlying token
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
      * @param amount The amount of ZWToken to burn and redeem for the underlying token
+     * @param data Additional data for extensibility, such as fee information, callback data, or metadata.
      */
-    function withdraw(address to, uint256 id, uint256 amount) external;
+    function withdraw(address to, uint256 id, uint256 amount, bytes calldata data) external;
     
     /**
      * @notice Remint ZWToken using a zero-knowledge proof to unlink the source of funds
@@ -93,16 +98,49 @@ interface IERC8065 {
      * @param to Recipient address that will receive the reminted ZWToken or the underlying token
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
      * @param amount Amount of ZWToken burned from the provable burn address for reminting
-     * @param redeem If true, withdraws the equivalent underlying token instead of reminting ZWToken
-     * @param data Encapsulated remint data including commitment, nullifiers, proof, and relayer information
+     * @param data Encapsulated remint data including commitment, nullifiers, redeem flag, proof, and relayer information
      */
     function remint(
         address to,
         uint256 id,
         uint256 amount,
-        bool redeem,
         RemintData calldata data
     ) external;
+    
+    // ========== Optional Preview Functions ==========
+    
+    /**
+     * @notice OPTIONAL: Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block.
+     * @dev MUST return as close to and no more than the exact amount of ZWToken that would be minted in a `deposit` call in the same transaction.
+     * @param to The address that will receive the minted ZWTokens.
+     * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
+     * @param amount The amount of underlying tokens to deposit.
+     * @param data Additional data for extensibility, such as fee information.
+     * @return The amount of ZWToken that would be minted to the recipient after deducting applicable fees.
+     */
+    function previewDeposit(address to, uint256 id, uint256 amount, bytes calldata data) external view returns (uint256);
+    
+    /**
+     * @notice OPTIONAL: Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block.
+     * @dev MUST return as close to and no more than the exact amount of underlying tokens that would be received in a `withdraw` call in the same transaction.
+     * @param to The recipient address that will receive the underlying token.
+     * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
+     * @param amount The amount of ZWToken to burn.
+     * @param data Additional data for extensibility, such as fee information.
+     * @return The amount of underlying tokens that would be received by the recipient after deducting applicable fees.
+     */
+    function previewWithdraw(address to, uint256 id, uint256 amount, bytes calldata data) external view returns (uint256);
+    
+    /**
+     * @notice OPTIONAL: Allows an on-chain or off-chain user to simulate the effects of their remint at the current block.
+     * @dev MUST return as close to and no more than the exact amount of ZWToken or underlying tokens that would be received in a `remint` call in the same transaction.
+     * @param to Recipient address that will receive the reminted ZWToken or the underlying token.
+     * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
+     * @param amount The amount of ZWToken burned from the provable burn address for reminting.
+     * @param data Encapsulated remint data including commitment, nullifiers, redeem flag, proof, and relayer information.
+     * @return The amount of ZWToken or underlying tokens that would be received by the recipient after all applicable fees have been deducted.
+     */
+    function previewRemint(address to, uint256 id, uint256 amount, RemintData calldata data) external view returns (uint256);
     
     // ========== Query Functions ==========
     
@@ -122,6 +160,13 @@ interface IERC8065 {
     function hasCommitment(uint256 id, bytes32 commitment) external view returns (bool);
     
     /**
+     * @notice OPTIONAL: Returns the total number of commitment leaves stored
+     * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
+     * @return The total count of commitment leaves
+     */
+    function getCommitLeafCount(uint256 id) external view returns (uint256);
+    
+    /**
      * @notice OPTIONAL: Retrieves leaf-level commit data and their hashes
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
      * @param startIndex Index of the first leaf to fetch
@@ -134,26 +179,8 @@ interface IERC8065 {
         external view returns (bytes32[] memory commitHashes, address[] memory recipients, uint256[] memory amounts);
     
     /**
-     * @notice OPTIONAL: Returns the total number of commitment leaves stored
-     * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
-     * @return The total count of commitment leaves
-     */
-    function getCommitLeafCount(uint256 id) external view returns (uint256);
-    
-    /**
-     * @notice Returns the configured fees for deposit, remint, and withdrawal operations
-     * @return depositFee Fee rate applied to deposits
-     * @return remintFee Fee rate applied to remints
-     * @return withdrawFee Fee rate applied to withdrawals
-     * @return feeDenominator Denominator used to calculate percentage-based fees
-     */
-    function getFeeConfig() external view returns (uint256 depositFee, uint256 remintFee, uint256 withdrawFee, uint256 feeDenominator);
-    
-    /**
      * @notice Returns the address of the underlying token wrapped by this ZWToken
      * @return The underlying token contract address
      */
     function getUnderlying() external view returns (address);
 }
-
-

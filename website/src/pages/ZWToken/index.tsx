@@ -1191,7 +1191,7 @@ const ZWToken: React.FC = () => {
         signer,
       );
 
-      const tx = await zwTokenContract.deposit(values.targetAddress, 0, depositAmountBigInt);
+      const tx = await zwTokenContract.deposit(values.targetAddress, 0, depositAmountBigInt, '0x');
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
       await tx.wait();
@@ -1297,7 +1297,7 @@ const ZWToken: React.FC = () => {
 
       // Determine to address: use targetAddress if provided (burn mode), otherwise use account
       const toAddress = values.targetAddress || account;
-      const tx = await zwTokenContract.deposit(toAddress, 0, depositAmountBigInt);
+      const tx = await zwTokenContract.deposit(toAddress, 0, depositAmountBigInt, '0x');
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
       await tx.wait();
@@ -1357,9 +1357,9 @@ const ZWToken: React.FC = () => {
         } tokens = ${withdrawAmount.toString()} units (${tokenDecimals} decimals)`,
       );
 
-      // withdraw(address to, uint256 id, uint256 amount)
+      // withdraw(address to, uint256 id, uint256 amount, bytes data)
       const signerAddress = await signer.getAddress();
-      const tx = await contract.withdraw(signerAddress, 0, withdrawAmount);
+      const tx = await contract.withdraw(signerAddress, 0, withdrawAmount, '0x');
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.withdraw.submitting' }), 0);
       await tx.wait();
@@ -1613,13 +1613,13 @@ const ZWToken: React.FC = () => {
           values.recipient, // to
           0, // id (ERC-20)
           remintAmount, // amount
-          redeem, // Use the actual value from form
           {
-            // RemintData struct
+            // RemintData struct (ERC-8065 spec)
             commitment: localRoot,
             nullifiers: [nullifierHex],
             proverData: '0x',
             relayerData: relayerData,
+            redeem: redeem, // redeem flag is now inside RemintData
             proof: proofBytes,
           },
         );

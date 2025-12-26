@@ -106,7 +106,7 @@ describe("ZWERC20 - Remint Test", function () {
     await underlying
       .connect(alice)
       .approve(await zwToken.getAddress(), depositAmount);
-    await zwToken.connect(alice).deposit(alice.address, 0, depositAmount);
+    await zwToken.connect(alice).deposit(alice.address, 0, depositAmount, "0x");
 
     const aliceBalance = await zwToken.balanceOf(alice.address);
     console.log(`   Alice ZWT balance: ${ethers.formatEther(aliceBalance)}`);
@@ -211,13 +211,13 @@ describe("ZWERC20 - Remint Test", function () {
       bob.address, // to
       0, // id
       claimAmount, // amount
-      false, // redeem
       {
         // RemintData struct
         commitment: root,
         nullifiers: [nullifierHex],
         proverData: "0x",
         relayerData: relayerData,
+        redeem: false,
         proof: proofBytes,
       }
     );
@@ -254,7 +254,7 @@ describe("ZWERC20 - Remint Test", function () {
       `   Bob underlying before: ${ethers.formatEther(bobUnderlyingBefore)}`
     );
 
-    await zwToken.connect(bob).withdraw(bob.address, 0, claimAmount);
+    await zwToken.connect(bob).withdraw(bob.address, 0, claimAmount, "0x");
 
     const bobUnderlyingAfter = await underlying.balanceOf(bob.address);
     const bobZWTAfter = await zwToken.balanceOf(bob.address);
@@ -275,13 +275,13 @@ describe("ZWERC20 - Remint Test", function () {
         bob.address, // to
         0, // id
         claimAmount, // amount
-        false, // redeem
         {
           // RemintData struct
           commitment: root,
           nullifiers: [nullifierHex],
           proverData: "0x",
           relayerData: relayerData,
+          redeem: false,
           proof: proofBytes,
         }
       )
@@ -349,13 +349,13 @@ describe("ZWERC20 - Remint Test", function () {
       bob.address, // to
       0, // id
       claimAmount2, // amount
-      false, // redeem
       {
         // RemintData struct
         commitment: root2,
         nullifiers: [nullifierHex2],
         proverData: "0x",
         relayerData: relayerData2,
+        redeem: false,
         proof: proofBytes2,
       }
     );
@@ -454,13 +454,13 @@ describe("ZWERC20 - Remint Test", function () {
         deployer.address, // to
         0, // id
         claimAmount3, // amount
-        false, // redeem
         {
           // RemintData struct
           commitment: oldRoot, // Use old root
           nullifiers: [nullifierHex3],
           proverData: "0x",
           relayerData: relayerData3,
+          redeem: false,
           proof: proofBytes3,
         }
       )

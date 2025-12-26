@@ -181,7 +181,7 @@ describe("Gas Profile Comparison", function () {
         const amount = ethers.parseEther("100");
         const tx = await zwToken
           .connect(alice)
-          .deposit(alice.address, 0, amount);
+          .deposit(alice.address, 0, amount, "0x");
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(formatGasReport("ZWERC20: deposit (first time)", cost));
@@ -195,7 +195,7 @@ describe("Gas Profile Comparison", function () {
         const amount = ethers.parseEther("50");
         const tx = await zwToken
           .connect(alice)
-          .deposit(alice.address, 0, amount);
+          .deposit(alice.address, 0, amount, "0x");
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(formatGasReport("ZWERC20: deposit (subsequent)", cost));
@@ -209,7 +209,7 @@ describe("Gas Profile Comparison", function () {
         const amount = ethers.parseEther("50");
         const tx = await zwToken
           .connect(alice)
-          .withdraw(alice.address, 0, amount);
+          .withdraw(alice.address, 0, amount, "0x");
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(formatGasReport("ZWERC20: withdraw (first time)", cost));
@@ -223,7 +223,7 @@ describe("Gas Profile Comparison", function () {
         const amount = ethers.parseEther("20");
         const tx = await zwToken
           .connect(alice)
-          .withdraw(alice.address, 0, amount);
+          .withdraw(alice.address, 0, amount, "0x");
         const receipt = await tx.wait();
         const cost = calculateCost(receipt.gasUsed);
         gasReport.push(formatGasReport("ZWERC20: withdraw (subsequent)", cost));
@@ -239,7 +239,7 @@ describe("Gas Profile Comparison", function () {
         // Bob deposits first
         await zwToken
           .connect(bob)
-          .deposit(bob.address, 0, ethers.parseEther("200"));
+          .deposit(bob.address, 0, ethers.parseEther("200"), "0x");
 
         // Bob transfers to Charlie (Charlie's first receipt - will record commitment)
         const amount = ethers.parseEther("100");
@@ -307,13 +307,13 @@ describe("Gas Profile Comparison", function () {
           dave.address, // to
           0, // id
           amount, // amount
-          false, // redeem
           {
             // RemintData struct
             commitment: root,
             nullifiers: [nullifier],
             proverData: "0x",
             relayerData: relayerData,
+            redeem: false,
             proof: proofBytes,
           }
         );
@@ -358,13 +358,13 @@ describe("Gas Profile Comparison", function () {
           charlie.address, // to
           0, // id
           amount, // amount
-          false, // redeem
           {
             // RemintData struct
             commitment: root,
             nullifiers: [nullifier],
             proverData: "0x",
             relayerData: relayerData2,
+            redeem: false,
             proof: proofBytes2,
           }
         );

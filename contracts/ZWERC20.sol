@@ -119,8 +119,9 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
      * @param to The address that will receive the minted ZWERC20
      * @param id The token identifier (MUST be 0 for ERC-20)
      * @param amount The amount of the underlying asset to deposit
+     * @param data Additional data for extensibility (currently unused)
      */
-    function deposit(address to, uint256 id, uint256 amount) external payable override {
+    function deposit(address to, uint256 id, uint256 amount, bytes calldata data) external payable override {
         if (id != 0) revert InvalidTokenId();
         if (amount == 0) revert InvalidAmount();
         
@@ -150,6 +151,9 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
         }
         
         emit Deposited(msg.sender, to, id, mintAmount);
+        
+        // Suppress unused variable warning
+        data;
     }
     
     /**
@@ -161,8 +165,9 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
      * @param to The recipient address that will receive the underlying token
      * @param id The token identifier (MUST be 0 for ERC-20)
      * @param amount The amount of ZWERC20 to burn
+     * @param data Additional data for extensibility (currently unused)
      */
-    function withdraw(address to, uint256 id, uint256 amount) external override {
+    function withdraw(address to, uint256 id, uint256 amount, bytes calldata data) external override {
         if (id != 0) revert InvalidTokenId();
         if (amount == 0) revert InvalidAmount();
         
@@ -186,6 +191,9 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
         }
         
         emit Withdrawn(msg.sender, to, id, amount);
+        
+        // Suppress unused variable warning
+        data;
     }
     
     /**
@@ -194,14 +202,12 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
      * @param to Recipient address that will receive the reminted ZWToken or underlying token
      * @param id Token identifier (MUST be 0 for ERC-20)
      * @param amount Amount of ZWToken burned from the provable burn address for reminting
-     * @param redeem If true, withdraws underlying token instead of reminting ZWToken
-     * @param data Encapsulated remint data including commitment, nullifiers, proof, and relayer information
+     * @param data Encapsulated remint data including commitment, nullifiers, redeem flag, proof, and relayer information
      */
     function remint(
         address to,
         uint256 id,
         uint256 amount,
-        bool redeem,
         IERC8065.RemintData calldata data
     ) external override {
         // Parameter validation
@@ -233,12 +239,12 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
             to,
             amount,
             id,
-            redeem,
+            data.redeem,
             relayerFee
         );
         
         // Execute remint
-        _executeRemint(to, id, amount, redeem, relayerFee);
+        _executeRemint(to, id, amount, data.redeem, relayerFee);
     }
     
     /**
@@ -419,14 +425,76 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
     }
     
     /**
+     * @notice OPTIONAL: Preview deposit amount after fees
+     * @dev Implements IERC8065.previewDeposit
+     * @param to The address that will receive the minted ZWTokens (unused in current implementation)
+     * @param id The token identifier (MUST be 0 for ERC-20)
+     * @param amount The amount of underlying tokens to deposit
+     * @param data Additional data (unused in current implementation)
+     * @return The amount of ZWToken that would be minted after fees
+     */
+    function previewDeposit(address to, uint256 id, uint256 amount, bytes calldata data) external view override returns (uint256) {
+        if (id != 0) revert InvalidTokenId();
+        uint256 feeAmount = depositFee > 0 ? (amount * depositFee) / feeDenominator : 0;
+        // Suppress unused variable warnings
+        to; data;
+        return amount - feeAmount;
+    }
+    
+    /**
+     * @notice OPTIONAL: Preview withdraw amount after fees
+     * @dev Implements IERC8065.previewWithdraw
+     * @param to The recipient address (unused in current implementation)
+     * @param id The token identifier (MUST be 0 for ERC-20)
+     * @param amount The amount of ZWToken to burn
+     * @param data Additional data (unused in current implementation)
+     * @return The amount of underlying tokens that would be received after fees
+     */
+    function previewWithdraw(address to, uint256 id, uint256 amount, bytes calldata data) external view override returns (uint256) {
+        if (id != 0) revert InvalidTokenId();
+        uint256 feeAmount = withdrawFee > 0 ? (amount * withdrawFee) / feeDenominator : 0;
+        // Suppress unused variable warnings
+        to; data;
+        return amount - feeAmount;
+    }
+    
+    /**
+     * @notice OPTIONAL: Preview remint amount after fees
+     * @dev Implements IERC8065.previewRemint
+     * @param to Recipient address (unused in current implementation)
+     * @param id The token identifier (MUST be 0 for ERC-20)
+     * @param amount The amount of ZWToken to remint
+     * @param data Encapsulated remint data
+     * @return The amount of ZWToken or underlying tokens that would be received after fees
+     */
+    function previewRemint(address to, uint256 id, uint256 amount, IERC8065.RemintData calldata data) external view override returns (uint256) {
+        if (id != 0) revert InvalidTokenId();
+        
+        // Parse relayer fee from relayerData
+        uint256 relayerFee = 0;
+        if (data.relayerData.length >= 32) {
+            relayerFee = abi.decode(data.relayerData[:32], (uint256));
+        }
+        
+        uint256 protocolFeeRate = data.redeem ? remintFee + withdrawFee : remintFee;
+        uint256 protocolFee = (amount * protocolFeeRate) / feeDenominator;
+        uint256 relayerPayment = (amount * relayerFee) / feeDenominator;
+        
+        // Suppress unused variable warning
+        to;
+        
+        return amount - protocolFee - relayerPayment;
+    }
+    
+    /**
      * @notice Returns the configured fees
-     * @dev Implements IERC8065.getFeeConfig
+     * @dev Not part of IERC8065 but useful for frontend integration
      * @return depositFee_ Fee rate applied to deposits
      * @return remintFee_ Fee rate applied to remints
      * @return withdrawFee_ Fee rate applied to withdrawals
      * @return feeDenominator_ Denominator used to calculate percentage-based fees
      */
-    function getFeeConfig() external view override returns (
+    function getFeeConfig() external view returns (
         uint256 depositFee_,
         uint256 remintFee_,
         uint256 withdrawFee_,
@@ -444,4 +512,3 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
         return address(underlying);
     }
 }
-
