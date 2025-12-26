@@ -479,4 +479,3 @@ describe("ZWERC1155 - E2E with Real ZK Proof", function () {
     console.log("\n🎉 Cross-Token Isolation Test PASSED!");
   });
 });
-

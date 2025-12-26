@@ -231,9 +231,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
     await underlying
       .connect(alice)
       .approve(await zwToken.getAddress(), depositAmount);
-    await zwToken
-      .connect(alice)
-      .deposit(alice.address, 0, depositAmount, "0x");
+    await zwToken.connect(alice).deposit(alice.address, 0, depositAmount, "0x");
 
     const { addr20, q, privacyAddress } = derivePrivacyAddress(
       tokenId,
@@ -318,4 +316,3 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
     console.log("\n🎉 ZWERC20 redeem=true Test PASSED!");
   });
 });
-
