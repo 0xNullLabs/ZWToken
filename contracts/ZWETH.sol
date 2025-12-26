@@ -2,23 +2,20 @@
 pragma solidity ^0.8.20;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {BaseZWToken} from "./base/BaseZWToken.sol";
 import {IERC8065} from "./interfaces/IERC8065.sol";
 
 /**
- * @title ZWERC20
- * @notice ZK Wrapper Token for ERC-20 tokens implementing IERC8065
- * @dev Extends BaseZWToken with ERC-20 specific functionality
+ * @title ZWETH
+ * @notice ZK Wrapper Token for native ETH implementing IERC8065
+ * @dev Extends BaseZWToken with ETH-specific functionality
  * 
  * Architecture:
- * - Records first receipt of ZWERC20 for each address via transfer/transferFrom/remint
+ * - Wraps native ETH into an ERC-20 compatible ZW token
+ * - Records first receipt for each address via transfer/transferFrom/remint
  * - Uses Poseidon hash (ZK-friendly, ~25K gas per hash, ~1K circuit constraints)
  * - 20-layer Merkle tree (supports 1,048,576 addresses)
  * - Browser-friendly ZK proof generation (~15K constraints, 5-15 seconds)
- * - No backend dependency (frontend builds Merkle proofs from chain data)
  * 
  * Commitment Recording Logic:
  * - deposit(): Mint (from=0) → Records commitment if to != msg.sender
@@ -26,62 +23,42 @@ import {IERC8065} from "./interfaces/IERC8065.sol";
  * - remint(): Mint to recipient + explicit commitment call → Records if first receipt
  * - withdraw(): Burn (to=0) → NO commitment recorded
  */
-contract ZWERC20 is ERC20, BaseZWToken {
-    using SafeERC20 for IERC20;
-
-    // ========== Immutable Variables ==========
-    
-    uint8 private immutable _decimals;
-    IERC20 public immutable underlying;
-    
+contract ZWETH is ERC20, BaseZWToken {
     // ========== Constructor ==========
     
     /**
-     * @notice ZWERC20 constructor
+     * @notice ZWETH constructor
      * @param name_ Token name
      * @param symbol_ Token symbol
-     * @param decimals_ Token decimals
-     * @param underlying_ Address of the underlying ERC20 token
      * @param config ZWToken configuration (verifier, feeCollector, fees)
      */
     constructor(
         string memory name_,
         string memory symbol_,
-        uint8 decimals_,
-        address underlying_,
         ZWConfig memory config
     ) 
         ERC20(name_, symbol_) 
         BaseZWToken(config) 
-    {
-        require(underlying_ != address(0), "Invalid underlying");
-        _decimals = decimals_;
-        underlying = IERC20(underlying_);
-    }
+    {}
     
     // ========== Public Functions ==========
     
-    function decimals() public view override returns (uint8) {
-        return _decimals;
-    }
-
     /**
-     * @notice Deposits underlying tokens and mints ZWERC20 to the specified address
+     * @notice Deposits ETH and mints ZWETH to the specified address
      * @dev Implements IERC8065.deposit
-     * - For ERC-20: id MUST be 0
+     * - For ETH: id MUST be 0
+     * - msg.value should equal amount
      * - Records commitment if to != msg.sender (potential provable burn address)
      * - Applies depositFee if configured
-     * @param to The address that will receive the minted ZWERC20
-     * @param id The token identifier (MUST be 0 for ERC-20)
-     * @param amount The amount of the underlying asset to deposit
+     * @param to The address that will receive the minted ZWETH
+     * @param id The token identifier (MUST be 0 for ETH)
+     * @param amount The amount of ETH to deposit (must match msg.value)
      * @param data Additional data for extensibility (currently unused)
      */
     function deposit(address to, uint256 id, uint256 amount, bytes calldata data) external payable override {
         if (id != 0) revert InvalidTokenId();
         if (amount == 0) revert InvalidAmount();
-        
-        // Transfer underlying tokens from msg.sender
-        underlying.safeTransferFrom(msg.sender, address(this), amount);
+        require(msg.value == amount, "ETH amount mismatch");
         
         // Calculate mint amount after fee
         uint256 mintAmount = amount;
@@ -91,7 +68,7 @@ contract ZWERC20 is ERC20, BaseZWToken {
             mintAmount = amount - feeAmount;
         }
         
-        // Mint ZWERC20 to recipient
+        // Mint ZWETH to recipient
         _mint(to, mintAmount);
         
         // Mint fee to fee collector
@@ -100,7 +77,6 @@ contract ZWERC20 is ERC20, BaseZWToken {
         }
         
         // Record commitment if to != msg.sender (optimized as per spec)
-        // If to == msg.sender, skip commitment (msg.sender cannot be provable burn address)
         if (to != msg.sender) {
             _recordCommitmentIfNeeded(id, to, mintAmount);
         }
@@ -112,21 +88,21 @@ contract ZWERC20 is ERC20, BaseZWToken {
     }
     
     /**
-     * @notice Withdraw underlying tokens by burning ZWERC20
+     * @notice Withdraw ETH by burning ZWETH
      * @dev Implements IERC8065.withdraw
-     * - Burns ZWERC20 from msg.sender
-     * - Transfers underlying tokens to the specified recipient
+     * - Burns ZWETH from msg.sender
+     * - Transfers ETH to the specified recipient
      * - Applies withdrawFee if configured
-     * @param to The recipient address that will receive the underlying token
-     * @param id The token identifier (MUST be 0 for ERC-20)
-     * @param amount The amount of ZWERC20 to burn
+     * @param to The recipient address that will receive the ETH
+     * @param id The token identifier (MUST be 0 for ETH)
+     * @param amount The amount of ZWETH to burn
      * @param data Additional data for extensibility (currently unused)
      */
     function withdraw(address to, uint256 id, uint256 amount, bytes calldata data) external override {
         if (id != 0) revert InvalidTokenId();
         if (amount == 0) revert InvalidAmount();
         
-        // Burn ZWERC20 from msg.sender
+        // Burn ZWETH from msg.sender
         _burn(msg.sender, amount);
         
         // Calculate withdraw amount after fee
@@ -137,13 +113,14 @@ contract ZWERC20 is ERC20, BaseZWToken {
             withdrawAmount = amount - feeAmount;
         }
         
-        // Transfer underlying tokens to recipient
-        underlying.safeTransfer(to, withdrawAmount);
-        
-        // Mint fee to fee collector (underlying remains in contract)
+        // Mint fee to fee collector
         if (feeAmount > 0) {
             _mint(feeCollector, feeAmount);
         }
+        
+        // Transfer ETH to recipient
+        (bool success, ) = to.call{value: withdrawAmount}("");
+        if (!success) revert TransferFailed();
         
         emit Withdrawn(msg.sender, to, id, amount);
         
@@ -152,11 +129,11 @@ contract ZWERC20 is ERC20, BaseZWToken {
     }
     
     /**
-     * @notice Remint ZWToken using zero-knowledge proof
+     * @notice Remint ZWETH using zero-knowledge proof
      * @dev Implements IERC8065.remint - Current implementation requires exactly one nullifier
-     * @param to Recipient address that will receive the reminted ZWToken or underlying token
-     * @param id Token identifier (MUST be 0 for ERC-20)
-     * @param amount Amount of ZWToken burned from the provable burn address for reminting
+     * @param to Recipient address that will receive the reminted ZWETH or ETH
+     * @param id Token identifier (MUST be 0 for ETH)
+     * @param amount Amount of ZWETH burned from the provable burn address for reminting
      * @param data Encapsulated remint data including commitment, nullifiers, redeem flag, proof, and relayer information
      */
     function remint(
@@ -207,7 +184,9 @@ contract ZWERC20 is ERC20, BaseZWToken {
             _calculateRemintFees(amount, redeem, relayerFee);
         
         if (redeem) {
-            underlying.safeTransfer(to, recipientAmount);
+            // Transfer ETH to recipient
+            (bool success, ) = to.call{value: recipientAmount}("");
+            if (!success) revert TransferFailed();
         } else {
             _mint(to, recipientAmount);
             _recordCommitmentIfNeeded(id, to, recipientAmount);
@@ -223,21 +202,17 @@ contract ZWERC20 is ERC20, BaseZWToken {
     
     /**
      * @dev Override _update to track first receipts for transfers
-     * Only records commitment for actual transfers (from != 0, to != 0)
-     * Excludes mint (from == 0) and burn (to == 0)
      */
     function _update(
         address from,
         address to,
         uint256 amount
     ) internal virtual override {
-        // Standard ERC20 transfer
         super._update(from, to, amount);
         
         // Record commitment only for transfers (not mint/burn)
-        // Mint and burn are handled separately (remint handles mint explicitly)
         if (from != address(0) && to != address(0)) {
-            _recordCommitmentIfNeeded(0, to, amount); // id = 0 for ERC-20
+            _recordCommitmentIfNeeded(0, to, amount);
         }
     }
     
@@ -259,70 +234,50 @@ contract ZWERC20 is ERC20, BaseZWToken {
     
     /**
      * @notice OPTIONAL: Preview deposit amount after fees
-     * @dev Implements IERC8065.previewDeposit
-     * @param to The address that will receive the minted ZWTokens (unused in current implementation)
-     * @param id The token identifier (MUST be 0 for ERC-20)
-     * @param amount The amount of underlying tokens to deposit
-     * @param data Additional data (unused in current implementation)
-     * @return The amount of ZWToken that would be minted after fees
      */
     function previewDeposit(address to, uint256 id, uint256 amount, bytes calldata data) external view override returns (uint256) {
         if (id != 0) revert InvalidTokenId();
         uint256 feeAmount = depositFee > 0 ? (amount * depositFee) / feeDenominator : 0;
-        // Suppress unused variable warnings
         to; data;
         return amount - feeAmount;
     }
     
     /**
      * @notice OPTIONAL: Preview withdraw amount after fees
-     * @dev Implements IERC8065.previewWithdraw
-     * @param to The recipient address (unused in current implementation)
-     * @param id The token identifier (MUST be 0 for ERC-20)
-     * @param amount The amount of ZWToken to burn
-     * @param data Additional data (unused in current implementation)
-     * @return The amount of underlying tokens that would be received after fees
      */
     function previewWithdraw(address to, uint256 id, uint256 amount, bytes calldata data) external view override returns (uint256) {
         if (id != 0) revert InvalidTokenId();
         uint256 feeAmount = withdrawFee > 0 ? (amount * withdrawFee) / feeDenominator : 0;
-        // Suppress unused variable warnings
         to; data;
         return amount - feeAmount;
     }
     
     /**
      * @notice OPTIONAL: Preview remint amount after fees
-     * @dev Implements IERC8065.previewRemint
-     * @param to Recipient address (unused in current implementation)
-     * @param id The token identifier (MUST be 0 for ERC-20)
-     * @param amount The amount of ZWToken to remint
-     * @param data Encapsulated remint data
-     * @return The amount of ZWToken or underlying tokens that would be received after fees
      */
     function previewRemint(address to, uint256 id, uint256 amount, IERC8065.RemintData calldata data) external view override returns (uint256) {
         if (id != 0) revert InvalidTokenId();
         
-        // Parse relayer fee from relayerData
         uint256 relayerFee = 0;
         if (data.relayerData.length >= 32) {
             relayerFee = abi.decode(data.relayerData[:32], (uint256));
         }
         
         (,, uint256 recipientAmount) = _calculateRemintFees(amount, data.redeem, relayerFee);
-        
-        // Suppress unused variable warning
         to;
-        
         return recipientAmount;
     }
     
     /**
-     * @notice Returns the address of the underlying token
-     * @dev Implements IERC8065.getUnderlying
-     * @return The underlying token contract address
+     * @notice Returns address(0) as the underlying is native ETH
      */
-    function getUnderlying() external view override returns (address) {
-        return address(underlying);
+    function getUnderlying() external pure override returns (address) {
+        return address(0);
     }
+    
+    /**
+     * @notice Receive ETH (for direct transfers)
+     */
+    receive() external payable {}
 }
+

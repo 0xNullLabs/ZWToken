@@ -1,6 +1,15 @@
 // remint.circom
-// ZK Circuit: Proves user can remint their first received ZWToken
+// ZK Circuit: Universal remint proof for all ZWToken types (ZWERC20, ZWETH, ZWERC721, ZWERC1155)
 // Uses Poseidon hash (ZK friendly) + 20-layer Merkle tree
+//
+// This single circuit and verifier supports all token types:
+// - ZWERC20: id = 0, amount = fungible amount
+// - ZWETH:   id = 0, amount = ETH amount in wei
+// - ZWERC721: id = NFT tokenId, amount = 1
+// - ZWERC1155: id = tokenId, amount = token amount
+//
+// The circuit generates unique privacy addresses per (id, secret) pair,
+// ensuring cross-token isolation while sharing the same verification logic.
 
 pragma circom 2.1.6;
 
