@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-05T06:45:52.349Z",
+  "timestamp": "2025-12-26T02:06:29.858Z",
   "gasPrice": {
     "gwei": 0.2,
     "ethPriceUSD": 4000
@@ -77,10 +77,10 @@
     },
     {
       "operation": "ZWERC20: remint (subsequent, no new commitment)",
-      "gasUsed": "78943",
+      "gasUsed": "78955",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000015789",
-      "costUSD": "$0.063154"
+      "costETH": "0.000015791",
+      "costUSD": "$0.063164"
     }
   ],
   "summary": {

@@ -157,7 +157,7 @@ export default {
   'pages.zwtoken.remint.seedModal.select': '选择',
   'pages.zwtoken.remint.seedModal.checking': '检查中...',
   'pages.zwtoken.remint.seedModal.failed': '查询失败',
-  'pages.zwtoken.remint.withdrawUnderlying': '解封装 ZWUSDC 为 USDC',
+  'pages.zwtoken.remint.redeem': '解封装 ZWUSDC 为 USDC',
 
   // 直接销毁封装
   'pages.zwtoken.deposit.directBurn': '直接销毁（封装到销毁地址）',
@@ -207,7 +207,7 @@ export default {
 
   // 重铸参数
   'pages.zwtoken.remint.parameters': '重铸参数：',
-  'pages.zwtoken.remint.withdrawUnderlyingDesc':
+  'pages.zwtoken.remint.redeemDesc':
     '- 解封装 ZWUSDC 为 USDC：如果勾选，将直接解封装 ZWUSDC 为 USDC；否则重铸 ZWUSDC',
 
   // 简易模式重铸提示

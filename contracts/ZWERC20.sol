@@ -194,14 +194,14 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
      * @param to Recipient address that will receive the reminted ZWToken or underlying token
      * @param id Token identifier (MUST be 0 for ERC-20)
      * @param amount Amount of ZWToken burned from the provable burn address for reminting
-     * @param withdrawUnderlying If true, withdraws underlying token instead of reminting ZWToken
+     * @param redeem If true, withdraws underlying token instead of reminting ZWToken
      * @param data Encapsulated remint data including commitment, nullifiers, proof, and relayer information
      */
     function remint(
         address to,
         uint256 id,
         uint256 amount,
-        bool withdrawUnderlying,
+        bool redeem,
         IERC8065.RemintData calldata data
     ) external override {
         // Parameter validation
@@ -233,12 +233,12 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
             to,
             amount,
             id,
-            withdrawUnderlying,
+            redeem,
             relayerFee
         );
         
         // Execute remint
-        _executeRemint(to, id, amount, withdrawUnderlying, relayerFee);
+        _executeRemint(to, id, amount, redeem, relayerFee);
     }
     
     /**
@@ -253,7 +253,7 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
         address to,
         uint256 amount,
         uint256 id,
-        bool withdrawUnderlying,
+        bool redeem,
         uint256 relayerFee
     ) private view {
         uint256[7] memory pubInputs = [
@@ -262,7 +262,7 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
             uint256(uint160(to)),
             amount,
             id,
-            withdrawUnderlying ? 1 : 0,
+            redeem ? 1 : 0,
             relayerFee                // Small value, always within BN128 range
         ];
         
@@ -281,15 +281,15 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
         address to,
         uint256 id,
         uint256 amount,
-        bool withdrawUnderlying,
+        bool redeem,
         uint256 relayerFee
     ) private {
-        uint256 protocolFeeRate = withdrawUnderlying ? remintFee + withdrawFee : remintFee;
+        uint256 protocolFeeRate = redeem ? remintFee + withdrawFee : remintFee;
         uint256 protocolFee = (amount * protocolFeeRate) / feeDenominator;
         uint256 relayerPayment = (amount * relayerFee) / feeDenominator;
         uint256 recipientAmount = amount - protocolFee - relayerPayment;
         
-        if (withdrawUnderlying) {
+        if (redeem) {
             underlying.safeTransfer(to, recipientAmount);
         } else {
             _mint(to, recipientAmount);
@@ -299,7 +299,7 @@ contract ZWERC20 is ERC20, PoseidonMerkleTree, IERC8065 {
         if (relayerPayment > 0) _mint(msg.sender, relayerPayment);
         if (protocolFee > 0) _mint(feeCollector, protocolFee);
         
-        emit Reminted(msg.sender, to, id, recipientAmount, withdrawUnderlying);
+        emit Reminted(msg.sender, to, id, recipientAmount, redeem);
     }
     
     // ========== Internal Functions ==========

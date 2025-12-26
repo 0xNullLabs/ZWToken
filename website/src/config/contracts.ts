@@ -34,7 +34,7 @@ export const CONTRACT_ABIS = {
   ZWERC20: [
     'function deposit(address to, uint256 id, uint256 amount) external payable',
     'function withdraw(address to, uint256 id, uint256 amount) external',
-    'function remint(address to, uint256 id, uint256 amount, bool withdrawUnderlying, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bytes proof) data) external',
+    'function remint(address to, uint256 id, uint256 amount, bool redeem, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bytes proof) data) external',
     'function transfer(address to, uint256 amount) external returns (bool)',
     'function balanceOf(address account) external view returns (uint256)',
     'function root() external view returns (bytes32)',

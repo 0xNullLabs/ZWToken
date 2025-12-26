@@ -226,7 +226,7 @@ await zwToken.remint(
   recipientAddress, // to
   0, // id (0 for ERC-20)
   remintAmount, // amount
-  false, // withdrawUnderlying
+  false, // redeem
   {
     // RemintData struct
     commitment: root,

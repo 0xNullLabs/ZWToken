@@ -254,7 +254,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       to: BigInt(bob.address),
       remintAmount: BigInt(remintAmountValue),
       id: tokenId, // Token ID (0 for ERC-20)
-      withdrawUnderlying: 0n, // 0 = mint ZWERC20, 1 = withdraw underlying
+      redeem: 0n, // 0 = mint ZWERC20, 1 = withdraw underlying
       relayerFee: relayerFee, // Relayer fee (basis points)
 
       // Private inputs
@@ -301,7 +301,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
     console.log(`      [2] to: ${publicSignals[2]}`);
     console.log(`      [3] remintAmount: ${publicSignals[3]}`);
     console.log(`      [4] id: ${publicSignals[4]}`);
-    console.log(`      [5] withdrawUnderlying: ${publicSignals[5]}`);
+    console.log(`      [5] redeem: ${publicSignals[5]}`);
     console.log(`      [6] relayerFee: ${publicSignals[6]}`);
 
     // Format as Solidity calldata
@@ -335,7 +335,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       bob.address, // to
       0, // id
       remintAmountValue, // amount
-      false, // withdrawUnderlying
+      false, // redeem
       {
         // RemintData struct
         commitment: localRoot,
@@ -372,7 +372,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
         bob.address, // to
         0, // id
         remintAmountValue, // amount
-        false, // withdrawUnderlying
+        false, // redeem
         {
           // RemintData struct
           commitment: localRoot,
@@ -422,7 +422,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
    *
    * This test group verifies security after circuit fixes:
    * - Tampering to address will cause proof verification to fail
-   * - Tampering withdrawUnderlying will cause proof verification to fail
+   * - Tampering redeem will cause proof verification to fail
    * - Tampering relayerDataHash will cause proof verification to fail
    */
   describe("Public Inputs Tampering Attack Tests", function () {
@@ -496,7 +496,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
         to: BigInt(bob.address),
         remintAmount: ethers.parseEther("500"),
         id: tokenId,
-        withdrawUnderlying: 0n,
+        redeem: 0n,
         relayerFee: relayerFee,
         secret: SECRET,
         addr20: addr20,
@@ -565,16 +565,16 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       );
     });
 
-    it("Tampering withdrawUnderlying should cause proof verification to fail", async function () {
+    it("Tampering redeem should cause proof verification to fail", async function () {
       console.log("\n" + "=".repeat(70));
-      console.log("🔒 Test: Tampering withdrawUnderlying");
+      console.log("🔒 Test: Tampering redeem");
       console.log("=".repeat(70));
 
       const proofBytes = encodeProof(validProof.a, validProof.b, validProof.c);
 
-      // Tamper withdrawUnderlying (proof has false, but submit with true)
-      console.log(`   Original withdrawUnderlying: false`);
-      console.log(`   Tampered withdrawUnderlying: true`);
+      // Tamper redeem (proof has false, but submit with true)
+      console.log(`   Original redeem: false`);
+      console.log(`   Tampered redeem: true`);
 
       await expect(
         zwToken.remint(
@@ -593,7 +593,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       ).to.be.revertedWithCustomError(zwToken, "InvalidProof");
 
       console.log(
-        "   ✅ Verification failed (as expected): Tampering withdrawUnderlying detected"
+        "   ✅ Verification failed (as expected): Tampering redeem detected"
       );
     });
 
@@ -934,7 +934,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
         to: BigInt(user4.address),
         remintAmount: BigInt(remintAmount),
         id: tokenId,
-        withdrawUnderlying: 0n,
+        redeem: 0n,
         relayerFee: 0n,
         secret: SECRET_USER1,
         addr20: addr20_1,
@@ -1088,7 +1088,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
         to: BigInt(user4.address),
         remintAmount: BigInt(remintAmount),
         id: tokenId,
-        withdrawUnderlying: 0n,
+        redeem: 0n,
         relayerFee: 0n,
         secret: SECRET_USER2,
         addr20: addr20_2,
@@ -1146,11 +1146,11 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       console.log("=".repeat(70));
     });
 
-    it("Should correctly remint with withdrawUnderlying=true", async function () {
+    it("Should correctly remint with redeem=true", async function () {
       this.timeout(180000);
 
       console.log("\n" + "=".repeat(70));
-      console.log("🧪 Test: Remint with withdrawUnderlying=true");
+      console.log("🧪 Test: Remint with redeem=true");
       console.log("=".repeat(70));
 
       const tokenId = 0n;
@@ -1210,14 +1210,14 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       const nullifierNew = poseidon([addr20New, SECRET_NEW]);
       const remintAmount = ethers.parseEther("200");
 
-      // Generate proof with withdrawUnderlying=true (1n)
+      // Generate proof with redeem=true (1n)
       const circuitInput = {
         root: tree.root,
         nullifier: nullifierNew,
         to: BigInt(user4.address),
         remintAmount: BigInt(remintAmount),
         id: tokenId,
-        withdrawUnderlying: 1n, // TRUE - withdraw underlying instead of minting
+        redeem: 1n, // TRUE - withdraw underlying instead of minting
         relayerFee: 0n,
         secret: SECRET_NEW,
         addr20: addr20New,
@@ -1227,16 +1227,14 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
         pathIndices: merkleProof.pathIndices,
       };
 
-      console.log("   ⏳ Generating ZK proof with withdrawUnderlying=1...");
+      console.log("   ⏳ Generating ZK proof with redeem=1...");
       const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
         circuitInput,
         wasmPath,
         zkeyPath
       );
       console.log("   ✅ ZK proof generated");
-      console.log(
-        `   Public signal [5] withdrawUnderlying: ${publicSignals[5]}`
-      );
+      console.log(`   Public signal [5] redeem: ${publicSignals[5]}`);
 
       const calldata = await snarkjs.groth16.exportSolidityCallData(
         zkProof,
@@ -1257,7 +1255,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
         )}`
       );
 
-      // Submit remint with withdrawUnderlying=true
+      // Submit remint with redeem=true
       await expect(
         zwToken2.remint(user4.address, 0, remintAmount, true, {
           commitment: localRoot,
@@ -1277,7 +1275,7 @@ describe("ZWERC20 - E2E with Real ZK Proof", function () {
       );
 
       console.log("\n" + "=".repeat(70));
-      console.log("🎉 withdrawUnderlying=true Test PASSED!");
+      console.log("🎉 redeem=true Test PASSED!");
       console.log("=".repeat(70));
     });
   });

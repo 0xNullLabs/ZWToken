@@ -211,7 +211,7 @@ describe("ZWERC20 - Remint Test", function () {
       bob.address, // to
       0, // id
       claimAmount, // amount
-      false, // withdrawUnderlying
+      false, // redeem
       {
         // RemintData struct
         commitment: root,
@@ -275,7 +275,7 @@ describe("ZWERC20 - Remint Test", function () {
         bob.address, // to
         0, // id
         claimAmount, // amount
-        false, // withdrawUnderlying
+        false, // redeem
         {
           // RemintData struct
           commitment: root,
@@ -349,7 +349,7 @@ describe("ZWERC20 - Remint Test", function () {
       bob.address, // to
       0, // id
       claimAmount2, // amount
-      false, // withdrawUnderlying
+      false, // redeem
       {
         // RemintData struct
         commitment: root2,
@@ -454,7 +454,7 @@ describe("ZWERC20 - Remint Test", function () {
         deployer.address, // to
         0, // id
         claimAmount3, // amount
-        false, // withdrawUnderlying
+        false, // redeem
         {
           // RemintData struct
           commitment: oldRoot, // Use old root

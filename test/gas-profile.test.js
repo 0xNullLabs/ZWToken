@@ -307,7 +307,7 @@ describe("Gas Profile Comparison", function () {
           dave.address, // to
           0, // id
           amount, // amount
-          false, // withdrawUnderlying
+          false, // redeem
           {
             // RemintData struct
             commitment: root,
@@ -358,7 +358,7 @@ describe("Gas Profile Comparison", function () {
           charlie.address, // to
           0, // id
           amount, // amount
-          false, // withdrawUnderlying
+          false, // redeem
           {
             // RemintData struct
             commitment: root,

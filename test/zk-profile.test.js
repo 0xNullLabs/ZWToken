@@ -122,7 +122,7 @@ describe("ZK Profile - Circuit Performance Metrics", function () {
       to: addr20,
       remintAmount: remintAmount,
       id: tokenId,
-      withdrawUnderlying: 0n,
+      redeem: 0n,
       relayerFee: 0n,
       // Private inputs
       secret: secret,

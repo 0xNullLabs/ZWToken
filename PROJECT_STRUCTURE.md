@@ -193,7 +193,7 @@ npx hardhat test test/e2e.test.js  # E2E tests
 
 4. User submits remint
    ↓
-   ZWERC20.remint(to, id, amount, withdrawUnderlying, data)
+   ZWERC20.remint(to, id, amount, redeem, data)
    ↓
    Verify root in isKnownRoot
    ↓

@@ -1,4 +1,15 @@
-import { Card, Tabs, Form, InputNumber, Input, Button, message, Modal, Table, Checkbox } from 'antd';
+import {
+  Card,
+  Tabs,
+  Form,
+  InputNumber,
+  Input,
+  Button,
+  message,
+  Modal,
+  Table,
+  Checkbox,
+} from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { useConnectWallet } from '@web3-onboard/react';
@@ -48,36 +59,40 @@ const ZWToken: React.FC = () => {
   const [remintSecretList, setRemintSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
-  
+
   // Advanced Mode Remint states
   const [advancedRemintSeedModalVisible, setAdvancedRemintSeedModalVisible] = useState(false);
   const [advancedRemintSecretList, setAdvancedRemintSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
-  
+
   // Store selected max amount for remint
   const [selectedRemintMaxAmount, setSelectedRemintMaxAmount] = useState<string | null>(null);
-  
+
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
-  
+
   // Simple Mode Deposit (Burn) states
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
   const [depositSecretForm] = Form.useForm();
   const [depositSecretList, setDepositSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
-  
+
   // Advanced Mode Deposit states
   const [advancedDepositSecretModalVisible, setAdvancedDepositSecretModalVisible] = useState(false);
   const [advancedDepositSecretForm] = Form.useForm();
   const [advancedDepositSecretList, setAdvancedDepositSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
-  const [advancedDepositSecretMode, setAdvancedDepositSecretMode] = useState<'manual' | 'seed' | undefined>(undefined);
-  
+  const [advancedDepositSecretMode, setAdvancedDepositSecretMode] = useState<
+    'manual' | 'seed' | undefined
+  >(undefined);
+
   // Transfer states
-  const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed' | undefined>(undefined);
+  const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed' | undefined>(
+    undefined,
+  );
 
   // Get current account
   const account = wallet?.accounts?.[0]?.address;
@@ -93,7 +108,6 @@ const ZWToken: React.FC = () => {
 
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
 
   // Function to get token decimals
   const fetchDecimals = React.useCallback(async () => {
@@ -290,7 +304,7 @@ const ZWToken: React.FC = () => {
     const preloadCircuits = () => {
       try {
         console.log('Starting to preload circuits files...');
-        
+
         // Use prefetch to preload circuits files
         const link1 = document.createElement('link');
         link1.rel = 'prefetch';
@@ -314,9 +328,9 @@ const ZWToken: React.FC = () => {
     if ('requestIdleCallback' in window) {
       const idleCallbackId = (window as any).requestIdleCallback(
         preloadCircuits,
-        { timeout: 3000 } // Force execution after at most 3 seconds
+        { timeout: 3000 }, // Force execution after at most 3 seconds
       );
-      
+
       return () => {
         if ('cancelIdleCallback' in window) {
           (window as any).cancelIdleCallback(idleCallbackId);
@@ -456,7 +470,9 @@ const ZWToken: React.FC = () => {
         return;
       }
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${
+          error.message
+        }`,
       );
     }
   };
@@ -473,7 +489,9 @@ const ZWToken: React.FC = () => {
       setDepositSecretList([]);
     } catch (error: any) {
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${
+          error.message
+        }`,
       );
     }
   };
@@ -490,7 +508,9 @@ const ZWToken: React.FC = () => {
       setAdvancedDepositSecretList([]);
     } catch (error: any) {
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${
+          error.message
+        }`,
       );
     }
   };
@@ -514,7 +534,9 @@ const ZWToken: React.FC = () => {
         return;
       }
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${error.message}`,
+        `${intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.error' })}: ${
+          error.message
+        }`,
       );
     }
   };
@@ -616,17 +638,17 @@ const ZWToken: React.FC = () => {
 
           // Check if this address has ever received tokens
           const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
-          
+
           let isClaimed = false;
-          
+
           if (hasFirstReceipt) {
             // Address has received tokens before, check if claimed
             const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
             const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
-            
+
             // Check current balance of privacy address
             const currentBalance = await contract.balanceOf(privacyAddress);
-            
+
             // Claimed if nullifier used OR balance is 0
             isClaimed = isNullifierUsed || currentBalance === 0n;
           } else {
@@ -692,19 +714,25 @@ const ZWToken: React.FC = () => {
           if (targetMode === 'deposit') {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
-                idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                idx === i
+                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  : item,
               ),
             );
           } else if (targetMode === 'transfer') {
             setSecretList((prev) =>
               prev.map((item, idx) =>
-                idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                idx === i
+                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  : item,
               ),
             );
           } else if (targetMode === 'advancedDeposit') {
             setAdvancedDepositSecretList((prev) =>
               prev.map((item, idx) =>
-                idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                idx === i
+                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  : item,
               ),
             );
           } else {
@@ -712,19 +740,25 @@ const ZWToken: React.FC = () => {
             if (depositSecretModalVisible) {
               setDepositSecretList((prev) =>
                 prev.map((item, idx) =>
-                  idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                  idx === i
+                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    : item,
                 ),
               );
             } else if (advancedDepositSecretModalVisible) {
               setAdvancedDepositSecretList((prev) =>
                 prev.map((item, idx) =>
-                  idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                  idx === i
+                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    : item,
                 ),
               );
             } else {
               setSecretList((prev) =>
                 prev.map((item, idx) =>
-                  idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+                  idx === i
+                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    : item,
                 ),
               );
             }
@@ -840,17 +874,17 @@ const ZWToken: React.FC = () => {
 
           // Check if this address has ever received tokens
           const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
-          
+
           let isClaimed = false;
-          
+
           if (hasFirstReceipt) {
             // Address has received tokens before, check if claimed
             const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
             const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
-            
+
             // Check current balance of privacy address
             const currentBalance = await contract.balanceOf(privacyAddress);
-            
+
             // Claimed if nullifier used OR balance is 0
             isClaimed = isNullifierUsed || currentBalance === 0n;
           } else {
@@ -870,7 +904,9 @@ const ZWToken: React.FC = () => {
           console.error(`Failed to query Secret ${i + 1} amount:`, error);
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+              idx === i
+                ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                : item,
             ),
           );
         }
@@ -890,7 +926,7 @@ const ZWToken: React.FC = () => {
   // Select SecretBySeed for Remint page
   const handleSelectRemintSecret = (secret: string, amount: string) => {
     remintForm.setFieldsValue({ secret });
-    
+
     // Set remint amount if available
     const amountNum = parseFloat(amount);
     if (!isNaN(amountNum) && amountNum > 0) {
@@ -899,7 +935,7 @@ const ZWToken: React.FC = () => {
     } else {
       setSelectedRemintMaxAmount(null);
     }
-    
+
     setRemintSeedModalVisible(false);
     message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
   };
@@ -986,17 +1022,17 @@ const ZWToken: React.FC = () => {
 
           // Check if this address has ever received tokens
           const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
-          
+
           let isClaimed = false;
-          
+
           if (hasFirstReceipt) {
             // Address has received tokens before, check if claimed
             const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
             const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
-            
+
             // Check current balance of privacy address
             const currentBalance = await contract.balanceOf(privacyAddress);
-            
+
             // Claimed if nullifier used OR balance is 0
             isClaimed = isNullifierUsed || currentBalance === 0n;
           } else {
@@ -1016,7 +1052,9 @@ const ZWToken: React.FC = () => {
           console.error(`Failed to query Secret ${i + 1} amount:`, error);
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
-              idx === i ? { ...item, amount: 'Query failed', loading: false, isClaimed: false } : item,
+              idx === i
+                ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                : item,
             ),
           );
         }
@@ -1036,7 +1074,7 @@ const ZWToken: React.FC = () => {
   // Advanced Mode Remint - Select SecretBySeed
   const handleAdvancedRemintSelectSecret = (secret: string, amount: string) => {
     remintForm.setFieldsValue({ secret });
-    
+
     // Set remint amount if available
     const amountNum = parseFloat(amount);
     if (!isNaN(amountNum) && amountNum > 0) {
@@ -1045,7 +1083,7 @@ const ZWToken: React.FC = () => {
     } else {
       setSelectedRemintMaxAmount(null);
     }
-    
+
     setAdvancedRemintSeedModalVisible(false);
     message.success(intl.formatMessage({ id: 'pages.zwtoken.message.secretSelected' }));
   };
@@ -1117,7 +1155,11 @@ const ZWToken: React.FC = () => {
       );
 
       const depositAmountBigInt = ethers.parseUnits(values.amount.toString(), tokenDecimals);
-      console.log(`[Simple] Deposit amount: ${values.amount} tokens = ${depositAmountBigInt.toString()} units`);
+      console.log(
+        `[Simple] Deposit amount: ${
+          values.amount
+        } tokens = ${depositAmountBigInt.toString()} units`,
+      );
 
       const currentAllowance = await underlyingContract.allowance(
         account,
@@ -1148,7 +1190,7 @@ const ZWToken: React.FC = () => {
         CONTRACT_ABIS.ZWERC20,
         signer,
       );
-      
+
       const tx = await zwTokenContract.deposit(values.targetAddress, 0, depositAmountBigInt);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
@@ -1161,12 +1203,12 @@ const ZWToken: React.FC = () => {
     } catch (error: any) {
       console.error('❌ [Simple] Deposit/Approve error:', error);
       message.destroy();
-      
+
       let errorMessage = error.message || 'Unknown error';
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
         errorMessage = 'User rejected the transaction';
       }
-      
+
       message.error(
         `${intl.formatMessage({ id: 'pages.zwtoken.deposit.failed' })}: ${errorMessage}`,
       );
@@ -1180,7 +1222,7 @@ const ZWToken: React.FC = () => {
   const handleAdvancedDeposit = async (values: { amount: number; targetAddress?: string }) => {
     console.log('🟢 [Advanced Mode] handleAdvancedDeposit called with:', {
       ...values,
-      directBurn
+      directBurn,
     });
 
     if (!account) {
@@ -1211,7 +1253,11 @@ const ZWToken: React.FC = () => {
       );
 
       const depositAmountBigInt = ethers.parseUnits(values.amount.toString(), tokenDecimals);
-      console.log(`[Advanced] Deposit amount: ${values.amount} tokens = ${depositAmountBigInt.toString()} units`);
+      console.log(
+        `[Advanced] Deposit amount: ${
+          values.amount
+        } tokens = ${depositAmountBigInt.toString()} units`,
+      );
 
       const currentAllowance = await underlyingContract.allowance(
         account,
@@ -1221,7 +1267,7 @@ const ZWToken: React.FC = () => {
       console.log('[Advanced] Allowance check:', {
         currentAllowance: currentAllowance.toString(),
         depositAmountBigInt: depositAmountBigInt.toString(),
-        needsApproval: currentAllowance < depositAmountBigInt
+        needsApproval: currentAllowance < depositAmountBigInt,
       });
 
       // If allowance is insufficient, only execute approval
@@ -1248,7 +1294,7 @@ const ZWToken: React.FC = () => {
         CONTRACT_ABIS.ZWERC20,
         signer,
       );
-      
+
       // Determine to address: use targetAddress if provided (burn mode), otherwise use account
       const toAddress = values.targetAddress || account;
       const tx = await zwTokenContract.deposit(toAddress, 0, depositAmountBigInt);
@@ -1264,12 +1310,12 @@ const ZWToken: React.FC = () => {
     } catch (error: any) {
       console.error('❌ [Advanced] Deposit/Approve error:', error);
       message.destroy();
-      
+
       let errorMessage = error.message || 'Unknown error';
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
         errorMessage = 'User rejected the transaction';
       }
-      
+
       message.error(
         `${intl.formatMessage({ id: 'pages.zwtoken.deposit.failed' })}: ${errorMessage}`,
       );
@@ -1434,7 +1480,9 @@ const ZWToken: React.FC = () => {
       const currentBalance = await contract.balanceOf(privacyAddress);
       if (currentBalance === 0n) {
         hideLoading();
-        message.error(intl.formatMessage({ id: 'pages.zwtoken.message.privacyAddressZeroBalance' }));
+        message.error(
+          intl.formatMessage({ id: 'pages.zwtoken.message.privacyAddressZeroBalance' }),
+        );
         return;
       }
 
@@ -1495,16 +1543,16 @@ const ZWToken: React.FC = () => {
       console.log(`Merkle proof generated (${merkleProof.pathElements.length} elements)`);
 
       // === Step 5: Prepare circuit input ===
-      const withdrawUnderlying = values.withdrawUnderlying || false;
+      const redeem = values.redeem || false;
       const relayerFee = values.relayerFee || 0;
-      
+
       const circuitInput = prepareCircuitInput({
         root: tree.root,
         nullifier,
         recipient: values.recipient,
         remintAmount: remintAmount, // Already BigInt
         id: 0n,
-        withdrawUnderlying: withdrawUnderlying,
+        redeem: redeem,
         relayerFee: BigInt(relayerFee), // Convert to BigInt
         secret,
         addr20,
@@ -1547,7 +1595,7 @@ const ZWToken: React.FC = () => {
         const abiCoder = ethers.AbiCoder.defaultAbiCoder();
         const proofBytes = abiCoder.encode(
           ['uint256[2]', 'uint256[2][2]', 'uint256[2]'],
-          [solidityProof.a, solidityProof.b, solidityProof.c]
+          [solidityProof.a, solidityProof.b, solidityProof.c],
         );
 
         // === Step 7: Submit remint transaction ===
@@ -1565,7 +1613,7 @@ const ZWToken: React.FC = () => {
           values.recipient, // to
           0, // id (ERC-20)
           remintAmount, // amount
-          withdrawUnderlying, // Use the actual value from form
+          redeem, // Use the actual value from form
           {
             // RemintData struct
             commitment: localRoot,
@@ -1879,7 +1927,9 @@ const ZWToken: React.FC = () => {
                       rules={[
                         {
                           required: true,
-                          message: intl.formatMessage({ id: 'pages.zwtoken.burn.address.required' }),
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.burn.address.required',
+                          }),
                         },
                         {
                           pattern: /^0x[a-fA-F0-9]{40}$/,
@@ -1890,7 +1940,9 @@ const ZWToken: React.FC = () => {
                       ]}
                     >
                       <Input
-                        placeholder={intl.formatMessage({ id: 'pages.zwtoken.burn.address.placeholder' })}
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.burn.address.placeholder',
+                        })}
                         maxLength={42}
                         addonBefore={
                           <Button
@@ -1906,16 +1958,24 @@ const ZWToken: React.FC = () => {
 
                     <Form.Item>
                       <Button type="primary" htmlType="submit" loading={loading} block>
-                        {simpleNeedsApproval ? 'Approve' : intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
+                        {simpleNeedsApproval
+                          ? 'Approve'
+                          : intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
                       </Button>
                     </Form.Item>
                   </Form>
 
-                  <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+                  <div
+                    style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
+                  >
                     <h4>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.title' })}</h4>
-                    <p><strong>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.what' })}</strong></p>
+                    <p>
+                      <strong>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.what' })}</strong>
+                    </p>
                     <p>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.whatDesc' })}</p>
-                    <p><strong>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.how' })}</strong></p>
+                    <p>
+                      <strong>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.how' })}</strong>
+                    </p>
                     <p>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.step1' })}</p>
                     <p>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.step2' })}</p>
                     <p>{intl.formatMessage({ id: 'pages.zwtoken.burn.tip.step3' })}</p>
@@ -1925,13 +1985,13 @@ const ZWToken: React.FC = () => {
 
               <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.remint' })} key="remint">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-                  <Form 
-                    form={remintForm} 
-                    layout="vertical" 
+                  <Form
+                    form={remintForm}
+                    layout="vertical"
                     onFinish={handleRemint}
                     initialValues={{
                       recipient: account || undefined,
-                      withdrawUnderlying: true,
+                      redeem: true,
                     }}
                   >
                     <Form.Item
@@ -1940,7 +2000,9 @@ const ZWToken: React.FC = () => {
                       rules={[
                         {
                           required: true,
-                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.secret.required' }),
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.remint.secret.required',
+                          }),
                         },
                       ]}
                     >
@@ -1956,8 +2018,9 @@ const ZWToken: React.FC = () => {
                           >
                             {isMobile
                               ? intl.formatMessage({ id: 'pages.zwtoken.remint.select' })
-                              : intl.formatMessage({ id: 'pages.zwtoken.remint.selectSecretBySeed' })
-                            }
+                              : intl.formatMessage({
+                                  id: 'pages.zwtoken.remint.selectSecretBySeed',
+                                })}
                           </Button>
                         }
                       />
@@ -1969,18 +2032,25 @@ const ZWToken: React.FC = () => {
                       rules={[
                         {
                           required: true,
-                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.recipient.required' }),
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.remint.recipient.required',
+                          }),
                         },
                         {
                           pattern: /^0x[a-fA-F0-9]{40}$/,
-                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.recipient.invalid' }),
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.remint.recipient.invalid',
+                          }),
                         },
                       ]}
                     >
                       <Input
-                        placeholder={account || intl.formatMessage({
-                          id: 'pages.zwtoken.remint.recipient.placeholder',
-                        })}
+                        placeholder={
+                          account ||
+                          intl.formatMessage({
+                            id: 'pages.zwtoken.remint.recipient.placeholder',
+                          })
+                        }
                         maxLength={42}
                       />
                     </Form.Item>
@@ -1991,7 +2061,9 @@ const ZWToken: React.FC = () => {
                       rules={[
                         {
                           required: true,
-                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.amount.required' }),
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.remint.amount.required',
+                          }),
                         },
                         {
                           type: 'number',
@@ -2019,26 +2091,18 @@ const ZWToken: React.FC = () => {
                           fontSize: '12px',
                         }}
                       >
-                        💡 {intl.formatMessage({ id: 'pages.zwtoken.remint.maxAmountTip' })}: {parseFloat(selectedRemintMaxAmount).toFixed(6)} USDC
+                        💡 {intl.formatMessage({ id: 'pages.zwtoken.remint.maxAmountTip' })}:{' '}
+                        {parseFloat(selectedRemintMaxAmount).toFixed(6)} USDC
                       </div>
                     )}
 
-                    <Form.Item
-                      name="relayerFee"
-                      initialValue={0}
-                      hidden
-                    >
+                    <Form.Item name="relayerFee" initialValue={0} hidden>
                       <InputNumber />
                     </Form.Item>
 
-                    <Form.Item
-                      name="withdrawUnderlying"
-                      valuePropName="checked"
-                      initialValue={true}
-                      hidden
-                    >
+                    <Form.Item name="redeem" valuePropName="checked" initialValue={true} hidden>
                       <Checkbox>
-                        {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlying' })}
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.redeem' })}
                       </Checkbox>
                     </Form.Item>
 
@@ -2049,16 +2113,33 @@ const ZWToken: React.FC = () => {
                     </Form.Item>
                   </Form>
 
-                  <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.title' })}</h4>
-                    <p><strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.what' })}</strong></p>
-                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.whatDesc' })}</p>
-                    <p><strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.how' })}</strong></p>
+                  <div
+                    style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
+                  >
+                    <h4>
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.title' })}
+                    </h4>
+                    <p>
+                      <strong>
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.what' })}
+                      </strong>
+                    </p>
+                    <p>
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.whatDesc' })}
+                    </p>
+                    <p>
+                      <strong>
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.how' })}
+                      </strong>
+                    </p>
                     <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.step1' })}</p>
                     <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.step2' })}</p>
                     <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.step3' })}</p>
                     <p style={{ color: '#1890ff', marginTop: 12 }}>
-                      <strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.note' })}</strong> {intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.noteDesc' })}
+                      <strong>
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.note' })}
+                      </strong>{' '}
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.simpleMode.tip.noteDesc' })}
                     </p>
                   </div>
                 </div>
@@ -2069,34 +2150,40 @@ const ZWToken: React.FC = () => {
           {/* Advanced Mode - Includes all four Tabs */}
           <TabPane tab="Advanced Mode" key="advanced">
             <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }}>
-          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.wrap' })} key="deposit">
-            <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-              <Form form={advancedDepositForm} layout="vertical" onFinish={handleAdvancedDeposit}>
-                <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.deposit.amount' })}
-                  name="amount"
-                  rules={[
-                    {
-                      required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.deposit.amount.required' }),
-                    },
-                    {
-                      type: 'number',
-                      min: 0.000001,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.deposit.amount.min' }),
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.deposit.amount.placeholder',
-                    })}
-                    precision={6}
-                    min={0}
-                    onChange={(value) => setAdvancedDepositAmount(value)}
-                  />
-                </Form.Item>
+              <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.wrap' })} key="deposit">
+                <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                  <Form
+                    form={advancedDepositForm}
+                    layout="vertical"
+                    onFinish={handleAdvancedDeposit}
+                  >
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.deposit.amount' })}
+                      name="amount"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.deposit.amount.required',
+                          }),
+                        },
+                        {
+                          type: 'number',
+                          min: 0.000001,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.deposit.amount.min' }),
+                        },
+                      ]}
+                    >
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.deposit.amount.placeholder',
+                        })}
+                        precision={6}
+                        min={0}
+                        onChange={(value) => setAdvancedDepositAmount(value)}
+                      />
+                    </Form.Item>
 
                     {account && (
                       <div
@@ -2112,114 +2199,116 @@ const ZWToken: React.FC = () => {
                       </div>
                     )}
 
-                <Form.Item>
-                  <Checkbox
-                    checked={directBurn}
-                    onChange={(e) => {
-                      setDirectBurn(e.target.checked);
-                      if (!e.target.checked) {
-                        advancedDepositForm.setFieldsValue({ targetAddress: undefined });
-                      }
-                    }}
+                    <Form.Item>
+                      <Checkbox
+                        checked={directBurn}
+                        onChange={(e) => {
+                          setDirectBurn(e.target.checked);
+                          if (!e.target.checked) {
+                            advancedDepositForm.setFieldsValue({ targetAddress: undefined });
+                          }
+                        }}
+                      >
+                        {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurn' })}
+                      </Checkbox>
+                    </Form.Item>
+
+                    {directBurn && (
+                      <Form.Item
+                        label={intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress' })}
+                        name="targetAddress"
+                        rules={[
+                          {
+                            required: true,
+                            message: intl.formatMessage({
+                              id: 'pages.zwtoken.deposit.targetAddress.required',
+                            }),
+                          },
+                          {
+                            pattern: /^0x[a-fA-F0-9]{40}$/,
+                            message: intl.formatMessage({
+                              id: 'pages.zwtoken.transfer.targetAddress.invalid',
+                            }),
+                          },
+                        ]}
+                      >
+                        <Input
+                          placeholder={intl.formatMessage({
+                            id: 'pages.zwtoken.deposit.targetAddress.placeholder',
+                          })}
+                          maxLength={42}
+                          addonAfter={
+                            <Button
+                              type="link"
+                              onClick={handleAdvancedDepositGenerateClick}
+                              style={{ padding: 0, height: 'auto' }}
+                            >
+                              {intl.formatMessage({ id: 'pages.zwtoken.deposit.generateBySeed' })}
+                            </Button>
+                          }
+                        />
+                      </Form.Item>
+                    )}
+
+                    <Form.Item>
+                      <Button type="primary" htmlType="submit" loading={loading} block>
+                        {advancedNeedsApproval ? 'Approve' : directBurn ? 'Wrap and Burn' : 'Wrap'}
+                      </Button>
+                    </Form.Item>
+                  </Form>
+
+                  <div
+                    style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
                   >
-                    {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurn' })}
-                  </Checkbox>
-                </Form.Item>
+                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.title' })}</h4>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.3' })}</p>
+                    {directBurn && (
+                      <p style={{ color: '#faad14', fontWeight: 'bold' }}>
+                        {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurnNote' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </TabPane>
 
-                {directBurn && (
-                  <Form.Item
-                    label={intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress' })}
-                    name="targetAddress"
-                    rules={[
-                      {
-                        required: true,
-                        message: intl.formatMessage({ id: 'pages.zwtoken.deposit.targetAddress.required' }),
-                      },
-                      {
-                        pattern: /^0x[a-fA-F0-9]{40}$/,
-                        message: intl.formatMessage({
-                          id: 'pages.zwtoken.transfer.targetAddress.invalid',
-                        }),
-                      },
-                    ]}
-                  >
-                    <Input
-                      placeholder={intl.formatMessage({
-                        id: 'pages.zwtoken.deposit.targetAddress.placeholder',
-                      })}
-                      maxLength={42}
-                      addonAfter={
-                        <Button
-                          type="link"
-                          onClick={handleAdvancedDepositGenerateClick}
-                          style={{ padding: 0, height: 'auto' }}
-                        >
-                          {intl.formatMessage({ id: 'pages.zwtoken.deposit.generateBySeed' })}
-                        </Button>
-                      }
-                    />
-                  </Form.Item>
-                )}
+              <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.unwrap' })} key="withdraw">
+                <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                  <Form form={withdrawForm} layout="vertical" onFinish={handleWithdraw}>
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount' })}
+                      name="amount"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.withdraw.amount.required',
+                          }),
+                        },
+                        {
+                          type: 'number',
+                          min: 0.000001,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount.min' }),
+                        },
+                      ]}
+                    >
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.withdraw.amount.placeholder',
+                        })}
+                        precision={6}
+                        min={0}
+                      />
+                    </Form.Item>
 
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={loading} block>
-                    {advancedNeedsApproval
-                      ? 'Approve'
-                      : directBurn
-                      ? 'Wrap and Burn'
-                      : 'Wrap'}
-                  </Button>
-                </Form.Item>
-              </Form>
-
-              <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                <h4>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.title' })}</h4>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.1' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.2' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.deposit.tip.3' })}</p>
-                {directBurn && (
-                  <p style={{ color: '#faad14', fontWeight: 'bold' }}>
-                    {intl.formatMessage({ id: 'pages.zwtoken.deposit.directBurnNote' })}
-                  </p>
-                )}
-              </div>
-            </div>
-          </TabPane>
-
-          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.unwrap' })} key="withdraw">
-            <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-              <Form form={withdrawForm} layout="vertical" onFinish={handleWithdraw}>
-                <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount' })}
-                  name="amount"
-                  rules={[
-                    {
-                      required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount.required' }),
-                    },
-                    {
-                      type: 'number',
-                      min: 0.000001,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.withdraw.amount.min' }),
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.withdraw.amount.placeholder',
-                    })}
-                    precision={6}
-                    min={0}
-                  />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={loading} block>
-                    {intl.formatMessage({ id: 'pages.zwtoken.withdraw.button' })}
-                  </Button>
-                </Form.Item>
-              </Form>
+                    <Form.Item>
+                      <Button type="primary" htmlType="submit" loading={loading} block>
+                        {intl.formatMessage({ id: 'pages.zwtoken.withdraw.button' })}
+                      </Button>
+                    </Form.Item>
+                  </Form>
 
                   <div
                     style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
@@ -2300,12 +2389,12 @@ const ZWToken: React.FC = () => {
                       />
                     </Form.Item>
 
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={loading} block>
-                    {intl.formatMessage({ id: 'pages.zwtoken.transfer.button' })}
-                  </Button>
-                </Form.Item>
-              </Form>
+                    <Form.Item>
+                      <Button type="primary" htmlType="submit" loading={loading} block>
+                        {intl.formatMessage({ id: 'pages.zwtoken.transfer.button' })}
+                      </Button>
+                    </Form.Item>
+                  </Form>
 
                   <div
                     style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
@@ -2319,132 +2408,138 @@ const ZWToken: React.FC = () => {
                 </div>
               </TabPane>
 
-          <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.remint' })} key="remint">
-            <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-              <Form form={remintForm} layout="vertical" onFinish={handleRemint}>
-                <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.remint.secret' })}
-                  name="secret"
-                  rules={[
-                    {
-                      required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.secret.required' }),
-                    },
-                  ]}
-                >
-                  <Input.Password
-                    placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.remint.secret.placeholder',
-                    })}
-                    addonAfter={
-                      <Button
-                        type="link"
-                        onClick={handleAdvancedRemintGenerateBySeedClick}
-                        style={{ padding: 0, height: 'auto' }}
+              <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.remint' })} key="remint">
+                <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                  <Form form={remintForm} layout="vertical" onFinish={handleRemint}>
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.remint.secret' })}
+                      name="secret"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.remint.secret.required',
+                          }),
+                        },
+                      ]}
+                    >
+                      <Input.Password
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.remint.secret.placeholder',
+                        })}
+                        addonAfter={
+                          <Button
+                            type="link"
+                            onClick={handleAdvancedRemintGenerateBySeedClick}
+                            style={{ padding: 0, height: 'auto' }}
+                          >
+                            {intl.formatMessage({ id: 'pages.zwtoken.remint.selectSecretBySeed' })}
+                          </Button>
+                        }
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.remint.recipient' })}
+                      name="recipient"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.remint.recipient.required',
+                          }),
+                        },
+                        {
+                          pattern: /^0x[a-fA-F0-9]{40}$/,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.remint.recipient.invalid',
+                          }),
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.remint.recipient.placeholder',
+                        })}
+                        maxLength={42}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      label={intl.formatMessage({ id: 'pages.zwtoken.remint.amount' })}
+                      name="remintAmount"
+                      rules={[
+                        {
+                          required: true,
+                          message: intl.formatMessage({
+                            id: 'pages.zwtoken.remint.amount.required',
+                          }),
+                        },
+                        {
+                          type: 'number',
+                          min: 0.000001,
+                          message: intl.formatMessage({ id: 'pages.zwtoken.remint.amount.min' }),
+                        },
+                      ]}
+                    >
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder={intl.formatMessage({
+                          id: 'pages.zwtoken.remint.amount.placeholder',
+                        })}
+                        precision={6}
+                        min={0}
+                      />
+                    </Form.Item>
+
+                    {selectedRemintMaxAmount && parseFloat(selectedRemintMaxAmount) > 0 && (
+                      <div
+                        style={{
+                          marginTop: -16,
+                          marginBottom: 16,
+                          color: '#1890ff',
+                          fontSize: '12px',
+                        }}
                       >
-                        {intl.formatMessage({ id: 'pages.zwtoken.remint.selectSecretBySeed' })}
+                        💡 {intl.formatMessage({ id: 'pages.zwtoken.remint.maxAmountTip' })}:{' '}
+                        {parseFloat(selectedRemintMaxAmount).toFixed(6)} ZWUSDC
+                      </div>
+                    )}
+
+                    <Form.Item name="relayerFee" initialValue={0} hidden>
+                      <InputNumber />
+                    </Form.Item>
+
+                    <Form.Item name="redeem" valuePropName="checked" initialValue={false}>
+                      <Checkbox>
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.redeem' })}
+                      </Checkbox>
+                    </Form.Item>
+
+                    <Form.Item>
+                      <Button type="primary" htmlType="submit" loading={loading} block>
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
                       </Button>
-                    }
-                  />
-                </Form.Item>
+                    </Form.Item>
+                  </Form>
 
-                <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.remint.recipient' })}
-                  name="recipient"
-                  rules={[
-                    {
-                      required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.recipient.required' }),
-                    },
-                    {
-                      pattern: /^0x[a-fA-F0-9]{40}$/,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.recipient.invalid' }),
-                    },
-                  ]}
-                >
-                  <Input
-                    placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.remint.recipient.placeholder',
-                    })}
-                    maxLength={42}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={intl.formatMessage({ id: 'pages.zwtoken.remint.amount' })}
-                  name="remintAmount"
-                  rules={[
-                    {
-                      required: true,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.amount.required' }),
-                    },
-                    {
-                      type: 'number',
-                      min: 0.000001,
-                      message: intl.formatMessage({ id: 'pages.zwtoken.remint.amount.min' }),
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder={intl.formatMessage({
-                      id: 'pages.zwtoken.remint.amount.placeholder',
-                    })}
-                    precision={6}
-                    min={0}
-                  />
-                </Form.Item>
-
-                {selectedRemintMaxAmount && parseFloat(selectedRemintMaxAmount) > 0 && (
                   <div
-                    style={{
-                      marginTop: -16,
-                      marginBottom: 16,
-                      color: '#1890ff',
-                      fontSize: '12px',
-                    }}
+                    style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
                   >
-                    💡 {intl.formatMessage({ id: 'pages.zwtoken.remint.maxAmountTip' })}: {parseFloat(selectedRemintMaxAmount).toFixed(6)} ZWUSDC
+                    <h4>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.title' })}</h4>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.3' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.4' })}</p>
+                    <p style={{ color: '#1890ff', marginTop: 12 }}>
+                      <strong>
+                        {intl.formatMessage({ id: 'pages.zwtoken.remint.parameters' })}
+                      </strong>
+                      <br />
+                      {intl.formatMessage({ id: 'pages.zwtoken.remint.redeemDesc' })}
+                    </p>
                   </div>
-                )}
-
-                <Form.Item
-                  name="relayerFee"
-                  initialValue={0}
-                  hidden
-                >
-                  <InputNumber />
-                </Form.Item>
-
-                <Form.Item
-                  name="withdrawUnderlying"
-                  valuePropName="checked"
-                  initialValue={false}
-                >
-                  <Checkbox>
-                    {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlying' })}
-                  </Checkbox>
-                </Form.Item>
-
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={loading} block>
-                    {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
-                  </Button>
-                </Form.Item>
-              </Form>
-
-              <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                <h4>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.title' })}</h4>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.1' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.2' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.3' })}</p>
-                <p>{intl.formatMessage({ id: 'pages.zwtoken.remint.tip.4' })}</p>
-                <p style={{ color: '#1890ff', marginTop: 12 }}>
-                  <strong>{intl.formatMessage({ id: 'pages.zwtoken.remint.parameters' })}</strong><br />
-                  {intl.formatMessage({ id: 'pages.zwtoken.remint.withdrawUnderlyingDesc' })}
-                </p>
-              </div>
-            </div>
+                </div>
               </TabPane>
             </Tabs>
           </TabPane>
@@ -2452,27 +2547,29 @@ const ZWToken: React.FC = () => {
           {/* Tutorial Tab */}
           <TabPane tab="Tutorial" key="tutorial">
             <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 0' }}>
-              <div style={{ 
-                position: 'relative', 
-                paddingBottom: '56.25%', /* 16:9 aspect ratio */
-                height: 0,
-                overflow: 'hidden',
-                maxWidth: '100%',
-                background: '#000'
-              }}>
-                <iframe 
+              <div
+                style={{
+                  position: 'relative',
+                  paddingBottom: '56.25%' /* 16:9 aspect ratio */,
+                  height: 0,
+                  overflow: 'hidden',
+                  maxWidth: '100%',
+                  background: '#000',
+                }}
+              >
+                <iframe
                   style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     width: '100%',
                     height: '100%',
-                    border: 0
+                    border: 0,
                   }}
-                  src="https://www.youtube.com/embed/aH_Q9idI2Uw?si=4B99x1e1WapJRQe2&cc_load_policy=1" 
-                  title="YouTube video player" 
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                  referrerPolicy="strict-origin-when-cross-origin" 
+                  src="https://www.youtube.com/embed/aH_Q9idI2Uw?si=4B99x1e1WapJRQe2&cc_load_policy=1"
+                  title="YouTube video player"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
                   allowFullScreen
                 />
               </div>
@@ -2584,13 +2681,13 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 USDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})</span>;
+                      return (
+                        <span style={{ color: '#999' }}>
+                          0 USDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
+                        </span>
+                      );
                     }
-                    return (
-                      <span style={{ color: '#52c41a' }}>
-                        0 USDC
-                      </span>
-                    );
+                    return <span style={{ color: '#52c41a' }}>0 USDC</span>;
                   },
                 },
                 {
@@ -2604,9 +2701,17 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}</span>;
+                      return (
+                        <span style={{ color: '#999', fontWeight: 'bold' }}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}
+                        </span>
+                      );
                     }
-                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        {intl.formatMessage({ id: 'pages.zwtoken.table.available' })}
+                      </span>
+                    );
                   },
                 },
                 {
@@ -2817,13 +2922,13 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})</span>;
+                      return (
+                        <span style={{ color: '#999' }}>
+                          0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
+                        </span>
+                      );
                     }
-                    return (
-                      <span style={{ color: '#52c41a' }}>
-                        0 ZWUSDC
-                      </span>
-                    );
+                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
                   },
                 },
                 {
@@ -2837,9 +2942,17 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}</span>;
+                      return (
+                        <span style={{ color: '#999', fontWeight: 'bold' }}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}
+                        </span>
+                      );
                     }
-                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        {intl.formatMessage({ id: 'pages.zwtoken.table.available' })}
+                      </span>
+                    );
                   },
                 },
                 {
@@ -2955,7 +3068,12 @@ const ZWToken: React.FC = () => {
                   })}
                 />
               </Form.Item>
-              <Button type="primary" onClick={handleAdvancedDepositSecretConfirm} block size="large">
+              <Button
+                type="primary"
+                onClick={handleAdvancedDepositSecretConfirm}
+                block
+                size="large"
+              >
                 {intl.formatMessage({ id: 'pages.zwtoken.transfer.secretModal.confirm' })}
               </Button>
             </Form>
@@ -3051,13 +3169,13 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})</span>;
+                      return (
+                        <span style={{ color: '#999' }}>
+                          0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
+                        </span>
+                      );
                     }
-                    return (
-                      <span style={{ color: '#52c41a' }}>
-                        0 ZWUSDC
-                      </span>
-                    );
+                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
                   },
                 },
                 {
@@ -3071,9 +3189,17 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}</span>;
+                      return (
+                        <span style={{ color: '#999', fontWeight: 'bold' }}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })}
+                        </span>
+                      );
                     }
-                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        {intl.formatMessage({ id: 'pages.zwtoken.table.available' })}
+                      </span>
+                    );
                   },
                 },
                 {
@@ -3213,7 +3339,11 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 USDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})</span>;
+                      return (
+                        <span style={{ color: '#999' }}>
+                          0 USDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})
+                        </span>
+                      );
                     }
                     return <span style={{ color: '#52c41a' }}>0 USDC</span>;
                   },
@@ -3229,9 +3359,17 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })}</span>;
+                      return (
+                        <span style={{ color: '#999', fontWeight: 'bold' }}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })}
+                        </span>
+                      );
                     }
-                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        {intl.formatMessage({ id: 'pages.zwtoken.table.available' })}
+                      </span>
+                    );
                   },
                 },
                 {
@@ -3350,7 +3488,11 @@ const ZWToken: React.FC = () => {
                     }
                     // Show different message based on isClaimed status
                     if (record.isClaimed) {
-                      return <span style={{ color: '#999' }}>0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})</span>;
+                      return (
+                        <span style={{ color: '#999' }}>
+                          0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})
+                        </span>
+                      );
                     }
                     return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
                   },
@@ -3366,9 +3508,17 @@ const ZWToken: React.FC = () => {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })}</span>;
+                      return (
+                        <span style={{ color: '#999', fontWeight: 'bold' }}>
+                          {intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })}
+                        </span>
+                      );
                     }
-                    return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwtoken.table.available' })}</span>;
+                    return (
+                      <span style={{ color: '#52c41a' }}>
+                        {intl.formatMessage({ id: 'pages.zwtoken.table.available' })}
+                      </span>
+                    );
                   },
                 },
                 {

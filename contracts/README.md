@@ -120,7 +120,7 @@ transfer/claim → _recordCommitmentIfNeeded()
 ### 3. Remint Flow (Privacy Transfer)
 
 ```
-User → remint(to, id, amount, withdrawUnderlying, data)
+User → remint(to, id, amount, redeem, data)
      ↓
 Verify root is a valid historical root
      ↓
@@ -128,8 +128,8 @@ Verify nullifier has not been used
      ↓
 Verify ZK proof (via ISnarkVerifier)
      ↓
-If withdrawUnderlying=false: Mint ZWToken to to address
-If withdrawUnderlying=true: Transfer out underlying tokens
+If redeem=false: Mint ZWToken to to address
+If redeem=true: Transfer out underlying tokens
      ↓
 Record commitment (if first receipt and minting)
 ```

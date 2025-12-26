@@ -8,7 +8,7 @@ export const CONTRACT_CONFIG = {
     // IERC8065 core functions
     'function deposit(address to, uint256 id, uint256 amount) external payable',
     'function withdraw(address to, uint256 id, uint256 amount) external',
-    'function remint(address to, uint256 id, uint256 amount, bool withdrawUnderlying, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bytes proof) data) external',
+    'function remint(address to, uint256 id, uint256 amount, bool redeem, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bytes proof) data) external',
 
     // Transfer function
     'function transfer(address to, uint256 amount) external returns (bool)',
@@ -23,7 +23,7 @@ export const CONTRACT_CONFIG = {
     'event CommitmentUpdated(uint256 indexed id, bytes32 indexed commitment, address indexed to, uint256 amount)',
     'event Deposited(address indexed from, address indexed to, uint256 indexed id, uint256 amount)',
     'event Withdrawn(address indexed from, address indexed to, uint256 indexed id, uint256 amount)',
-    'event Reminted(address indexed from, address indexed to, uint256 indexed id, uint256 amount, bool withdrawUnderlying)',
+    'event Reminted(address indexed from, address indexed to, uint256 indexed id, uint256 amount, bool redeem)',
   ],
 };
 

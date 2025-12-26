@@ -41,7 +41,7 @@ Circuit: remint.circom
 3. `to` - Recipient address
 4. `remintAmount` - Amount to remint
 5. `id` - Token ID (0 for ERC-20)
-6. `withdrawUnderlying` - Withdrawal flag
+6. `redeem` - Withdrawal flag
 7. `relayerFee` - Optional relayer fee
 
 ### Private Inputs (44)

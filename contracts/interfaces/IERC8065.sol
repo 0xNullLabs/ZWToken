@@ -61,9 +61,9 @@ interface IERC8065 {
      * @param to The address receiving the reminted ZWToken
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
      * @param amount The amount of ZWToken reminted
-     * @param withdrawUnderlying If true, withdraws the equivalent underlying token instead of reminting ZWToken
+     * @param redeem If true, withdraws the equivalent underlying token instead of reminting ZWToken
      */
-    event Reminted(address indexed from, address indexed to, uint256 indexed id, uint256 amount, bool withdrawUnderlying);
+    event Reminted(address indexed from, address indexed to, uint256 indexed id, uint256 amount, bool redeem);
     
     // ========== Core Functions ==========
     
@@ -93,14 +93,14 @@ interface IERC8065 {
      * @param to Recipient address that will receive the reminted ZWToken or the underlying token
      * @param id The token identifier. For fungible tokens that do not have `id`, such as ERC-20, this value MUST be set to `0`.
      * @param amount Amount of ZWToken burned from the provable burn address for reminting
-     * @param withdrawUnderlying If true, withdraws the equivalent underlying token instead of reminting ZWToken
+     * @param redeem If true, withdraws the equivalent underlying token instead of reminting ZWToken
      * @param data Encapsulated remint data including commitment, nullifiers, proof, and relayer information
      */
     function remint(
         address to,
         uint256 id,
         uint256 amount,
-        bool withdrawUnderlying,
+        bool redeem,
         RemintData calldata data
     ) external;
     

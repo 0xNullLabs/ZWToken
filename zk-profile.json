@@ -27,35 +27,35 @@
   },
   "proofGeneration": {
     "output": {
-      "proofJsonSize": 720,
+      "proofJsonSize": 721,
       "publicSignalsCount": 7,
-      "estimatedTxBytes": 944
+      "estimatedTxBytes": 945
     },
     "runs": 5,
     "times": [
-      789,
-      821,
-      848,
-      860,
-      979
+      679,
+      695,
+      702,
+      709,
+      723
     ],
-    "average": 859,
-    "min": 789,
-    "max": 979,
-    "median": 848,
+    "average": 702,
+    "min": 679,
+    "max": 723,
+    "median": 702,
     "unit": "ms"
   },
   "memory": {
-    "averageHeapIncreaseMB": 0.06,
-    "averageExternalIncreaseMB": 2.01,
-    "totalIncreaseMB": 2.07
+    "averageHeapIncreaseMB": 0.1,
+    "averageExternalIncreaseMB": 1.84,
+    "totalIncreaseMB": 1.94
   },
   "mobileAssessment": {
-    "desktopAvgMs": 859,
+    "desktopAvgMs": 702,
     "estimates": {
       "highEnd": {
         "multiplier": 2.5,
-        "estimatedMs": 2148,
+        "estimatedMs": 1755,
         "devices": [
           "iPhone 14 Pro",
           "Samsung S23",
@@ -64,7 +64,7 @@
       },
       "midRange": {
         "multiplier": 3.5,
-        "estimatedMs": 3007,
+        "estimatedMs": 2457,
         "devices": [
           "iPhone 12",
           "Samsung A53",
@@ -73,7 +73,7 @@
       },
       "lowEnd": {
         "multiplier": 5,
-        "estimatedMs": 4295,
+        "estimatedMs": 3510,
         "devices": [
           "iPhone X",
           "Samsung A32",
@@ -83,8 +83,8 @@
     },
     "memoryRequirement": {
       "baselineMB": 7.69,
-      "runtimeMB": 2.07,
-      "totalMB": 9.76
+      "runtimeMB": 1.94,
+      "totalMB": 9.63
     },
     "feasibility": {
       "highEnd": "✅ Excellent",

@@ -317,7 +317,7 @@ describe("ZWERC20 - Commitment Recording", function () {
         bob.address, // to
         0, // id
         amount, // amount
-        false, // withdrawUnderlying
+        false, // redeem
         {
           // RemintData struct
           commitment: root,
@@ -371,7 +371,7 @@ describe("ZWERC20 - Commitment Recording", function () {
         bob.address, // to
         0, // id
         amount, // amount
-        false, // withdrawUnderlying
+        false, // redeem
         {
           // RemintData struct
           commitment: root,
@@ -409,7 +409,7 @@ describe("ZWERC20 - Commitment Recording", function () {
         bob.address, // to
         0, // id
         amount, // amount
-        false, // withdrawUnderlying
+        false, // redeem
         {
           // RemintData struct
           commitment: root,
