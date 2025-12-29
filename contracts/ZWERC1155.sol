@@ -50,18 +50,16 @@ contract ZWERC1155 is ERC1155, BaseZWToken {
      * @notice ZWERC1155 constructor
      * @param name_ Token name
      * @param symbol_ Token symbol
-     * @param uri_ Base URI for token metadata
      * @param underlying_ Address of the underlying ERC1155 contract
      * @param config ZWToken configuration (verifier, feeCollector, fees)
      */
     constructor(
         string memory name_,
         string memory symbol_,
-        string memory uri_,
         address underlying_,
         ZWConfig memory config
     ) 
-        ERC1155(uri_) 
+        ERC1155("") 
         BaseZWToken(config) 
     {
         require(underlying_ != address(0), "Invalid underlying");
@@ -458,12 +456,7 @@ contract ZWERC1155 is ERC1155, BaseZWToken {
      * @notice Returns the token URI from the underlying contract
      */
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
-        // Try to get URI from underlying if it implements IERC1155MetadataURI
-        try IERC1155MetadataURI(address(underlying)).uri(tokenId) returns (string memory tokenUri) {
-            return tokenUri;
-        } catch {
-            return super.uri(tokenId);
-        }
+        return IERC1155MetadataURI(address(underlying)).uri(tokenId);
     }
     
     /**

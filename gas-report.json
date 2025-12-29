@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-26T11:58:42.524Z",
+  "timestamp": "2025-12-29T08:38:41.933Z",
   "gasPrice": {
     "gwei": 0.2,
     "ethPriceUSD": 4000
@@ -28,17 +28,17 @@
     },
     {
       "operation": "ZWERC20: deposit (first time)",
-      "gasUsed": "107077",
+      "gasUsed": "107121",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000021415",
-      "costUSD": "$0.085662"
+      "costETH": "0.000021424",
+      "costUSD": "$0.085697"
     },
     {
       "operation": "ZWERC20: deposit (subsequent)",
-      "gasUsed": "55777",
+      "gasUsed": "55821",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000011155",
-      "costUSD": "$0.044622"
+      "costETH": "0.000011164",
+      "costUSD": "$0.044657"
     },
     {
       "operation": "ZWERC20: withdraw (first time)",
@@ -56,31 +56,31 @@
     },
     {
       "operation": "ZWERC20: transfer (first receipt, records commitment)",
-      "gasUsed": "1364749",
+      "gasUsed": "1367108",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000272950",
-      "costUSD": "$1.091799"
+      "costETH": "0.000273422",
+      "costUSD": "$1.093686"
     },
     {
       "operation": "ZWERC20: transfer (subsequent, no commitment)",
-      "gasUsed": "36957",
+      "gasUsed": "37014",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000007391",
-      "costUSD": "$0.029566"
+      "costETH": "0.000007403",
+      "costUSD": "$0.029611"
     },
     {
       "operation": "ZWERC20: remint (with ZK proof)",
-      "gasUsed": "1045447",
+      "gasUsed": "1047900",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000209089",
-      "costUSD": "$0.836358"
+      "costETH": "0.000209580",
+      "costUSD": "$0.838320"
     },
     {
       "operation": "ZWERC20: remint (subsequent, no new commitment)",
-      "gasUsed": "79200",
+      "gasUsed": "79351",
       "gasPriceGwei": 0.2,
-      "costETH": "0.000015840",
-      "costUSD": "$0.063360"
+      "costETH": "0.000015870",
+      "costUSD": "$0.063481"
     }
   ],
   "summary": {
@@ -111,17 +111,17 @@
       "depositWithdraw": [
         {
           "operation": "ZWERC20: deposit (first time)",
-          "gasUsed": "107077",
+          "gasUsed": "107121",
           "gasPriceGwei": 0.2,
-          "costETH": "0.000021415",
-          "costUSD": "$0.085662"
+          "costETH": "0.000021424",
+          "costUSD": "$0.085697"
         },
         {
           "operation": "ZWERC20: deposit (subsequent)",
-          "gasUsed": "55777",
+          "gasUsed": "55821",
           "gasPriceGwei": 0.2,
-          "costETH": "0.000011155",
-          "costUSD": "$0.044622"
+          "costETH": "0.000011164",
+          "costUSD": "$0.044657"
         },
         {
           "operation": "ZWERC20: withdraw (first time)",

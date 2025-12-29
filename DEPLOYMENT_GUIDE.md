@@ -1,311 +1,324 @@
 # Deployment Guide
 
-## 📦 Automatic Deployment Records
+## 📦 Multi-Contract Deployment
 
-The deployment script now automatically records detailed information for each deployment and syncs updates to README.md.
+The deployment script supports deploying multiple ZWToken contracts from a JSON configuration file:
 
-### Features
+- **ZWERC20**: Wraps ERC-20 tokens
+- **ZWERC721**: Wraps ERC-721 NFTs
+- **ZWERC1155**: Wraps ERC-1155 tokens
+- **ZWETH**: Wraps native ETH
 
-1. **Incremental Records** - Does not delete historical deployment records
-2. **Multi-network Support** - Automatically identifies network and generates corresponding block explorer links
-3. **Dual Storage** - JSON file + README.md update
+Each token has its own `verifier` and `feeConfig`. Deployed addresses are automatically written back to the config file.
 
-### Deployment Record Storage
-
-Each deployment generates the following files:
-
-```
-deployments/
-├── deployment-{network}-{timestamp}.json  # Historical deployment records
-└── latest-{network}.json                  # Latest deployment (overwrite)
-```
-
-### Supported Networks
-
-| Network         | Block Explorer                          |
-| --------------- | --------------------------------------- |
-| mainnet         | https://etherscan.io                    |
-| sepolia         | https://sepolia.etherscan.io            |
-| goerli          | https://goerli.etherscan.io             |
-| arbitrum        | https://arbiscan.io                     |
-| arbitrumSepolia | https://sepolia.arbiscan.io             |
-| optimism        | https://optimistic.etherscan.io         |
-| optimismSepolia | https://sepolia-optimistic.etherscan.io |
-| polygon         | https://polygonscan.com                 |
-| polygonMumbai   | https://mumbai.polygonscan.com          |
-| bsc             | https://bscscan.com                     |
-| bscTestnet      | https://testnet.bscscan.com             |
-| hardhat         | No explorer                             |
-| localhost       | No explorer                             |
-
-### Deployment Record Contents
-
-Each deployment record contains:
-
-- **Network Info**: Network name, deployment time
-- **Contract Addresses**: PoseidonT3, Verifier, ZWERC20, Underlying Token
-- **Token Info**: Name, symbol, decimals
-- **Fee Configuration**: Fee collector, various fee rates
-- **Deployer Account**: Deployer address
-
-### Usage Examples
-
-#### 1. Deploy to Sepolia
+### Quick Start
 
 ```bash
+# 1. Copy example config
+cp deploy.config.example.json deploy.config.json
+
+# 2. Edit configuration
+vim deploy.config.json
+
+# 3. Deploy
 npx hardhat run scripts/deploy.js --network sepolia
 ```
 
-Output example:
+## 🔧 Configuration
 
-```
-================================================================================
-🚀 Starting ZWERC20 Contract Deployment
-================================================================================
+### Environment Variables (Sensitive Data Only)
 
-📍 Deployer Account: 0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb
-💰 Account Balance: 0.338139247778615935 ETH
+| Variable            | Description                               | Required |
+| ------------------- | ----------------------------------------- | -------- |
+| `PRIVATE_KEY`       | Deployer account private key              | Yes      |
+| `*_RPC_URL`         | Network RPC URL (e.g., `SEPOLIA_RPC_URL`) | Yes      |
+| `ETHERSCAN_API_KEY` | API key for contract verification         | No       |
+| `DEPLOY_CONFIG`     | Path to JSON config file                  | No       |
 
-...deployment process...
+### JSON Configuration File
 
-📝 Deployment info saved: deployments/deployment-sepolia-1730892000000.json
-📝 Latest deployment info: deployments/latest-sepolia.json
-📝 README.md deployment records updated
-
-✅ Deployment records saved to deployments/ directory and README.md
-```
-
-#### 2. Deploy to Other Networks
-
-```bash
-# Mainnet
-npx hardhat run scripts/deploy.js --network mainnet
-
-# Arbitrum
-npx hardhat run scripts/deploy.js --network arbitrum
-
-# Optimism
-npx hardhat run scripts/deploy.js --network optimism
-
-# Polygon
-npx hardhat run scripts/deploy.js --network polygon
-```
-
-#### 3. View Deployment History
-
-```bash
-# View all deployment records
-ls -la deployments/
-
-# View latest deployment for specific network
-cat deployments/latest-sepolia.json
-
-# View deployment records in README
-tail -n 50 README.md
-```
-
-### README.md Deployment Record Format
-
-Each deployment appends a new record to the "📦 Deployment Records" section in README.md:
-
-```markdown
-## 📦 Deployment Records
-
-### Sepolia - 11/6/2025, 3:53:20 PM
-
-**Contract Addresses:**
-
-- PoseidonT3: [`0xABC...`](https://sepolia.etherscan.io/address/0xABC...)
-- Verifier: [`0xDEF...`](https://sepolia.etherscan.io/address/0xDEF...)
-- ZWERC20: [`0x123...`](https://sepolia.etherscan.io/address/0x123...)
-- Underlying Token (USDC): [`0x456...`](https://sepolia.etherscan.io/address/0x456...)
-
-**Token Info:**
-
-- Name: Zero Knowledge Wrapper USDC
-- Symbol: ZWUSDC
-- Decimals: 6
-
-**Fee Configuration:**
-
-- Fee Collector: `0xb54...`
-- Fee Denominator: 1000000
-- Deposit Fee: 0 (0.00%)
-- Remint Fee: 0 (0.00%)
-- Withdraw Fee: 0 (0.00%)
-
-**Deployer:** `0xb54...`
-```
-
-### JSON Record Format
+Create a `deploy.config.json` file:
 
 ```json
 {
-  "network": "sepolia",
-  "timestamp": "2025-11-06T07:53:20.000Z",
-  "deployer": "0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb",
-  "addresses": {
-    "poseidonT3": "0xABCEffcB2b5fD8958A9358eC6c218F91b7bA0A62",
-    "underlying": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-    "verifier": "0xaB165da0aB5D12C0D75ff49b53319fff60140C51",
-    "zwToken": "0xFdb64908218B900585571218a77a0a1B47c537e7"
-  },
-  "tokenInfo": {
-    "name": "Zero Knowledge Wrapper USDC",
-    "symbol": "ZWUSDC",
-    "decimals": "6",
-    "underlyingName": "USDC",
-    "underlyingSymbol": "USDC"
-  },
-  "feeConfig": {
-    "feeCollector": "0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb",
-    "feeDenominator": "1000000",
-    "depositFee": "0",
-    "remintFee": "0",
-    "withdrawFee": "0"
-  }
+  "poseidonT3": null,
+  "tokens": [
+    {
+      "type": "ZWETH",
+      "name": "ZK Wrapper ETH",
+      "symbol": "ZWETH",
+      "address": null,
+      "verifier": null,
+      "feeConfig": {
+        "depositFee": 0,
+        "withdrawFee": 0
+      }
+    }
+  ]
 }
 ```
 
-### Important Notes
+### Configuration Fields
 
-1. **History Preserved**: All deployment records are preserved, filenames include timestamps
-2. **README Updates**: Each deployment appends new records to README.md, does not delete old records
-3. **Network Separation**: Deployment records for different networks are stored separately
-4. **Block Explorer Links**: Correct explorer links are generated based on network
-5. **Local Networks**: hardhat and localhost networks do not generate explorer links
+#### Root Level
 
-### Environment Variable Configuration
+| Field        | Type   | Description                                    |
+| ------------ | ------ | ---------------------------------------------- |
+| `poseidonT3` | string | PoseidonT3 library address (null = deploy new) |
+| `tokens`     | array  | Array of token configurations                  |
 
-Before deployment, ensure the following environment variables are configured (in `.env` file):
+#### Token Configuration
 
-```bash
-# Required
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
-PRIVATE_KEY=your_private_key
-UNDERLYING_TOKEN_ADDRESS=0x...
+| Field        | Type   | Required | Description                                            |
+| ------------ | ------ | -------- | ------------------------------------------------------ |
+| `type`       | string | Yes      | Token type: ZWERC20, ZWERC721, ZWERC1155, ZWETH        |
+| `name`       | string | No       | Token name (auto-generated if not set)                 |
+| `symbol`     | string | No       | Token symbol (auto-generated if not set)               |
+| `address`    | string | No       | Deployed address (null = deploy, set = skip)           |
+| `verifier`   | string | No       | Verifier address (null = deploy new)                   |
+| `underlying` | string | Depends  | Underlying token address (required for ERC20/721/1155) |
+| `uri`        | string | No       | Base URI for ERC1155 metadata                          |
+| `feeConfig`  | object | No       | Token-specific fee configuration                       |
 
-# Optional (fee configuration)
-FEE_COLLECTOR=0x...           # Default: deployer account
-FEE_DENOMINATOR=1000000       # Default: 1000000 (0.01% precision)
-DEPOSIT_FEE=0                 # Default: 0
-REMINT_FEE=0                  # Default: 0
-WITHDRAW_FEE=0                # Default: 0
+#### Fee Configuration (Per Token)
 
-# Optional (Etherscan verification)
-ETHERSCAN_API_KEY=your_api_key # Get from https://etherscan.io/apis
-                               # If set, contracts will be automatically verified
+| Field            | Type   | Default          | Description                         |
+| ---------------- | ------ | ---------------- | ----------------------------------- |
+| `feeCollector`   | string | Deployer address | Address that receives protocol fees |
+| `feeDenominator` | number | 10000            | Fee denominator (10000 = 100%)      |
+| `depositFee`     | number | 0                | Deposit fee in basis points         |
+| `remintFee`      | number | 0                | Remint fee in basis points          |
+| `withdrawFee`    | number | 0                | Withdraw fee in basis points        |
+| `minDepositFee`  | number | 0                | Minimum absolute deposit fee        |
+| `minWithdrawFee` | number | 0                | Minimum absolute withdraw fee       |
+| `minRemintFee`   | number | 0                | Minimum absolute remint fee         |
+
+## 📋 Configuration Examples
+
+### Example 1: Single ZWETH
+
+```json
+{
+  "tokens": [
+    {
+      "type": "ZWETH",
+      "address": null,
+      "verifier": null
+    }
+  ]
+}
 ```
 
-### Etherscan Contract Verification
+### Example 2: Multiple Tokens with Different Verifiers
 
-The deployment script includes automatic Etherscan verification. When `ETHERSCAN_API_KEY` is set, the script will:
+```json
+{
+  "tokens": [
+    {
+      "type": "ZWETH",
+      "address": null,
+      "verifier": null,
+      "feeConfig": { "depositFee": 0 }
+    },
+    {
+      "type": "ZWERC20",
+      "underlying": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "name": "Private USDC",
+      "symbol": "pUSDC",
+      "address": null,
+      "verifier": null,
+      "feeConfig": { "depositFee": 10, "withdrawFee": 10 }
+    },
+    {
+      "type": "ZWERC20",
+      "underlying": "0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0",
+      "name": "Private USDT",
+      "symbol": "pUSDT",
+      "address": null,
+      "verifier": null,
+      "feeConfig": { "depositFee": 20, "withdrawFee": 20 }
+    }
+  ]
+}
+```
 
-1. **Wait for block confirmations** (20 seconds) to ensure contracts are indexed
-2. **Verify PoseidonT3 Library** - Simple library contract
-3. **Verify Groth16Verifier** - ZK proof verifier contract
-4. **Verify ZWERC20** - Main contract with library linking
+### Example 3: Share Existing Verifier
 
-**Verification Output Example**:
+After first deployment, reuse the deployed verifier:
+
+```json
+{
+  "poseidonT3": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "tokens": [
+    {
+      "type": "ZWETH",
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "verifier": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+    },
+    {
+      "type": "ZWERC20",
+      "underlying": "0x...",
+      "address": null,
+      "verifier": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+    }
+  ]
+}
+```
+
+### Example 4: All Token Types
+
+```json
+{
+  "tokens": [
+    {
+      "type": "ZWETH",
+      "address": null,
+      "verifier": null,
+      "feeConfig": { "depositFee": 10 }
+    },
+    {
+      "type": "ZWERC20",
+      "underlying": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "address": null,
+      "verifier": null
+    },
+    {
+      "type": "ZWERC721",
+      "underlying": "0xYourNFTContract",
+      "address": null,
+      "verifier": null
+    },
+    {
+      "type": "ZWERC1155",
+      "underlying": "0xYourERC1155",
+      "uri": "https://api.example.com/{id}.json",
+      "address": null,
+      "verifier": null
+    }
+  ]
+}
+```
+
+## 📊 Deployment Behavior
+
+### First Deployment
 
 ```
 ================================================================================
-🔍 Verifying Contracts on Etherscan
+🚀 Starting ZWToken Multi-Contract Deployment
 ================================================================================
 
-⏳ Waiting for block confirmations...
+📄 Loaded configuration: deploy.config.json
+   2 token(s) configured
+
+📍 Deployer: 0xb54c...
+💰 Balance: 0.5 ETH
 
 ────────────────────────────────────────────────────────────────────────────────
-📦 Verifying PoseidonT3 Library
+📦 Shared Infrastructure
 ────────────────────────────────────────────────────────────────────────────────
-✅ PoseidonT3 verified: https://sepolia.etherscan.io/address/0x0305...
+🔧 Deploying PoseidonT3 Library...
+✅ PoseidonT3 deployed to: 0xABC...
 
-────────────────────────────────────────────────────────────────────────────────
-📦 Verifying Groth16Verifier
-────────────────────────────────────────────────────────────────────────────────
-✅ Groth16Verifier verified: https://sepolia.etherscan.io/address/0x7581...
+[1] ZWETH (ZWETH)
+────────────────────────────────────────────────────────────
+   🔧 Deploying Groth16Verifier...
+   ✅ Groth16Verifier deployed to: 0xDEF...
+   ✅ ZWETH deployed: 0x123...
 
-────────────────────────────────────────────────────────────────────────────────
-📦 Verifying ZWERC20 (with library linking)
-────────────────────────────────────────────────────────────────────────────────
-✅ ZWERC20 verified: https://sepolia.etherscan.io/address/0x95E3...
+[2] ZWERC20 (ZWUSDC)
+────────────────────────────────────────────────────────────
+   🔧 Deploying Groth16Verifier...
+   ✅ Groth16Verifier deployed to: 0xGHI...
+   Underlying: 0x1c7D...
+   └─ Name: USDC | Symbol: USDC
+   ✅ ZWERC20 deployed: 0x456...
+
+📝 Configuration updated: deploy.config.json
 
 ================================================================================
-✅ Contract Verification Complete!
+🎉 Deployment Complete!
 ================================================================================
+
+📋 Summary:
+────────────────────────────────────────────────────────────
+PoseidonT3:     0xABC...
+ZWETH:          0x123... (new)
+  └─ Verifier:  0xDEF...
+ZWERC20:        0x456... (new)
+  └─ Underlying: 0x1c7D...
+  └─ Verifier:  0xGHI...
+────────────────────────────────────────────────────────────
+📊 Deployed: 2 | Skipped: 0
 ```
 
-**Manual Verification** (if automatic verification fails):
+### Re-run (Skips Deployed)
 
-If automatic verification fails, the script will provide manual verification commands:
+```
+[1] ZWETH (ZWETH)
+────────────────────────────────────────────────────────────
+   ⏭️  Already deployed: 0x123...
 
-```bash
-# For ZWERC20 (with library linking)
-npx hardhat verify --network sepolia \
-  <ZWERC20_ADDRESS> \
-  "<TOKEN_NAME>" "<TOKEN_SYMBOL>" \
-  <DECIMALS> \
-  <UNDERLYING_ADDRESS> \
-  <VERIFIER_ADDRESS> \
-  <FEE_COLLECTOR> \
-  <FEE_DENOMINATOR> \
-  <DEPOSIT_FEE> <REMINT_FEE> <WITHDRAW_FEE> \
-  --libraries PoseidonT3:<POSEIDON_ADDRESS>
+[2] ZWERC20 (ZWUSDC)
+────────────────────────────────────────────────────────────
+   ⏭️  Already deployed: 0x456...
 
-# For Groth16Verifier (no constructor args)
-npx hardhat verify --network sepolia <VERIFIER_ADDRESS>
-
-# For PoseidonT3 (no constructor args)
-npx hardhat verify --network sepolia <POSEIDON_ADDRESS>
+────────────────────────────────────────────────────────────
+📊 Deployed: 0 | Skipped: 2
 ```
 
-**Getting Etherscan API Key**:
+## 📁 Output Files
 
-1. Go to [Etherscan.io](https://etherscan.io/)
-2. Create an account or log in
-3. Navigate to [API Keys](https://etherscan.io/apis)
-4. Create a new API key
-5. Add it to your `.env` file as `ETHERSCAN_API_KEY`
+### Config File (Updated After Deployment)
 
-### Troubleshooting
-
-#### Deployment Records Not Generated
-
-Check if script executed successfully to completion:
-
-```bash
-# View full output
-npx hardhat run scripts/deploy.js --network sepolia 2>&1 | tee deploy.log
+```json
+{
+  "poseidonT3": "0xABC...",
+  "tokens": [
+    {
+      "type": "ZWETH",
+      "name": "ZK Wrapper ETH",
+      "symbol": "ZWETH",
+      "address": "0x123...",
+      "verifier": "0xDEF...",
+      "feeConfig": { ... }
+    }
+  ]
+}
 ```
 
-#### README Not Updated
+### Deployment Record
 
-Manually run update function (requires deployment info):
-
-```javascript
-const deploymentInfo = require("./deployments/latest-sepolia.json");
-updateReadmeDeployment(deploymentInfo);
+```
+deployments/
+├── deployment-sepolia-{timestamp}.json
+└── latest-sepolia.json
 ```
 
-#### Permission Issues
+## 🌐 Supported Networks
 
-Ensure write permissions:
+| Network  | Block Explorer                  |
+| -------- | ------------------------------- |
+| mainnet  | https://etherscan.io            |
+| sepolia  | https://sepolia.etherscan.io    |
+| arbitrum | https://arbiscan.io             |
+| optimism | https://optimistic.etherscan.io |
+| polygon  | https://polygonscan.com         |
+| bsc      | https://bscscan.com             |
 
-```bash
-chmod +w README.md
-chmod +w deployments/
-```
+## 🔍 Etherscan Verification
 
-## 🔒 Security Recommendations
+When `ETHERSCAN_API_KEY` is set, newly deployed contracts are automatically verified.
 
-1. **Do not commit .env file** - Ensure `.gitignore` includes `.env`
-2. **Verify contract code** - Contracts are automatically verified if `ETHERSCAN_API_KEY` is set
-3. **Manual verification** - If automatic verification fails, use the provided manual commands
-4. **Small amount testing** - Test functionality with small amounts first
-5. **Multisig wallet** - Recommend using multisig wallet as owner in production
+## 🔒 Security
 
-## 📚 Related Documentation
+1. **Do not commit `.env`** - Contains private keys
+2. **Review `deploy.config.json`** - Contains deployed addresses
+3. **Use multisig** - For production fee collectors
+4. **Audit first** - Before mainnet deployment
 
-- [README.md](./README.md) - Main project documentation
-- [scripts/deploy.js](./scripts/deploy.js) - Deployment script source
-- [hardhat.config.js](./hardhat.config.js) - Hardhat configuration
+## 📚 Files
+
+- [deploy.config.example.json](./deploy.config.example.json) - Example config
+- [deployments/](./deployments/) - Deployment records
+- [scripts/deploy.js](./scripts/deploy.js) - Deployment script

@@ -311,14 +311,7 @@ contract ZWERC721 is ERC721, BaseZWToken {
      * @notice Returns the token URI from the underlying NFT
      */
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        _requireOwned(tokenId);
-        
-        // Try to get tokenURI from underlying if it implements IERC721Metadata
-        try IERC721Metadata(address(underlying)).tokenURI(tokenId) returns (string memory uri) {
-            return uri;
-        } catch {
-            return "";
-        }
+        return IERC721Metadata(address(underlying)).tokenURI(tokenId);
     }
 }
 

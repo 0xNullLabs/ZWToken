@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { poseidon } = require("circomlibjs");
+const { createZWConfig } = require("./helpers/test-utils");
 
 /**
  * Helper: Encode Groth16 proof as bytes
@@ -74,17 +75,16 @@ describe("ZWERC20 - Remint Test", function () {
       }
     );
     const underlyingDecimals = await underlying.decimals();
+    const config = createZWConfig(
+      await verifier.getAddress(),
+      deployer.address
+    );
     zwToken = await ZWERC20.deploy(
       "ZK Wrapper Token",
       "ZWT",
       underlyingDecimals, // Get decimals from underlying token
       await underlying.getAddress(),
-      await verifier.getAddress(),
-      deployer.address, // feeCollector
-      10000, // feeDenominator
-      0, // depositFee (0%)
-      0, // remintFee (0%)
-      0 // withdrawFee (0%)
+      config
     );
     await zwToken.waitForDeployment();
     console.log("✅ ZWERC20 deployed:", await zwToken.getAddress());

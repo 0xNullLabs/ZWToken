@@ -57,7 +57,6 @@ describe("ZWERC1155 - E2E with Real ZK Proof", function () {
     zwerc1155 = await ZWERC1155.deploy(
       "ZK Wrapped Multi Token",
       "zwMT",
-      "https://zw.example.com/token/",
       await underlying1155.getAddress(),
       config
     );

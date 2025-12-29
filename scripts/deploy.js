@@ -4,33 +4,92 @@ const fs = require("fs");
 const path = require("path");
 
 /**
- * Save deployment record to JSON file (incremental, preserves history)
+ * ZWToken Multi-Contract Deployment Script
+ *
+ * Supports deploying multiple ZWToken contracts from a JSON configuration file.
+ * Each token can have its own verifier and fee configuration.
+ * Deployed addresses are written back to the config file for reuse.
+ *
+ * Environment Variables (sensitive data only):
+ * - PRIVATE_KEY: Deployer account private key (required)
+ * - *_RPC_URL: Network RPC URL (required, e.g., SEPOLIA_RPC_URL)
+ * - ETHERSCAN_API_KEY: For contract verification (optional)
+ *
+ * Configuration File:
+ * - DEPLOY_CONFIG: Path to JSON config file (default: deploy.config.json)
+ *
+ * Usage:
+ *   npx hardhat run scripts/deploy.js --network sepolia
+ *   DEPLOY_CONFIG=./my-config.json npx hardhat run scripts/deploy.js --network sepolia
+ */
+
+// ========== Utility Functions ==========
+
+/**
+ * Load deployment configuration from JSON file
+ */
+function loadConfig() {
+  const configPath =
+    process.env.DEPLOY_CONFIG ||
+    path.join(__dirname, "..", "deploy.config.json");
+
+  if (!fs.existsSync(configPath)) {
+    throw new Error(
+      `Configuration file not found: ${configPath}\n` +
+        `Create a deploy.config.json file or set DEPLOY_CONFIG env variable.`
+    );
+  }
+
+  const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  config._configPath = configPath; // Store path for write-back
+
+  if (
+    !config.tokens ||
+    !Array.isArray(config.tokens) ||
+    config.tokens.length === 0
+  ) {
+    throw new Error("Configuration must contain a non-empty 'tokens' array");
+  }
+
+  return config;
+}
+
+/**
+ * Save updated configuration back to JSON file
+ */
+function saveConfig(config) {
+  const configPath = config._configPath;
+  const configToSave = { ...config };
+  delete configToSave._configPath; // Don't save internal field
+
+  fs.writeFileSync(configPath, JSON.stringify(configToSave, null, 2) + "\n");
+  console.log(`\n📝 Configuration updated: ${configPath}`);
+}
+
+/**
+ * Save deployment record to JSON file
  */
 function saveDeploymentRecord(deploymentInfo) {
   const deploymentsDir = path.join(__dirname, "..", "deployments");
 
-  // Ensure deployments directory exists
   if (!fs.existsSync(deploymentsDir)) {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
 
-  // Generate filename: deployment-{network}-{timestamp}.json
   const timestamp = Date.now();
   const filename = `deployment-${deploymentInfo.network}-${timestamp}.json`;
   const filepath = path.join(deploymentsDir, filename);
 
-  // Save deployment info
   fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
-  console.log(`\n📝 Deployment info saved: deployments/${filename}`);
+  console.log(`📝 Deployment record saved: deployments/${filename}`);
 
-  // Also save a latest.json pointing to the latest deployment
   const latestFilepath = path.join(
     deploymentsDir,
     `latest-${deploymentInfo.network}.json`
   );
   fs.writeFileSync(latestFilepath, JSON.stringify(deploymentInfo, null, 2));
   console.log(
-    `📝 Latest deployment info: deployments/latest-${deploymentInfo.network}.json`
+    `📝 Latest deployment: deployments/latest-${deploymentInfo.network}.json`
   );
 }
 
@@ -50,457 +109,623 @@ function getExplorerUrl(network) {
     polygonMumbai: "https://mumbai.polygonscan.com",
     bsc: "https://bscscan.com",
     bscTestnet: "https://testnet.bscscan.com",
-    hardhat: null, // Local network has no explorer
+    hardhat: null,
     localhost: null,
   };
   return explorers[network] || null;
 }
 
 /**
- * Update README.md deployment records (incremental, appends new records)
+ * Build ZWConfig struct for contract deployment
  */
-function updateReadmeDeployment(deploymentInfo) {
-  const readmePath = path.join(__dirname, "..", "README.md");
-  let readme = fs.readFileSync(readmePath, "utf-8");
+function buildZWConfig(verifierAddress, tokenConfig, deployer) {
+  const feeConfig = tokenConfig.feeConfig || {};
 
-  // Generate deployment record Markdown content
-  const deploymentDate = new Date(deploymentInfo.timestamp).toLocaleString(
-    "en-US",
-    {
-      timeZone: "UTC",
-    }
-  );
-
-  const explorerBaseUrl = getExplorerUrl(deploymentInfo.network);
-
-  // Generate different link formats based on whether explorer exists
-  const formatAddress = (address, label) => {
-    if (explorerBaseUrl) {
-      return `- ${label}: [\`${address}\`](${explorerBaseUrl}/address/${address})`;
-    } else {
-      return `- ${label}: \`${address}\``;
-    }
+  return {
+    verifier: verifierAddress,
+    feeCollector: feeConfig.feeCollector || deployer.address,
+    feeDenominator: feeConfig.feeDenominator || 10000,
+    depositFee: feeConfig.depositFee || 0,
+    remintFee: feeConfig.remintFee || 0,
+    withdrawFee: feeConfig.withdrawFee || 0,
+    minDepositFee: feeConfig.minDepositFee || 0,
+    minWithdrawFee: feeConfig.minWithdrawFee || 0,
+    minRemintFee: feeConfig.minRemintFee || 0,
   };
-
-  const newDeploymentSection = `
-### ${
-    deploymentInfo.network.charAt(0).toUpperCase() +
-    deploymentInfo.network.slice(1)
-  } - ${deploymentDate}
-
-**Contract Addresses:**
-${formatAddress(deploymentInfo.addresses.poseidonT3, "PoseidonT3")}
-${formatAddress(deploymentInfo.addresses.verifier, "Verifier")}
-${formatAddress(deploymentInfo.addresses.zwToken, "ZWERC20")}
-${formatAddress(
-  deploymentInfo.addresses.underlying,
-  `Underlying Token (${deploymentInfo.tokenInfo.underlyingSymbol})`
-)}
-
-**Token Info:**
-- Name: ${deploymentInfo.tokenInfo.name}
-- Symbol: ${deploymentInfo.tokenInfo.symbol}
-- Decimals: ${deploymentInfo.tokenInfo.decimals}
-
-**Fee Configuration:**
-- Fee Collector: \`${deploymentInfo.feeConfig.feeCollector}\`
-- Fee Denominator: ${deploymentInfo.feeConfig.feeDenominator}
-- Deposit Fee: ${deploymentInfo.feeConfig.depositFee} (${(
-    (Number(deploymentInfo.feeConfig.depositFee) * 100) /
-    Number(deploymentInfo.feeConfig.feeDenominator)
-  ).toFixed(2)}%)
-- Remint Fee: ${deploymentInfo.feeConfig.remintFee} (${(
-    (Number(deploymentInfo.feeConfig.remintFee) * 100) /
-    Number(deploymentInfo.feeConfig.feeDenominator)
-  ).toFixed(2)}%)
-- Withdraw Fee: ${deploymentInfo.feeConfig.withdrawFee} (${(
-    (Number(deploymentInfo.feeConfig.withdrawFee) * 100) /
-    Number(deploymentInfo.feeConfig.feeDenominator)
-  ).toFixed(2)}%)
-
-**Deployer:** \`${deploymentInfo.deployer}\`
-`;
-
-  // Find or create "Deployment Records" section
-  const deploymentSectionRegex =
-    /## 📦 Deployment Records[\s\S]*?(?=\n## |\n---\n|$)/;
-
-  if (readme.match(deploymentSectionRegex)) {
-    // If "Deployment Records" section exists, append new record after it
-    readme = readme.replace(
-      deploymentSectionRegex,
-      (match) => match + "\n" + newDeploymentSection
-    );
-  } else {
-    // If "Deployment Records" section doesn't exist, add at end of file
-    const deploymentChapter = `\n---\n\n## 📦 Deployment Records\n${newDeploymentSection}`;
-    readme = readme.trimEnd() + "\n" + deploymentChapter + "\n";
-  }
-
-  fs.writeFileSync(readmePath, readme);
-  console.log(`📝 README.md deployment records updated`);
 }
 
+// ========== Deployment Functions ==========
+
 /**
- * ZWERC20 Production Deployment Script
- *
- * Deployment order:
- * 1. PoseidonT3 library (ZK-friendly hash function)
- * 2. Use existing underlying ERC20 token
- * 3. Groth16Verifier (ZK proof verifier)
- * 4. ZWERC20 (main contract, linked with PoseidonT3)
- *
- * Required environment variables:
- * - UNDERLYING_TOKEN_ADDRESS: Underlying ERC20 token address (required)
- * - PRIVATE_KEY: Deployer account private key (required)
- * - SEPOLIA_RPC_URL (or other network): RPC URL (required)
- *
- * Optional environment variables (fee configuration):
- * - FEE_COLLECTOR: Fee collector address (default: deployer.address)
- * - FEE_DENOMINATOR: Fee denominator, 10000 = 100% (default: 10000, provides 0.01% precision)
- * - DEPOSIT_FEE: Deposit fee rate in basis points (default: 0)
- * - REMINT_FEE: Remint fee rate in basis points (default: 0)
- * - WITHDRAW_FEE: Withdraw fee rate in basis points (default: 0)
- *
- * Optional environment variables (Etherscan verification):
- * - ETHERSCAN_API_KEY: Etherscan API key for contract verification (optional)
- *   If set, contracts will be automatically verified after deployment
+ * Deploy PoseidonT3 library (shared across all tokens)
  */
-async function main() {
-  console.log("\n" + "=".repeat(80));
-  console.log("🚀 Starting ZWERC20 Contract Deployment");
-  console.log("=".repeat(80));
+async function deployPoseidonT3(existingAddress) {
+  if (existingAddress) {
+    if (!ethers.isAddress(existingAddress)) {
+      throw new Error("poseidonT3 must be a valid Ethereum address");
+    }
+    const code = await ethers.provider.getCode(existingAddress);
+    if (code === "0x") {
+      throw new Error("No contract found at poseidonT3 address");
+    }
+    console.log("✅ Using existing PoseidonT3:", existingAddress);
+    return { address: existingAddress, deployed: false };
+  }
 
-  const [deployer] = await ethers.getSigners();
-  console.log("\n📍 Deployer Account:", deployer.address);
-
-  const balance = await ethers.provider.getBalance(deployer.address);
-  console.log("💰 Account Balance:", ethers.formatEther(balance), "ETH");
-
-  // ========== 1. Deploy PoseidonT3 Library ==========
-  console.log("\n" + "─".repeat(80));
-  console.log("📦 Step 1/4: Deploying PoseidonT3 Library");
-  console.log("─".repeat(80));
-
+  console.log("🔧 Deploying PoseidonT3 Library...");
   const PoseidonT3 = await ethers.getContractFactory(
     "poseidon-solidity/PoseidonT3.sol:PoseidonT3"
   );
   const poseidonT3 = await PoseidonT3.deploy();
   await poseidonT3.waitForDeployment();
-  const poseidonT3Address = await poseidonT3.getAddress();
+  const address = await poseidonT3.getAddress();
+  console.log("✅ PoseidonT3 deployed to:", address);
+  return { address, deployed: true };
+}
 
-  console.log("✅ PoseidonT3 deployed to:", poseidonT3Address);
+/**
+ * Deploy Groth16Verifier
+ */
+async function deployVerifier(existingAddress) {
+  if (existingAddress) {
+    if (!ethers.isAddress(existingAddress)) {
+      throw new Error("verifier must be a valid Ethereum address");
+    }
+    const code = await ethers.provider.getCode(existingAddress);
+    if (code === "0x") {
+      throw new Error("No contract found at verifier address");
+    }
+    console.log("   ✅ Using existing Verifier:", existingAddress);
+    return { address: existingAddress, deployed: false };
+  }
 
-  // ========== 2. Configure Underlying ERC20 Token ==========
-  console.log("\n" + "─".repeat(80));
-  console.log("📦 Step 2/4: Configuring Underlying ERC20 Token");
-  console.log("─".repeat(80));
+  console.log("   🔧 Deploying Groth16Verifier...");
+  const Groth16Verifier = await ethers.getContractFactory("Groth16Verifier");
+  const verifier = await Groth16Verifier.deploy();
+  await verifier.waitForDeployment();
+  const address = await verifier.getAddress();
+  console.log("   ✅ Groth16Verifier deployed to:", address);
+  return { address, deployed: true };
+}
 
-  const underlyingAddress = process.env.UNDERLYING_TOKEN_ADDRESS;
+/**
+ * Deploy ZWERC20
+ */
+async function deployZWERC20(poseidonT3Address, tokenConfig, zwConfig) {
+  const underlyingAddress = tokenConfig.underlying;
 
   if (!underlyingAddress) {
-    console.error("❌ Underlying token address not configured!");
-    console.error(
-      "Please set environment variable: export UNDERLYING_TOKEN_ADDRESS=0x..."
-    );
-    throw new Error(
-      "UNDERLYING_TOKEN_ADDRESS environment variable is required"
-    );
+    throw new Error("ZWERC20 requires 'underlying' address");
   }
 
-  // Validate address format
   if (!ethers.isAddress(underlyingAddress)) {
-    throw new Error(
-      "UNDERLYING_TOKEN_ADDRESS must be a valid Ethereum address"
-    );
+    throw new Error("ZWERC20 underlying must be a valid Ethereum address");
   }
 
-  // Verify contract exists
   const code = await ethers.provider.getCode(underlyingAddress);
   if (code === "0x") {
-    throw new Error("No contract found at UNDERLYING_TOKEN_ADDRESS");
+    throw new Error(
+      `No contract found at ZWERC20 underlying: ${underlyingAddress}`
+    );
   }
 
-  console.log("✅ Using underlying token:", underlyingAddress);
-
-  // Read token info (must succeed)
   const underlying = await ethers.getContractAt(
     "IERC20Metadata",
     underlyingAddress
   );
   const underlyingName = await underlying.name();
   const underlyingSymbol = await underlying.symbol();
-
-  console.log("   Name:", underlyingName);
-  console.log("   Symbol:", underlyingSymbol);
-
-  // ========== 3. Deploy Groth16Verifier ==========
-  console.log("\n" + "─".repeat(80));
-  console.log("📦 Step 3/4: Deploying Groth16Verifier");
-  console.log("─".repeat(80));
-
-  const Groth16Verifier = await ethers.getContractFactory("Groth16Verifier");
-  const verifier = await Groth16Verifier.deploy();
-  await verifier.waitForDeployment();
-  const verifierAddress = await verifier.getAddress();
-
-  console.log("✅ Groth16Verifier deployed to:", verifierAddress);
-  console.log("   Type: Real ZK Proof Verifier");
-
-  // ========== 4. Deploy ZWERC20 ==========
-  console.log("\n" + "─".repeat(80));
-  console.log("📦 Step 4/4: Deploying ZWERC20 (Main Contract)");
-  console.log("─".repeat(80));
-
-  const ZWERC20 = await ethers.getContractFactory("ZWERC20", {
-    libraries: {
-      PoseidonT3: poseidonT3Address,
-    },
-  });
-
-  const zwTokenName = "Zero Knowledge Wrapper " + underlyingName;
-  const zwTokenSymbol = "ZW" + underlyingSymbol;
   const underlyingDecimals = await underlying.decimals();
 
-  // Fee configuration (can be set via environment variables, defaults to 0)
-  const feeCollector = process.env.FEE_COLLECTOR || deployer.address;
-  const feeDenominator = process.env.FEE_DENOMINATOR || 10000; // 10000 = 100%, 0.01% precision
-  const depositFee = process.env.DEPOSIT_FEE || 0; // 0 = 0%
-  const remintFee = process.env.REMINT_FEE || 0; // 0 = 0%
-  const withdrawFee = process.env.WITHDRAW_FEE || 0; // 0 = 0%
+  console.log("   Underlying:", underlyingAddress);
+  console.log("   └─ Name:", underlyingName, "| Symbol:", underlyingSymbol);
+
+  const ZWERC20 = await ethers.getContractFactory("ZWERC20", {
+    libraries: { PoseidonT3: poseidonT3Address },
+  });
+
+  const zwTokenName =
+    tokenConfig.name || "Zero Knowledge Wrapper " + underlyingName;
+  const zwTokenSymbol = tokenConfig.symbol || "ZW" + underlyingSymbol;
 
   const zwToken = await ZWERC20.deploy(
     zwTokenName,
     zwTokenSymbol,
     underlyingDecimals,
     underlyingAddress,
-    verifierAddress,
-    feeCollector, // feeCollector
-    feeDenominator, // feeDenominator (10000 = 100%)
-    depositFee, // depositFee (0 = 0%)
-    remintFee, // remintFee (0 = 0%)
-    withdrawFee // withdrawFee (0 = 0%)
+    zwConfig
   );
   await zwToken.waitForDeployment();
   const zwTokenAddress = await zwToken.getAddress();
 
-  console.log("✅ ZWERC20 deployed to:", zwTokenAddress);
-  console.log("   Name:", zwTokenName);
-  console.log("   Symbol:", zwTokenSymbol);
-  console.log("   Decimals:", underlyingDecimals);
-  console.log("   Underlying Token:", underlyingAddress);
-  console.log("   Verifier:", verifierAddress);
-  console.log("   Fee Collector:", feeCollector);
-  console.log(
-    "   Fee Denominator:",
-    feeDenominator,
-    "(",
-    (100 / feeDenominator) * 100,
-    "% precision)"
-  );
-  console.log(
-    "   Deposit Fee:",
-    depositFee,
-    "bp (",
-    (depositFee * 100) / feeDenominator,
-    "%)"
-  );
-  console.log(
-    "   Remint Fee:",
-    remintFee,
-    "bp (",
-    (remintFee * 100) / feeDenominator,
-    "%)"
-  );
-  console.log(
-    "   Withdraw Fee:",
-    withdrawFee,
-    "bp (",
-    (withdrawFee * 100) / feeDenominator,
-    "%)"
-  );
+  console.log("   ✅ ZWERC20 deployed:", zwTokenAddress);
 
-  // ========== Deployment Summary ==========
-  console.log("\n" + "=".repeat(80));
-  console.log("🎉 Deployment Complete!");
-  console.log("=".repeat(80));
-
-  console.log("\n📋 Contract Address Summary:");
-  console.log("─".repeat(80));
-  console.log("PoseidonT3:        ", poseidonT3Address);
-  console.log("Underlying Token:  ", underlyingAddress);
-  console.log("Verifier:          ", verifierAddress);
-  console.log("ZWERC20:           ", zwTokenAddress);
-  console.log("─".repeat(80));
-
-  // ========== Save Deployment Record ==========
-  const deploymentInfo = {
-    network: hre.network.name,
-    timestamp: new Date().toISOString(),
-    deployer: deployer.address,
-    addresses: {
-      poseidonT3: poseidonT3Address,
-      underlying: underlyingAddress,
-      verifier: verifierAddress,
-      zwToken: zwTokenAddress,
-    },
-    tokenInfo: {
-      name: zwTokenName,
-      symbol: zwTokenSymbol,
-      decimals: underlyingDecimals.toString(),
-      underlyingName: underlyingName,
-      underlyingSymbol: underlyingSymbol,
-    },
-    feeConfig: {
-      feeCollector: feeCollector,
-      feeDenominator: feeDenominator.toString(),
-      depositFee: depositFee.toString(),
-      remintFee: remintFee.toString(),
-      withdrawFee: withdrawFee.toString(),
-    },
+  return {
+    address: zwTokenAddress,
+    name: zwTokenName,
+    symbol: zwTokenSymbol,
+    decimals: underlyingDecimals.toString(),
+    underlyingName,
+    underlyingSymbol,
   };
+}
 
-  // Save deployment info to JSON file
-  saveDeploymentRecord(deploymentInfo);
+/**
+ * Deploy ZWERC721
+ */
+async function deployZWERC721(poseidonT3Address, tokenConfig, zwConfig) {
+  const underlyingAddress = tokenConfig.underlying;
 
-  // Update README.md deployment records
-  updateReadmeDeployment(deploymentInfo);
+  if (!underlyingAddress) {
+    throw new Error("ZWERC721 requires 'underlying' address");
+  }
 
-  console.log(
-    "\n✅ Deployment records saved to deployments/ directory and README.md"
+  if (!ethers.isAddress(underlyingAddress)) {
+    throw new Error("ZWERC721 underlying must be a valid Ethereum address");
+  }
+
+  const code = await ethers.provider.getCode(underlyingAddress);
+  if (code === "0x") {
+    throw new Error(
+      `No contract found at ZWERC721 underlying: ${underlyingAddress}`
+    );
+  }
+
+  let underlyingName = `ERC721#${`${underlyingAddress}`}`;
+  let underlyingSymbol = `ERC721#${`${underlyingAddress}`}`;
+  try {
+    const underlying = await ethers.getContractAt(
+      "IERC721Metadata",
+      underlyingAddress
+    );
+    underlyingName = await underlying.name();
+    underlyingSymbol = await underlying.symbol();
+  } catch (e) {
+    console.log("   ⚠️ Could not read underlying metadata");
+  }
+
+  console.log("   Underlying:", underlyingAddress);
+  console.log("   └─ Name:", underlyingName, "| Symbol:", underlyingSymbol);
+
+  const ZWERC721 = await ethers.getContractFactory("ZWERC721", {
+    libraries: { PoseidonT3: poseidonT3Address },
+  });
+
+  // Always use underlying name/symbol to generate ZW token name/symbol
+  const zwTokenName = tokenConfig.name || "ZK Wrapper " + underlyingName;
+  const zwTokenSymbol = tokenConfig.symbol || "ZW" + underlyingSymbol;
+
+  const zwToken = await ZWERC721.deploy(
+    zwTokenName,
+    zwTokenSymbol,
+    underlyingAddress,
+    zwConfig
   );
+  await zwToken.waitForDeployment();
+  const zwTokenAddress = await zwToken.getAddress();
 
-  // ========== Verify Contracts on Etherscan ==========
-  const explorerBaseUrl = getExplorerUrl(hre.network.name);
-  const shouldVerify = explorerBaseUrl && process.env.ETHERSCAN_API_KEY;
+  console.log("   ✅ ZWERC721 deployed:", zwTokenAddress);
 
-  if (shouldVerify) {
-    console.log("\n" + "=".repeat(80));
-    console.log("🔍 Verifying Contracts on Etherscan");
-    console.log("=".repeat(80));
+  return {
+    address: zwTokenAddress,
+    name: zwTokenName,
+    symbol: zwTokenSymbol,
+    underlyingName,
+    underlyingSymbol,
+  };
+}
 
-    // Wait for a few blocks to ensure contracts are indexed
-    console.log("\n⏳ Waiting for block confirmations...");
-    await new Promise((resolve) => setTimeout(resolve, 20000)); // Wait 20 seconds
+/**
+ * Deploy ZWERC1155
+ */
+async function deployZWERC1155(poseidonT3Address, tokenConfig, zwConfig) {
+  const underlyingAddress = tokenConfig.underlying;
 
+  if (!underlyingAddress) {
+    throw new Error("ZWERC1155 requires 'underlying' address");
+  }
+
+  if (!ethers.isAddress(underlyingAddress)) {
+    throw new Error("ZWERC1155 underlying must be a valid Ethereum address");
+  }
+
+  const code = await ethers.provider.getCode(underlyingAddress);
+  if (code === "0x") {
+    throw new Error(
+      `No contract found at ZWERC1155 underlying: ${underlyingAddress}`
+    );
+  }
+
+  // Try to get name and symbol from underlying (ERC1155 doesn't have standard name/symbol)
+  let underlyingName = `ERC1155#${`${underlyingAddress}`}`;
+  let underlyingSymbol = `ERC1155#${`${underlyingAddress}`}`;
+  try {
+    // Try to call name() and symbol() if they exist (using generic contract interface)
+    const underlyingContract = await ethers.getContractAt(
+      [
+        "function name() external view returns (string memory)",
+        "function symbol() external view returns (string memory)",
+      ],
+      underlyingAddress
+    );
     try {
-      // 1. Verify PoseidonT3 Library
-      console.log("\n" + "─".repeat(80));
-      console.log("📦 Verifying PoseidonT3 Library");
-      console.log("─".repeat(80));
-      try {
-        await hre.run("verify:verify", {
-          address: poseidonT3Address,
-          constructorArguments: [],
-        });
-        console.log(
-          "✅ PoseidonT3 verified:",
-          `${explorerBaseUrl}/address/${poseidonT3Address}`
-        );
-      } catch (error) {
-        if (error.message.includes("Already Verified")) {
-          console.log("ℹ️  PoseidonT3 already verified");
-        } else {
-          console.log("⚠️  PoseidonT3 verification failed:", error.message);
-        }
-      }
-
-      // 2. Verify Groth16Verifier
-      console.log("\n" + "─".repeat(80));
-      console.log("📦 Verifying Groth16Verifier");
-      console.log("─".repeat(80));
-      try {
-        await hre.run("verify:verify", {
-          address: verifierAddress,
-          constructorArguments: [],
-        });
-        console.log(
-          "✅ Groth16Verifier verified:",
-          `${explorerBaseUrl}/address/${verifierAddress}`
-        );
-      } catch (error) {
-        if (error.message.includes("Already Verified")) {
-          console.log("ℹ️  Groth16Verifier already verified");
-        } else {
-          console.log(
-            "⚠️  Groth16Verifier verification failed:",
-            error.message
-          );
-        }
-      }
-
-      // 3. Verify ZWERC20 (with library linking)
-      console.log("\n" + "─".repeat(80));
-      console.log("📦 Verifying ZWERC20 (with library linking)");
-      console.log("─".repeat(80));
-      try {
-        await hre.run("verify:verify", {
-          address: zwTokenAddress,
-          constructorArguments: [
-            zwTokenName,
-            zwTokenSymbol,
-            underlyingDecimals,
-            underlyingAddress,
-            verifierAddress,
-            feeCollector,
-            feeDenominator,
-            depositFee,
-            remintFee,
-            withdrawFee,
-          ],
-          libraries: {
-            PoseidonT3: poseidonT3Address,
-          },
-        });
-        console.log(
-          "✅ ZWERC20 verified:",
-          `${explorerBaseUrl}/address/${zwTokenAddress}`
-        );
-      } catch (error) {
-        if (error.message.includes("Already Verified")) {
-          console.log("ℹ️  ZWERC20 already verified");
-        } else {
-          console.log("⚠️  ZWERC20 verification failed:", error.message);
-          console.log("   You can verify manually with:");
-          console.log(
-            `   npx hardhat verify --network ${hre.network.name} ${zwTokenAddress} "${zwTokenName}" "${zwTokenSymbol}" ${underlyingDecimals} ${underlyingAddress} ${verifierAddress} ${feeCollector} ${feeDenominator} ${depositFee} ${remintFee} ${withdrawFee} --libraries PoseidonT3:${poseidonT3Address}`
-          );
-        }
-      }
-
-      console.log("\n" + "=".repeat(80));
-      console.log("✅ Contract Verification Complete!");
-      console.log("=".repeat(80));
-    } catch (error) {
-      console.log(
-        "\n⚠️  Verification process encountered an error:",
-        error.message
-      );
-      console.log("   You can verify contracts manually using:");
-      console.log(
-        `   npx hardhat verify --network ${hre.network.name} <CONTRACT_ADDRESS> [CONSTRUCTOR_ARGS]`
-      );
+      underlyingName = await underlyingContract.name();
+    } catch (e) {
+      // name() not available, use default
     }
-  } else {
+    try {
+      underlyingSymbol = await underlyingContract.symbol();
+    } catch (e) {
+      // symbol() not available, use default
+    }
+  } catch (e) {
+    console.log("   ⚠️ Could not read underlying name/symbol");
+  }
+
+  console.log("   Underlying:", underlyingAddress);
+  console.log("   └─ Name:", underlyingName, "| Symbol:", underlyingSymbol);
+
+  const ZWERC1155 = await ethers.getContractFactory("ZWERC1155", {
+    libraries: { PoseidonT3: poseidonT3Address },
+  });
+
+  // Always use underlying name/symbol to generate ZW token name/symbol
+  const zwTokenName = tokenConfig.name || "ZK Wrapper " + underlyingName;
+  const zwTokenSymbol = tokenConfig.symbol || "ZW" + underlyingSymbol;
+
+  const zwToken = await ZWERC1155.deploy(
+    zwTokenName,
+    zwTokenSymbol,
+    underlyingAddress,
+    zwConfig
+  );
+  await zwToken.waitForDeployment();
+  const zwTokenAddress = await zwToken.getAddress();
+
+  console.log("   ✅ ZWERC1155 deployed:", zwTokenAddress);
+
+  return {
+    address: zwTokenAddress,
+    name: zwTokenName,
+    symbol: zwTokenSymbol,
+  };
+}
+
+/**
+ * Deploy ZWETH
+ */
+async function deployZWETH(poseidonT3Address, tokenConfig, zwConfig) {
+  const ZWETH = await ethers.getContractFactory("ZWETH", {
+    libraries: { PoseidonT3: poseidonT3Address },
+  });
+
+  const zwTokenName = tokenConfig.name || "ZK Wrapper ETH";
+  const zwTokenSymbol = tokenConfig.symbol || "ZWETH";
+
+  const zwToken = await ZWETH.deploy(zwTokenName, zwTokenSymbol, zwConfig);
+  await zwToken.waitForDeployment();
+  const zwTokenAddress = await zwToken.getAddress();
+
+  console.log("   ✅ ZWETH deployed:", zwTokenAddress);
+
+  return {
+    address: zwTokenAddress,
+    name: zwTokenName,
+    symbol: zwTokenSymbol,
+  };
+}
+
+/**
+ * Deploy a single token
+ */
+async function deployToken(tokenConfig, poseidonT3Address, deployer, index) {
+  const type = tokenConfig.type?.toUpperCase();
+  const label = tokenConfig.symbol || tokenConfig.name || type;
+
+  console.log(`\n[${index}] ${type} (${label})`);
+  console.log("─".repeat(60));
+
+  // Check if already deployed
+  if (tokenConfig.address) {
+    const code = await ethers.provider.getCode(tokenConfig.address);
+    if (code !== "0x") {
+      console.log("   ⏭️  Already deployed:", tokenConfig.address);
+      return { skipped: true, address: tokenConfig.address };
+    }
+    console.log(
+      "   ⚠️  Address in config but no contract found, redeploying..."
+    );
+  }
+
+  // Deploy or use existing verifier
+  const verifierResult = await deployVerifier(tokenConfig.verifier);
+  const verifierAddress = verifierResult.address;
+
+  // Build ZWConfig
+  const zwConfig = buildZWConfig(verifierAddress, tokenConfig, deployer);
+
+  // Deploy token based on type
+  let result;
+  switch (type) {
+    case "ZWERC20":
+      result = await deployZWERC20(poseidonT3Address, tokenConfig, zwConfig);
+      break;
+    case "ZWERC721":
+      result = await deployZWERC721(poseidonT3Address, tokenConfig, zwConfig);
+      break;
+    case "ZWERC1155":
+      result = await deployZWERC1155(poseidonT3Address, tokenConfig, zwConfig);
+      break;
+    case "ZWETH":
+      result = await deployZWETH(poseidonT3Address, tokenConfig, zwConfig);
+      break;
+    default:
+      throw new Error(`Unknown token type: ${tokenConfig.type}`);
+  }
+
+  return {
+    skipped: false,
+    ...result,
+    type,
+    verifier: verifierAddress,
+    verifierDeployed: verifierResult.deployed,
+    feeConfig: zwConfig,
+  };
+}
+
+/**
+ * Verify contracts on Etherscan
+ */
+async function verifyContracts(toVerify, poseidonT3Address) {
+  const explorerBaseUrl = getExplorerUrl(hre.network.name);
+  if (!explorerBaseUrl || !process.env.ETHERSCAN_API_KEY) {
     if (!explorerBaseUrl) {
       console.log(
         "\nℹ️  Skipping verification: No explorer for network",
         hre.network.name
       );
-    } else if (!process.env.ETHERSCAN_API_KEY) {
+    } else {
       console.log("\nℹ️  Skipping verification: ETHERSCAN_API_KEY not set");
-      console.log(
-        "   Set ETHERSCAN_API_KEY in .env to enable automatic verification"
+    }
+    return;
+  }
+
+  console.log("\n" + "=".repeat(80));
+  console.log("🔍 Verifying Contracts on Etherscan");
+  console.log("=".repeat(80));
+
+  console.log("\n⏳ Waiting for block confirmations...");
+  await new Promise((resolve) => setTimeout(resolve, 20000));
+
+  const verifyContract = async (name, address, constructorArgs, libraries) => {
+    console.log(`\n📦 Verifying ${name}...`);
+    try {
+      await hre.run("verify:verify", {
+        address,
+        constructorArguments: constructorArgs || [],
+        libraries: libraries || {},
+      });
+      console.log(`✅ ${name} verified: ${explorerBaseUrl}/address/${address}`);
+    } catch (error) {
+      if (error.message.includes("Already Verified")) {
+        console.log(`ℹ️  ${name} already verified`);
+      } else {
+        console.log(`⚠️  ${name} verification failed:`, error.message);
+      }
+    }
+  };
+
+  const libraries = { PoseidonT3: poseidonT3Address };
+
+  for (const item of toVerify) {
+    await verifyContract(
+      item.name,
+      item.address,
+      item.constructorArgs,
+      libraries
+    );
+  }
+
+  console.log("\n" + "=".repeat(80));
+  console.log("✅ Verification Complete!");
+  console.log("=".repeat(80));
+}
+
+// ========== Main Deployment Function ==========
+
+async function main() {
+  console.log("\n" + "=".repeat(80));
+  console.log("🚀 Starting ZWToken Multi-Contract Deployment");
+  console.log("=".repeat(80));
+
+  // Load configuration
+  const config = loadConfig();
+  console.log(`\n📄 Loaded configuration: ${config._configPath}`);
+  console.log(`   ${config.tokens.length} token(s) configured`);
+
+  const [deployer] = await ethers.getSigners();
+  console.log("\n📍 Deployer:", deployer.address);
+
+  const balance = await ethers.provider.getBalance(deployer.address);
+  console.log("💰 Balance:", ethers.formatEther(balance), "ETH");
+
+  // Deploy PoseidonT3 (shared)
+  console.log("\n" + "─".repeat(80));
+  console.log("📦 Shared Infrastructure");
+  console.log("─".repeat(80));
+
+  const poseidonResult = await deployPoseidonT3(config.poseidonT3);
+  const poseidonT3Address = poseidonResult.address;
+
+  // Update config with PoseidonT3 address
+  if (poseidonResult.deployed) {
+    config.poseidonT3 = poseidonT3Address;
+  }
+
+  // Track what needs verification
+  const toVerify = [];
+
+  if (poseidonResult.deployed) {
+    toVerify.push({
+      name: "PoseidonT3",
+      address: poseidonT3Address,
+      constructorArgs: [],
+    });
+  }
+
+  // Track deployed verifiers to avoid re-verification
+  const deployedVerifiers = new Set();
+
+  // Deploy each token
+  const results = [];
+
+  for (let i = 0; i < config.tokens.length; i++) {
+    const tokenConfig = config.tokens[i];
+
+    try {
+      const result = await deployToken(
+        tokenConfig,
+        poseidonT3Address,
+        deployer,
+        i + 1
       );
+
+      results.push(result);
+
+      // Update config with deployed addresses
+      if (!result.skipped) {
+        config.tokens[i].address = result.address;
+        config.tokens[i].verifier = result.verifier;
+
+        // Add verifier to verification list (only once per address)
+        if (
+          result.verifierDeployed &&
+          !deployedVerifiers.has(result.verifier)
+        ) {
+          deployedVerifiers.add(result.verifier);
+          toVerify.push({
+            name: `Groth16Verifier`,
+            address: result.verifier,
+            constructorArgs: [],
+          });
+        }
+
+        // Add token to verification list
+        const type = tokenConfig.type?.toUpperCase();
+        let constructorArgs;
+
+        switch (type) {
+          case "ZWERC20": {
+            const underlying = await ethers.getContractAt(
+              "IERC20Metadata",
+              tokenConfig.underlying
+            );
+            const decimals = await underlying.decimals();
+            constructorArgs = [
+              result.name,
+              result.symbol,
+              decimals,
+              tokenConfig.underlying,
+              result.feeConfig,
+            ];
+            break;
+          }
+          case "ZWERC721":
+            constructorArgs = [
+              result.name,
+              result.symbol,
+              tokenConfig.underlying,
+              result.feeConfig,
+            ];
+            break;
+          case "ZWERC1155":
+            constructorArgs = [
+              result.name,
+              result.symbol,
+              tokenConfig.underlying,
+              result.feeConfig,
+            ];
+            break;
+          case "ZWETH":
+            constructorArgs = [result.name, result.symbol, result.feeConfig];
+            break;
+        }
+
+        toVerify.push({
+          name: `${type} (${result.symbol})`,
+          address: result.address,
+          constructorArgs,
+        });
+      }
+    } catch (error) {
+      console.error(`\n❌ Failed to deploy token ${i + 1}:`, error.message);
+      throw error;
     }
   }
 
-  // Return deployed contract addresses for testing
+  // Save updated config
+  saveConfig(config);
+
+  // Deployment summary
+  console.log("\n" + "=".repeat(80));
+  console.log("🎉 Deployment Complete!");
+  console.log("=".repeat(80));
+
+  console.log("\n📋 Summary:");
+  console.log("─".repeat(60));
+  console.log("PoseidonT3:".padEnd(15), poseidonT3Address);
+
+  let deployedCount = 0;
+  let skippedCount = 0;
+
+  for (let i = 0; i < config.tokens.length; i++) {
+    const token = config.tokens[i];
+    const result = results[i];
+    const status = result.skipped ? "(existing)" : "(new)";
+
+    if (result.skipped) {
+      skippedCount++;
+    } else {
+      deployedCount++;
+    }
+
+    console.log(`${token.type}:`.padEnd(15), token.address, status);
+    if (token.underlying) {
+      console.log("  └─ Underlying:".padEnd(15), token.underlying);
+    }
+    console.log("  └─ Verifier:".padEnd(15), token.verifier);
+  }
+
+  console.log("─".repeat(60));
+  console.log(`📊 Deployed: ${deployedCount} | Skipped: ${skippedCount}`);
+
+  // Save deployment record
+  const deploymentInfo = {
+    network: hre.network.name,
+    timestamp: new Date().toISOString(),
+    deployer: deployer.address,
+    poseidonT3: poseidonT3Address,
+    tokens: config.tokens.map((t, i) => ({
+      type: t.type,
+      address: t.address,
+      verifier: t.verifier,
+      underlying: t.underlying,
+      name: results[i].name || t.name,
+      symbol: results[i].symbol || t.symbol,
+      skipped: results[i].skipped,
+    })),
+  };
+
+  saveDeploymentRecord(deploymentInfo);
+
+  // Verify contracts
+  if (toVerify.length > 0) {
+    await verifyContracts(toVerify, poseidonT3Address);
+  }
+
   return {
     poseidonT3: poseidonT3Address,
-    underlying: underlyingAddress,
-    verifier: verifierAddress,
-    zwToken: zwTokenAddress,
+    tokens: config.tokens,
   };
 }
 

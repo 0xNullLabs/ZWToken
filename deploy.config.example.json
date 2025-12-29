@@ -1,0 +1,70 @@
+{
+  "_comment": "ZWToken Deployment Configuration",
+  "_doc": "Each token has its own verifier and feeConfig. After deployment, address and verifier are written back.",
+
+  "poseidonT3": null,
+
+  "tokens": [
+    {
+      "type": "ZWETH",
+      "name": "ZK Wrapper ETH",
+      "symbol": "ZWETH",
+      "address": null,
+      "verifier": null,
+      "feeConfig": {
+        "feeCollector": null,
+        "feeDenominator": 10000,
+        "depositFee": 0,
+        "remintFee": 0,
+        "withdrawFee": 0
+      }
+    },
+    {
+      "type": "ZWERC20",
+      "underlying": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "name": "ZK Wrapper USDC",
+      "symbol": "ZWUSDC",
+      "address": null,
+      "verifier": null,
+      "feeConfig": {
+        "depositFee": 10,
+        "withdrawFee": 10
+      }
+    },
+    {
+      "type": "ZWERC20",
+      "underlying": "0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0",
+      "name": "ZK Wrapper USDT",
+      "symbol": "ZWUSDT",
+      "address": null,
+      "verifier": null,
+      "feeConfig": {
+        "depositFee": 20,
+        "remintFee": 10,
+        "withdrawFee": 20
+      }
+    },
+    {
+      "type": "ZWERC721",
+      "underlying": "0x1234567890123456789012345678901234567890",
+      "name": "ZK Wrapper NFT",
+      "symbol": "ZWNFT",
+      "address": null,
+      "verifier": null,
+      "feeConfig": {}
+    },
+    {
+      "type": "ZWERC1155",
+      "underlying": "0x1234567890123456789012345678901234567890",
+      "name": "ZK Wrapper Items",
+      "symbol": "ZWITEMS",
+      "uri": "https://api.example.com/metadata/{id}.json",
+      "address": null,
+      "verifier": null,
+      "feeConfig": {
+        "minDepositFee": 1,
+        "minWithdrawFee": 1
+      }
+    }
+  ]
+}

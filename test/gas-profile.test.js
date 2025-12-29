@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const fs = require("fs");
+const { createZWConfig } = require("./helpers/test-utils");
 
 /**
  * Helper: Encode Groth16 proof as bytes
@@ -92,17 +93,16 @@ describe("Gas Profile Comparison", function () {
       }
     );
     const underlyingDecimals = await underlyingToken.decimals();
+    const config = createZWConfig(
+      await mockVerifier.getAddress(),
+      owner.address
+    );
     zwToken = await ZWERC20.deploy(
       "Zero Knowledge Wrapper",
       "ZWK",
       underlyingDecimals, // Get decimals from underlying token
       await underlyingToken.getAddress(),
-      await mockVerifier.getAddress(),
-      owner.address, // feeCollector
-      10000, // feeDenominator
-      0, // depositFee (0%)
-      0, // remintFee (0%)
-      0 // withdrawFee (0%)
+      config
     );
 
     // Deploy plain ERC20Mock for comparison (like USDT)

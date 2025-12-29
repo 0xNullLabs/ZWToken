@@ -1,0 +1,40 @@
+{
+  "poseidonT3": "0x0305de4B19eaae16947d8b7bec64d29A86B22189",
+  "tokens": [
+    {
+      "type": "ZWETH",
+      "name": "ZK Wrapper ETH",
+      "symbol": "ZWETH",
+      "address": "0x48E4C0f0BE2a996b36F72dED5A21C170a2404796",
+      "verifier": "0x524a87356540B36BBD82F470B5189ec973B2D759",
+      "feeConfig": {
+        "feeCollector": "0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e",
+        "feeDenominator": 10000,
+        "depositFee": 0,
+        "remintFee": 0,
+        "withdrawFee": 0,
+        "minDepositFee": 0,
+        "minWithdrawFee": 0,
+        "minRemintFee": 0
+      }
+    },
+    {
+      "type": "ZWERC20",
+      "underlying": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "name": "ZK Wrapper USDC",
+      "symbol": "ZWUSDC",
+      "address": "0x7E45741E01F5830Ff69a9faB1B6bd3f953da0503",
+      "verifier": "0x8C559486527EE8Ed6EA492a1fB061ead7187Db74",
+      "feeConfig": {
+        "feeCollector": "0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e",
+        "feeDenominator": 10000,
+        "depositFee": 0,
+        "remintFee": 0,
+        "withdrawFee": 0,
+        "minDepositFee": 0,
+        "minWithdrawFee": 0,
+        "minRemintFee": 0
+      }
+    }
+  ]
+}
