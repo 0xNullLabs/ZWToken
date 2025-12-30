@@ -1,17 +1,18 @@
 /**
  * Contract Address Configuration
- * From deployment records
+ * From deployment records - Sepolia Testnet
+ * Deployed: Dec 2025
  */
 
 export const CONTRACT_ADDRESSES = {
   // ZWToken main contract (ZWERC20 implementation)
-  ZWERC20: '0x95E31020C1fc1E58695F811e082BE25a243Dcb73',
+  ZWERC20: '0x7E45741E01F5830Ff69a9faB1B6bd3f953da0503',
 
   // Underlying token (USDC)
   UnderlyingToken: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
 
   // Groth16 verifier
-  Verifier: '0x7581A7E697587B2588fDde57e278B244A27DeAB4',
+  Verifier: '0x8C559486527EE8Ed6EA492a1fB061ead7187Db74',
 
   // PoseidonT3 library
   PoseidonT3: '0x0305de4B19eaae16947d8b7bec64d29A86B22189',
