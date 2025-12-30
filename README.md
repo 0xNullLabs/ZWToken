@@ -1,6 +1,7 @@
 # ZWToken - Zero Knowledge Wrapper Token
 
 > **ZWToken is an [ERC-8065](https://ethereum-magicians.org/t/erc-8065-zero-knowledge-token-wrapper/26006/1) implementation that brings native privacy to all tokens through browser-based ZK proof generation, requiring no backend other than an Ethereum node.**
+> Try zk.walletaa.com
 
 [![Solidity](https://img.shields.io/badge/Solidity-^0.8.20-blue)](https://soliditylang.org/)
 [![Circom](https://img.shields.io/badge/Circom-2.1.6-green)](https://docs.circom.io/)
