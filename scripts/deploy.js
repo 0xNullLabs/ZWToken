@@ -416,6 +416,65 @@ async function deployZWETH(poseidonT3Address, tokenConfig, zwConfig) {
 }
 
 /**
+ * Deploy ERC721Faucet
+ */
+async function deployERC721Faucet(faucetConfig) {
+  const ERC721Faucet = await ethers.getContractFactory("ERC721Faucet");
+
+  const name = faucetConfig.name || "Test ERC721 Faucet";
+  const symbol = faucetConfig.symbol || "TEST721";
+
+  const faucet = await ERC721Faucet.deploy(name, symbol);
+  await faucet.waitForDeployment();
+  const faucetAddress = await faucet.getAddress();
+
+  console.log("   ✅ ERC721Faucet deployed:", faucetAddress);
+  console.log("   └─ Name:", name, "| Symbol:", symbol);
+  console.log("   └─ No restrictions - unlimited minting");
+
+  return {
+    address: faucetAddress,
+    name,
+    symbol,
+  };
+}
+
+/**
+ * Deploy ERC1155Faucet
+ */
+async function deployERC1155Faucet(faucetConfig) {
+  const ERC1155Faucet = await ethers.getContractFactory("ERC1155Faucet");
+
+  const uri = faucetConfig.uri || "https://api.example.com/metadata/{id}.json";
+  const maxAmountPerToken = faucetConfig.maxAmountPerToken || 100;
+  const maxTokensPerAddress = faucetConfig.maxTokensPerAddress || 10;
+  const cooldownPeriod = faucetConfig.cooldownPeriod || 3600; // 1 hour default
+
+  const faucet = await ERC1155Faucet.deploy(
+    uri,
+    maxAmountPerToken,
+    maxTokensPerAddress,
+    cooldownPeriod
+  );
+  await faucet.waitForDeployment();
+  const faucetAddress = await faucet.getAddress();
+
+  console.log("   ✅ ERC1155Faucet deployed:", faucetAddress);
+  console.log("   └─ URI:", uri);
+  console.log("   └─ Max amount per token:", maxAmountPerToken);
+  console.log("   └─ Max tokens per address:", maxTokensPerAddress);
+  console.log("   └─ Cooldown period:", cooldownPeriod, "seconds");
+
+  return {
+    address: faucetAddress,
+    uri,
+    maxAmountPerToken,
+    maxTokensPerAddress,
+    cooldownPeriod,
+  };
+}
+
+/**
  * Deploy a single token
  */
 async function deployToken(tokenConfig, poseidonT3Address, deployer, index) {
@@ -429,8 +488,16 @@ async function deployToken(tokenConfig, poseidonT3Address, deployer, index) {
   if (tokenConfig.address) {
     const code = await ethers.provider.getCode(tokenConfig.address);
     if (code !== "0x") {
+      const name = tokenConfig.name || "N/A";
+      const symbol = tokenConfig.symbol || "N/A";
       console.log("   ⏭️  Already deployed:", tokenConfig.address);
-      return { skipped: true, address: tokenConfig.address };
+      console.log("   └─ Name:", name, "| Symbol:", symbol);
+      return {
+        skipped: true,
+        address: tokenConfig.address,
+        name: tokenConfig.name,
+        symbol: tokenConfig.symbol,
+      };
     }
     console.log(
       "   ⚠️  Address in config but no contract found, redeploying..."
@@ -596,6 +663,9 @@ async function main() {
       if (!result.skipped) {
         config.tokens[i].address = result.address;
         config.tokens[i].verifier = result.verifier;
+        // Write back auto-generated name and symbol
+        if (result.name) config.tokens[i].name = result.name;
+        if (result.symbol) config.tokens[i].symbol = result.symbol;
 
         // Add verifier to verification list (only once per address)
         if (
@@ -663,6 +733,91 @@ async function main() {
     }
   }
 
+  // Deploy faucets if configured
+  const faucetResults = [];
+  if (
+    config.faucets &&
+    Array.isArray(config.faucets) &&
+    config.faucets.length > 0
+  ) {
+    console.log("\n" + "─".repeat(80));
+    console.log("🚰 Faucet Contracts");
+    console.log("─".repeat(80));
+
+    for (let i = 0; i < config.faucets.length; i++) {
+      const faucetConfig = config.faucets[i];
+      const type = faucetConfig.type?.toUpperCase();
+      const label = faucetConfig.name || faucetConfig.symbol || type;
+
+      console.log(`\n[Faucet ${i + 1}] ${type} (${label})`);
+      console.log("─".repeat(60));
+
+      // Check if already deployed
+      if (faucetConfig.address) {
+        const code = await ethers.provider.getCode(faucetConfig.address);
+        if (code !== "0x") {
+          console.log("   ⏭️  Already deployed:", faucetConfig.address);
+          faucetResults.push({
+            skipped: true,
+            address: faucetConfig.address,
+            type,
+          });
+          continue;
+        }
+        console.log(
+          "   ⚠️  Address in config but no contract found, redeploying..."
+        );
+      }
+
+      let result;
+      try {
+        switch (type) {
+          case "ERC721FAUCET":
+            result = await deployERC721Faucet(faucetConfig);
+            result.type = "ERC721Faucet";
+            break;
+          case "ERC1155FAUCET":
+            result = await deployERC1155Faucet(faucetConfig);
+            result.type = "ERC1155Faucet";
+            break;
+          default:
+            throw new Error(`Unknown faucet type: ${faucetConfig.type}`);
+        }
+
+        result.skipped = false;
+        faucetResults.push(result);
+
+        // Update config with deployed address
+        config.faucets[i].address = result.address;
+        // Write back auto-generated name and symbol
+        if (result.name) config.faucets[i].name = result.name;
+        if (result.symbol) config.faucets[i].symbol = result.symbol;
+
+        // Add to verification list
+        let constructorArgs;
+        if (type === "ERC721FAUCET") {
+          constructorArgs = [result.name, result.symbol];
+        } else if (type === "ERC1155FAUCET") {
+          constructorArgs = [
+            result.uri,
+            result.maxAmountPerToken,
+            result.maxTokensPerAddress,
+            result.cooldownPeriod,
+          ];
+        }
+
+        toVerify.push({
+          name: `${type} (${result.name || result.symbol})`,
+          address: result.address,
+          constructorArgs,
+        });
+      } catch (error) {
+        console.error(`\n❌ Failed to deploy faucet ${i + 1}:`, error.message);
+        throw error;
+      }
+    }
+  }
+
   // Save updated config
   saveConfig(config);
 
@@ -689,7 +844,12 @@ async function main() {
       deployedCount++;
     }
 
+    const name = result.name || token.name || "N/A";
+    const symbol = result.symbol || token.symbol || "N/A";
+
     console.log(`${token.type}:`.padEnd(15), token.address, status);
+    console.log("  └─ Name:".padEnd(15), name);
+    console.log("  └─ Symbol:".padEnd(15), symbol);
     if (token.underlying) {
       console.log("  └─ Underlying:".padEnd(15), token.underlying);
     }
@@ -697,7 +857,45 @@ async function main() {
   }
 
   console.log("─".repeat(60));
-  console.log(`📊 Deployed: ${deployedCount} | Skipped: ${skippedCount}`);
+  console.log(
+    `📊 Tokens - Deployed: ${deployedCount} | Skipped: ${skippedCount}`
+  );
+
+  // Display faucet summary
+  if (faucetResults.length > 0) {
+    console.log("\n🚰 Faucets:");
+    console.log("─".repeat(60));
+    let faucetDeployedCount = 0;
+    let faucetSkippedCount = 0;
+
+    for (let i = 0; i < faucetResults.length; i++) {
+      const faucet = config.faucets[i];
+      const result = faucetResults[i];
+      const status = result.skipped ? "(existing)" : "(new)";
+
+      if (result.skipped) {
+        faucetSkippedCount++;
+      } else {
+        faucetDeployedCount++;
+      }
+
+      console.log(`${faucet.type}:`.padEnd(15), faucet.address, status);
+      if (result.name) {
+        console.log("  └─ Name:".padEnd(15), result.name);
+      }
+      if (result.symbol) {
+        console.log("  └─ Symbol:".padEnd(15), result.symbol);
+      }
+      if (result.uri) {
+        console.log("  └─ URI:".padEnd(15), result.uri);
+      }
+    }
+
+    console.log("─".repeat(60));
+    console.log(
+      `📊 Faucets - Deployed: ${faucetDeployedCount} | Skipped: ${faucetSkippedCount}`
+    );
+  }
 
   // Save deployment record
   const deploymentInfo = {
@@ -714,6 +912,15 @@ async function main() {
       symbol: results[i].symbol || t.symbol,
       skipped: results[i].skipped,
     })),
+    faucets: config.faucets
+      ? config.faucets.map((f, i) => ({
+          type: f.type,
+          address: f.address,
+          name: faucetResults[i]?.name || f.name,
+          symbol: faucetResults[i]?.symbol || f.symbol,
+          skipped: faucetResults[i]?.skipped || false,
+        }))
+      : [],
   };
 
   saveDeploymentRecord(deploymentInfo);

@@ -35,6 +35,42 @@
         "minWithdrawFee": 0,
         "minRemintFee": 0
       }
+    },
+    {
+      "type": "ZWERC721",
+      "underlying": "0xBF85386b4489b51672e23E9cBf9312A13D3D5093",
+      "name": "ZK Wrapper Test ERC721 Faucet",
+      "symbol": "ZWTEST721",
+      "address": "0xb3687A20f67618af09D1c9ff73CaA266d04067DC",
+      "verifier": "0x8C559486527EE8Ed6EA492a1fB061ead7187Db74",
+      "feeConfig": {
+        "feeCollector": "0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e",
+        "feeDenominator": 10000,
+        "depositFee": 0,
+        "remintFee": 0,
+        "withdrawFee": 0,
+        "minDepositFee": 0,
+        "minWithdrawFee": 0,
+        "minRemintFee": 0
+      }
+    },
+    {
+      "type": "ZWERC1155",
+      "underlying": "0x70989278F35C73A204819E8e73c5f3EBa93f3900",
+      "name": "ZK Wrapper Test ERC1155 Faucet",
+      "symbol": "ZWTEST1155",
+      "address": "0xc3DB1B665E323cb19fAddAa33aBe49E663560A28",
+      "verifier": "0x8C559486527EE8Ed6EA492a1fB061ead7187Db74",
+      "feeConfig": {
+        "feeCollector": "0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e",
+        "feeDenominator": 10000,
+        "depositFee": 0,
+        "remintFee": 0,
+        "withdrawFee": 0,
+        "minDepositFee": 0,
+        "minWithdrawFee": 0,
+        "minRemintFee": 0
+      }
     }
   ]
 }

@@ -1,0 +1,18 @@
+{
+  "_comment": "Faucet Deployment Configuration",
+  "_doc": "Configure ERC721 and ERC1155 faucet contracts for testnet usage. After deployment, addresses are written back.",
+  "faucets": [
+    {
+      "type": "ERC721Faucet",
+      "name": "Test ERC721 Faucet",
+      "symbol": "TEST721",
+      "address": "0xBF85386b4489b51672e23E9cBf9312A13D3D5093"
+    },
+    {
+      "type": "ERC1155Faucet",
+      "name": "Test ERC1155 Faucet",
+      "symbol": "TEST1155",
+      "address": "0x70989278F35C73A204819E8e73c5f3EBa93f3900"
+    }
+  ]
+}
