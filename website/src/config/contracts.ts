@@ -16,6 +16,12 @@ export const CONTRACT_ADDRESSES = {
 
   // PoseidonT3 library
   PoseidonT3: '0x0305de4B19eaae16947d8b7bec64d29A86B22189',
+
+  // ZWETH main contract
+  ZWETH: '0x48E4C0f0BE2a996b36F72dED5A21C170a2404796',
+
+  // ZWETH Verifier
+  ZWETHVerifier: '0x524a87356540B36BBD82F470B5189ec973B2D759',
 } as const;
 
 /**
@@ -57,14 +63,45 @@ export const CONTRACT_ABIS = {
     'function getFeeConfig() external view returns (uint256 depositFee, uint256 remintFee, uint256 withdrawFee, uint256 feeDenominator)',
     'function getUnderlying() external view returns (address)',
   ],
+
+  // ZWETH contract (same as ZWERC20 but wraps ETH)
+  ZWETH: [
+    // Core IERC8065 functions
+    'function deposit(address to, uint256 id, uint256 amount, bytes data) external payable',
+    'function withdraw(address to, uint256 id, uint256 amount, bytes data) external',
+    'function remint(address to, uint256 id, uint256 amount, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bool redeem, bytes proof) data) external',
+    // ERC20 functions
+    'function transfer(address to, uint256 amount) external returns (bool)',
+    'function balanceOf(address account) external view returns (uint256)',
+    // Query functions
+    'function root() external view returns (bytes32)',
+    'function getCommitLeafCount(uint256 id) external view returns (uint256)',
+    'function getCommitLeaves(uint256 id, uint256 startIndex, uint256 length) external view returns (bytes32[] memory commitHashes, address[] memory recipients, uint256[] memory amounts)',
+    'function getLatestCommitment(uint256 id) external view returns (bytes32)',
+    'function hasCommitment(uint256 id, bytes32 commitment) external view returns (bool)',
+    'function hasFirstReceiptRecorded(address account) external view returns (bool)',
+    'function nullifierUsed(bytes32 nullifier) external view returns (bool)',
+    // Preview functions (optional)
+    'function previewDeposit(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',
+    'function previewWithdraw(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',
+    'function previewRemint(address to, uint256 id, uint256 amount, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bool redeem, bytes proof) data) external view returns (uint256)',
+  ],
 } as const;
 
 /**
  * Token Information
  */
 export const TOKEN_INFO = {
-  name: 'Zero Knowledge Wrapper USDC',
-  symbol: 'ZWUSDC',
-  underlyingName: 'USDC',
-  underlyingSymbol: 'USDC',
+  ZWUSDC: {
+    name: 'Zero Knowledge Wrapper USDC',
+    symbol: 'ZWUSDC',
+    underlyingName: 'USDC',
+    underlyingSymbol: 'USDC',
+  },
+  ZWETH: {
+    name: 'ZK Wrapper ETH',
+    symbol: 'ZWETH',
+    underlyingName: 'ETH',
+    underlyingSymbol: 'ETH',
+  },
 } as const;

@@ -23,9 +23,10 @@ export default [
     icon: 'wallet',
   },
   {
-    path: '#',
+    path: '/zweth',
     name: 'ZWETH',
     icon: 'wallet',
+    component: './ZWETH',
   },
   {
     path: '/',
