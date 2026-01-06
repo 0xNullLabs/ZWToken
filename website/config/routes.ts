@@ -18,15 +18,15 @@ export default [
     component: './ZWToken',
   },
   {
-    path: '#',
-    name: 'ZWUSDT',
-    icon: 'wallet',
-  },
-  {
     path: '/zweth',
     name: 'ZWETH',
     icon: 'wallet',
     component: './ZWETH',
+  },
+  {
+    path: '#',
+    name: 'ZWUSDT',
+    icon: 'wallet',
   },
   {
     path: '/',
