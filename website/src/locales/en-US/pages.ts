@@ -312,6 +312,8 @@ export default {
 
   // Last Burn Information
   'pages.zwtoken.lastBurn.tip': 'Keep your Secret safe for future Remint operations.',
+  'pages.zwtoken.lastBurn.remintTip': 'You can use this address for Remint operations',
+  'pages.zwtoken.lastBurn.goToRemint': 'Go to Remint',
   'pages.zwtoken.lastBurn.noBurn': 'No Burn Yet',
   'pages.zwtoken.lastBurn.noBurnDesc': 'Burn information will appear here after your first burn operation',
 };
