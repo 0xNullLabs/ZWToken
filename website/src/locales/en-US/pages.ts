@@ -309,4 +309,9 @@ export default {
   'pages.searchTable.tenThousand': '0000',
   'pages.searchTable.batchDeletion': 'batch deletion',
   'pages.searchTable.batchApproval': 'batch approval',
+
+  // Last Burn Information
+  'pages.zwtoken.lastBurn.tip': 'Keep your Secret safe for future Remint operations.',
+  'pages.zwtoken.lastBurn.noBurn': 'No Burn Yet',
+  'pages.zwtoken.lastBurn.noBurnDesc': 'Burn information will appear here after your first burn operation',
 };

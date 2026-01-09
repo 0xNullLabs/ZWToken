@@ -72,12 +72,18 @@ const ZWToken: React.FC = () => {
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
 
+  // Last Burn information cache
+  const [lastBurnAmount, setLastBurnAmount] = useState<string | null>(null);
+  const [lastBurnAddress, setLastBurnAddress] = useState<string | null>(null);
+  const [lastBurnSecret, setLastBurnSecret] = useState<string | null>(null);
+
   // Simple Mode Deposit (Burn) states
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
   const [depositSecretForm] = Form.useForm();
   const [depositSecretList, setDepositSecretList] = useState<
     Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
+  const [currentSimpleDepositSecret, setCurrentSimpleDepositSecret] = useState<string | null>(null);
 
   // Advanced Mode Deposit states
   const [advancedDepositSecretModalVisible, setAdvancedDepositSecretModalVisible] = useState(false);
@@ -88,11 +94,13 @@ const ZWToken: React.FC = () => {
   const [advancedDepositSecretMode, setAdvancedDepositSecretMode] = useState<
     'manual' | 'seed' | undefined
   >(undefined);
+  const [currentAdvancedDepositSecret, setCurrentAdvancedDepositSecret] = useState<string | null>(null);
 
   // Transfer states
   const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed' | undefined>(
     undefined,
   );
+  const [currentTransferSecret, setCurrentTransferSecret] = useState<string | null>(null);
 
   // Get current account
   const account = wallet?.accounts?.[0]?.address;
@@ -430,6 +438,7 @@ const ZWToken: React.FC = () => {
     // Reset state
     setSeed('');
     setSecretList([]);
+    setCurrentTransferSecret(null);
   };
 
   // Handle Deposit Directly Burn button click (Simple Mode)
@@ -438,6 +447,7 @@ const ZWToken: React.FC = () => {
     // Reset state
     setSeed('');
     setDepositSecretList([]);
+    setCurrentSimpleDepositSecret(null);
     // Auto generate seed
     handleGenerateBySeed('deposit');
   };
@@ -449,6 +459,7 @@ const ZWToken: React.FC = () => {
     setSeed('');
     setAdvancedDepositSecretList([]);
     setAdvancedDepositSecretMode(undefined);
+    setCurrentAdvancedDepositSecret(null);
   };
 
   // Handle Deposit Secret confirmation - Generate Burn Address (Simple Mode)
@@ -483,6 +494,8 @@ const ZWToken: React.FC = () => {
       const privacyAddress = await generatePrivacyAddress(secret);
       // Set to Simple Deposit form targetAddress field
       simpleDepositForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Save the selected secret for later use
+      setCurrentSimpleDepositSecret(secret);
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setDepositSecretModalVisible(false);
       depositSecretForm.resetFields();
@@ -502,6 +515,8 @@ const ZWToken: React.FC = () => {
       const privacyAddress = await generatePrivacyAddress(secret);
       // Set to Advanced Deposit form targetAddress field
       advancedDepositForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Save the selected secret for later use
+      setCurrentAdvancedDepositSecret(secret);
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setAdvancedDepositSecretModalVisible(false);
       advancedDepositSecretForm.resetFields();
@@ -523,6 +538,9 @@ const ZWToken: React.FC = () => {
 
       // Set to Advanced Deposit form targetAddress field
       advancedDepositForm.setFieldsValue({ targetAddress: privacyAddress });
+      
+      // Save the manually entered secret for later use
+      setCurrentAdvancedDepositSecret(values.secret);
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.privacyAddressGenerated' }));
       setAdvancedDepositSecretModalVisible(false);
@@ -781,6 +799,8 @@ const ZWToken: React.FC = () => {
       const privacyAddress = await generatePrivacyAddress(secret);
       // Set to Transfer form targetAddress field
       transferForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Save the selected secret for later use
+      setCurrentTransferSecret(secret);
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.generateSuccess' }));
       setSecretModalVisible(false);
       secretForm.resetFields();
@@ -1096,6 +1116,9 @@ const ZWToken: React.FC = () => {
 
       // Set to Transfer form targetAddress field
       transferForm.setFieldsValue({ targetAddress: privacyAddress });
+      
+      // Save the manually entered secret for later use
+      setCurrentTransferSecret(values.secret);
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.generateSuccess' }));
       setSecretModalVisible(false);
@@ -1197,8 +1220,16 @@ const ZWToken: React.FC = () => {
       await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
+      
+      // Save Last Burn information (Simple Mode)
+      setLastBurnAmount(values.amount.toString());
+      setLastBurnAddress(values.targetAddress);
+      // Use the saved secret if available
+      setLastBurnSecret(currentSimpleDepositSecret);
+      
       simpleDepositForm.resetFields();
       setSimpleDepositAmount(null);
+      setCurrentSimpleDepositSecret(null); // Clear the saved secret
       refreshBalances();
     } catch (error: any) {
       console.error('❌ [Simple] Deposit/Approve error:', error);
@@ -1303,9 +1334,19 @@ const ZWToken: React.FC = () => {
       await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
+      
+      // Save Last Burn information (Advanced Mode with Direct Burn)
+      if (directBurn && values.targetAddress) {
+        setLastBurnAmount(values.amount.toString());
+        setLastBurnAddress(values.targetAddress);
+        // Use the saved secret if available
+        setLastBurnSecret(currentAdvancedDepositSecret);
+      }
+      
       advancedDepositForm.resetFields();
       setAdvancedDepositAmount(null);
       setDirectBurn(false);
+      setCurrentAdvancedDepositSecret(null); // Clear the saved secret
       refreshBalances();
     } catch (error: any) {
       console.error('❌ [Advanced] Deposit/Approve error:', error);
@@ -1416,7 +1457,17 @@ const ZWToken: React.FC = () => {
       await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.success' }));
+      
+      // Save Last Burn information (Transfer with Burn address)
+      // If we have a saved secret, this is a Burn transfer
+      if (currentTransferSecret) {
+        setLastBurnAmount(values.amount.toString());
+        setLastBurnAddress(values.targetAddress);
+        setLastBurnSecret(currentTransferSecret);
+      }
+      
       transferForm.resetFields();
+      setCurrentTransferSecret(null); // Clear the saved secret
       // Refresh balances
       refreshBalances();
     } catch (error: any) {
@@ -1686,35 +1737,34 @@ const ZWToken: React.FC = () => {
         ),
       }}
     >
-      <Card>
-        {/* Balance display area */}
-        <div
-          style={{
-            marginBottom: 24,
-            padding: '20px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: 8,
-            cursor: account ? 'default' : 'pointer',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-          }}
-          onClick={() => {
-            if (!account) {
-              connect();
-            }
-          }}
-          onMouseEnter={(e) => {
-            if (!account) {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 16px rgba(102, 126, 234, 0.3)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!account) {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }
-          }}
-        >
+      {/* Balance display card */}
+      <div
+        style={{
+          marginBottom: 24,
+          padding: '20px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: 8,
+          cursor: account ? 'default' : 'pointer',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+        onClick={() => {
+          if (!account) {
+            connect();
+          }
+        }}
+        onMouseEnter={(e) => {
+          if (!account) {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 16px rgba(102, 126, 234, 0.3)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!account) {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }
+        }}
+      >
           {/* Faucet tip */}
           <div
             style={{
@@ -1873,6 +1923,112 @@ const ZWToken: React.FC = () => {
           </div>
         </div>
 
+      {/* Last Burn Information card */}
+      {lastBurnAmount && lastBurnAddress && (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: '20px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 8,
+          }}
+        >
+          <div style={{ color: '#fff' }}>
+            <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold' }}>
+              🔥 Last Burn Information
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Amount */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>Amount:</span>
+                <span style={{ fontSize: 16, fontWeight: 'bold' }}>
+                  {parseFloat(lastBurnAmount).toFixed(6)} USDC
+                </span>
+              </div>
+
+              {/* Address */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>Address:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <span
+                    style={{
+                      fontSize: isMobile ? 12 : 14,
+                      fontFamily: 'monospace',
+                      wordBreak: 'break-all',
+                      flex: 1,
+                    }}
+                  >
+                    {lastBurnAddress}
+                  </span>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={async () => {
+                      const success = await copyToClipboard(lastBurnAddress);
+                      if (success) {
+                        message.success('Address copied!');
+                      } else {
+                        message.error('Failed to copy');
+                      }
+                    }}
+                    style={{ color: '#fff', padding: 0, height: 'auto' }}
+                  />
+                </div>
+              </div>
+
+              {/* Secret (if available) */}
+              {lastBurnSecret && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>Secret:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-all',
+                        flex: 1,
+                      }}
+                    >
+                      {lastBurnSecret}
+                    </span>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={async () => {
+                        const success = await copyToClipboard(lastBurnSecret);
+                        if (success) {
+                          message.success('Secret copied!');
+                        } else {
+                          message.error('Failed to copy');
+                        }
+                      }}
+                      style={{ color: '#fff', padding: 0, height: 'auto' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tip */}
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: 12,
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  opacity: 0.95,
+                }}
+              >
+                💡 {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.tip' })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Card>
         {/* Outer main Tab: Simple Mode and Advanced Mode */}
         <Tabs defaultActiveKey="simple" type="card" size="large">
           {/* Simple Mode - Only includes Burn and Remint */}

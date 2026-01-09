@@ -295,4 +295,9 @@ export default {
   'pages.searchTable.tenThousand': '万',
   'pages.searchTable.batchDeletion': '批量删除',
   'pages.searchTable.batchApproval': '批量审批',
+
+  // Last Burn 信息
+  'pages.zwtoken.lastBurn.tip': '保管好您的 Secret，用于后续重铸（Remint）操作。',
+  'pages.zwtoken.lastBurn.noBurn': '暂无销毁记录',
+  'pages.zwtoken.lastBurn.noBurnDesc': '执行销毁操作后，相关信息将显示在这里',
 };
