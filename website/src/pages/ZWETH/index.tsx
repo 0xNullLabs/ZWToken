@@ -71,6 +71,16 @@ const ZWETH: React.FC = () => {
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
 
+  // Last Burn Information states
+  const [lastBurnAmount, setLastBurnAmount] = useState<string | null>(null);
+  const [lastBurnAddress, setLastBurnAddress] = useState<string | null>(null);
+  const [lastBurnTxHash, setLastBurnTxHash] = useState<string | null>(null);
+
+  // Track active tabs for Remint navigation
+  const [activeMainTab, setActiveMainTab] = useState<string>('simple');
+  const [activeSimpleTab, setActiveSimpleTab] = useState<string>('burn');
+  const [activeAdvancedTab, setActiveAdvancedTab] = useState<string>('deposit');
+
   // Simple Mode Deposit (Burn) states
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
   const [depositSecretForm] = Form.useForm();
@@ -92,6 +102,8 @@ const ZWETH: React.FC = () => {
   const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed' | undefined>(
     undefined,
   );
+  // Save the burn address generated for transfer, to detect if it's a burn transfer
+  const [transferBurnAddress, setTransferBurnAddress] = useState<string | null>(null);
 
   // Get current account
   const account = wallet?.accounts?.[0]?.address;
@@ -385,6 +397,7 @@ const ZWETH: React.FC = () => {
     // Reset state
     setSeed('');
     setSecretList([]);
+    setTransferBurnAddress(null);
   };
 
   // Handle Deposit Directly Burn button click (Simple Mode)
@@ -736,6 +749,8 @@ const ZWETH: React.FC = () => {
       const privacyAddress = await generatePrivacyAddress(secret);
       // Set to Transfer form targetAddress field
       transferForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Save the generated burn address for later detection
+      setTransferBurnAddress(privacyAddress);
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.generateSuccess' }));
       setSecretModalVisible(false);
       secretForm.resetFields();
@@ -1051,6 +1066,9 @@ const ZWETH: React.FC = () => {
 
       // Set to Transfer form targetAddress field
       transferForm.setFieldsValue({ targetAddress: privacyAddress });
+      
+      // Save the generated burn address for later detection
+      setTransferBurnAddress(privacyAddress);
 
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.generateSuccess' }));
       setSecretModalVisible(false);
@@ -1114,9 +1132,15 @@ const ZWETH: React.FC = () => {
       });
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
-      await tx.wait();
+      const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
+      
+      // Save Last Burn information (Simple Mode - always burn)
+      setLastBurnAmount(values.amount.toString());
+      setLastBurnAddress(values.targetAddress);
+      setLastBurnTxHash(receipt.hash);
+      
       simpleDepositForm.resetFields();
       setSimpleDepositAmount(null);
       refreshBalances();
@@ -1189,9 +1213,18 @@ const ZWETH: React.FC = () => {
       });
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
-      await tx.wait();
+      const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
+      
+      // Save Last Burn information (Advanced Mode with Direct Burn)
+      // directBurn checkbox determines if this is a burn operation
+      if (directBurn && values.targetAddress) {
+        setLastBurnAmount(values.amount.toString());
+        setLastBurnAddress(values.targetAddress);
+        setLastBurnTxHash(receipt.hash);
+      }
+      
       advancedDepositForm.resetFields();
       setAdvancedDepositAmount(null);
       setDirectBurn(false);
@@ -1302,10 +1335,20 @@ const ZWETH: React.FC = () => {
       const tx = await contract.transfer(values.targetAddress, transferAmount);
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.transfer.submitting' }), 0);
-      await tx.wait();
+      const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.success' }));
+      
+      // Save Last Burn information (Transfer with Burn address)
+      // If the target address matches the saved burn address, this is a burn transfer
+      if (transferBurnAddress && values.targetAddress.toLowerCase() === transferBurnAddress.toLowerCase()) {
+        setLastBurnAmount(values.amount.toString());
+        setLastBurnAddress(values.targetAddress);
+        setLastBurnTxHash(receipt.hash);
+      }
+      
       transferForm.resetFields();
+      setTransferBurnAddress(null); // Clear the saved burn address
       // Refresh balances
       refreshBalances();
     } catch (error: any) {
@@ -1315,6 +1358,20 @@ const ZWETH: React.FC = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Navigate to Remint tab based on current main tab
+  const handleGoToRemint = () => {
+    if (activeMainTab === 'simple') {
+      setActiveSimpleTab('remint');
+    } else if (activeMainTab === 'advanced') {
+      setActiveAdvancedTab('remint');
+    }
+    // Scroll to the main content area (Card)
+    const mainCard = document.querySelector('.ant-pro-page-container-children-content');
+    if (mainCard) {
+      mainCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -1733,11 +1790,142 @@ const ZWETH: React.FC = () => {
           </div>
         </div>
 
+        {/* Last Burn Information */}
+        {lastBurnAmount && lastBurnAddress && (
+          <div
+            style={{
+              marginBottom: 24,
+              padding: '20px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: 8,
+            }}
+          >
+            <div style={{ color: '#fff' }}>
+              <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold' }}>
+                🔥 {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.title' })}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Amount */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>
+                    {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.amount' })}:
+                  </span>
+                  <span style={{ fontSize: 16, fontWeight: 'bold' }}>
+                    {parseFloat(lastBurnAmount).toFixed(6)} ETH
+                  </span>
+                </div>
+
+                {/* Address */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>
+                    {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.address' })}:
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <span
+                      style={{
+                        fontSize: isMobile ? 12 : 14,
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-all',
+                        flex: 1,
+                      }}
+                    >
+                      {lastBurnAddress}
+                    </span>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={async () => {
+                        const success = await copyToClipboard(lastBurnAddress);
+                        if (success) {
+                          message.success('Address copied!');
+                        } else {
+                          message.error('Failed to copy');
+                        }
+                      }}
+                      style={{ color: '#fff', padding: 0, height: 'auto' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Tx Hash */}
+                {lastBurnTxHash && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>
+                      {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.txHash' })}:
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${lastBurnTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: isMobile ? 12 : 14,
+                          fontFamily: 'monospace',
+                          wordBreak: 'break-all',
+                          flex: 1,
+                          color: '#fff',
+                          textDecoration: 'underline',
+                          textDecorationColor: 'rgba(255, 255, 255, 0.6)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {lastBurnTxHash.substring(0, 10)}...
+                        {lastBurnTxHash.substring(lastBurnTxHash.length - 8)}
+                      </a>
+                      <Button
+                        type="link"
+                        size="small"
+                        icon={<CopyOutlined />}
+                        onClick={async () => {
+                          const success = await copyToClipboard(lastBurnTxHash);
+                          if (success) {
+                            message.success('Tx Hash copied!');
+                          } else {
+                            message.error('Failed to copy');
+                          }
+                        }}
+                        style={{ color: '#fff', padding: 0, height: 'auto' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Tip and Remint Button */}
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: 12,
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    opacity: 0.95,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  💡 {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.remintTip' })}
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={handleGoToRemint}
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.goToRemint' })}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Outer main Tab: Simple Mode and Advanced Mode */}
-        <Tabs defaultActiveKey="simple" type="card" size="large">
+        <Tabs defaultActiveKey="simple" type="card" size="large" onChange={setActiveMainTab}>
           {/* Simple Mode - Only includes Burn and Remint */}
           <TabPane tab="Simple Mode" key="simple">
-            <Tabs defaultActiveKey="burn" type="line" style={{ marginTop: 16 }}>
+            <Tabs defaultActiveKey="burn" type="line" style={{ marginTop: 16 }} activeKey={activeSimpleTab} onChange={setActiveSimpleTab}>
               <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.burn' })} key="burn">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                   <Form form={simpleDepositForm} layout="vertical" onFinish={handleSimpleDeposit}>
@@ -1994,7 +2182,7 @@ const ZWETH: React.FC = () => {
 
           {/* Advanced Mode - Includes all four Tabs */}
           <TabPane tab="Advanced Mode" key="advanced">
-            <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }}>
+            <Tabs defaultActiveKey="deposit" type="line" style={{ marginTop: 16 }} activeKey={activeAdvancedTab} onChange={setActiveAdvancedTab}>
               <TabPane tab={intl.formatMessage({ id: 'pages.zwtoken.tab.wrap' })} key="deposit">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                   <Form
