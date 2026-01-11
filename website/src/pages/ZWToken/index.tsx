@@ -10,7 +10,7 @@ import {
   Table,
   Checkbox,
 } from 'antd';
-import { CopyOutlined } from '@ant-design/icons';
+import { CopyOutlined, CloseOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { useConnectWallet } from '@web3-onboard/react';
 import { useIntl } from '@umijs/max';
@@ -32,6 +32,9 @@ const { TabPane } = Tabs;
 
 // Sepolia testnet chainId
 const SEPOLIA_CHAIN_ID = 11155111;
+
+// LocalStorage keys for Last Burn information
+const LAST_BURN_STORAGE_KEY = 'zwtoken_last_burn_info';
 
 const ZWToken: React.FC = () => {
   const intl = useIntl();
@@ -72,10 +75,24 @@ const ZWToken: React.FC = () => {
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
 
-  // Last Burn information cache
-  const [lastBurnAmount, setLastBurnAmount] = useState<string | null>(null);
-  const [lastBurnAddress, setLastBurnAddress] = useState<string | null>(null);
-  const [lastBurnTxHash, setLastBurnTxHash] = useState<string | null>(null);
+  // Last Burn information cache - Initialize from localStorage
+  const getLastBurnInfoFromStorage = () => {
+    try {
+      const stored = localStorage.getItem(LAST_BURN_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Failed to read last burn info from localStorage:', error);
+    }
+    return { amount: null, address: null, txHash: null, mode: null };
+  };
+
+  const lastBurnInfo = getLastBurnInfoFromStorage();
+  const [lastBurnAmount, setLastBurnAmount] = useState<string | null>(lastBurnInfo.amount);
+  const [lastBurnAddress, setLastBurnAddress] = useState<string | null>(lastBurnInfo.address);
+  const [lastBurnTxHash, setLastBurnTxHash] = useState<string | null>(lastBurnInfo.txHash);
+  const [lastBurnMode, setLastBurnMode] = useState<'simple' | 'advanced' | null>(lastBurnInfo.mode);
 
   // Simple Mode Deposit (Burn) states
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
@@ -108,6 +125,35 @@ const ZWToken: React.FC = () => {
   const [activeMainTab, setActiveMainTab] = useState<string>('simple');
   const [activeSimpleTab, setActiveSimpleTab] = useState<string>('burn');
   const [activeAdvancedTab, setActiveAdvancedTab] = useState<string>('deposit');
+
+  // Helper functions to manage Last Burn info in localStorage
+  const saveLastBurnToStorage = (amount: string, address: string, txHash: string, mode: 'simple' | 'advanced') => {
+    try {
+      const burnInfo = {
+        amount,
+        address,
+        txHash,
+        mode,
+      };
+      localStorage.setItem(LAST_BURN_STORAGE_KEY, JSON.stringify(burnInfo));
+    } catch (error) {
+      console.error('Failed to save last burn info to localStorage:', error);
+    }
+  };
+
+  const clearLastBurnInfo = () => {
+    try {
+      localStorage.removeItem(LAST_BURN_STORAGE_KEY);
+      setLastBurnAmount(null);
+      setLastBurnAddress(null);
+      setLastBurnTxHash(null);
+      setLastBurnMode(null);
+      message.success('Last burn information cleared');
+    } catch (error) {
+      console.error('Failed to clear last burn info:', error);
+      message.error('Failed to clear information');
+    }
+  };
 
   // Listen to window size changes
   React.useEffect(() => {
@@ -1217,9 +1263,16 @@ const ZWToken: React.FC = () => {
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
       
       // Save Last Burn information (Simple Mode - always burn)
-      setLastBurnAmount(values.amount.toString());
-      setLastBurnAddress(values.targetAddress);
-      setLastBurnTxHash(receipt.hash);
+      const burnAmount = values.amount.toString();
+      const burnAddress = values.targetAddress;
+      const burnTxHash = receipt.hash;
+      const burnMode = 'simple';
+      
+      setLastBurnAmount(burnAmount);
+      setLastBurnAddress(burnAddress);
+      setLastBurnTxHash(burnTxHash);
+      setLastBurnMode(burnMode);
+      saveLastBurnToStorage(burnAmount, burnAddress, burnTxHash, burnMode);
       
       simpleDepositForm.resetFields();
       setSimpleDepositAmount(null);
@@ -1331,9 +1384,16 @@ const ZWToken: React.FC = () => {
       // Save Last Burn information (Advanced Mode with Direct Burn)
       // directBurn checkbox determines if this is a burn operation
       if (directBurn && values.targetAddress) {
-        setLastBurnAmount(values.amount.toString());
-        setLastBurnAddress(values.targetAddress);
-        setLastBurnTxHash(receipt.hash);
+        const burnAmount = values.amount.toString();
+        const burnAddress = values.targetAddress;
+        const burnTxHash = receipt.hash;
+        const burnMode = 'advanced';
+        
+        setLastBurnAmount(burnAmount);
+        setLastBurnAddress(burnAddress);
+        setLastBurnTxHash(burnTxHash);
+        setLastBurnMode(burnMode);
+        saveLastBurnToStorage(burnAmount, burnAddress, burnTxHash, burnMode);
       }
       
       advancedDepositForm.resetFields();
@@ -1453,9 +1513,16 @@ const ZWToken: React.FC = () => {
       // Save Last Burn information (Transfer with Burn address)
       // If the target address matches the saved burn address, this is a burn transfer
       if (transferBurnAddress && values.targetAddress.toLowerCase() === transferBurnAddress.toLowerCase()) {
-        setLastBurnAmount(values.amount.toString());
-        setLastBurnAddress(values.targetAddress);
-        setLastBurnTxHash(receipt.hash);
+        const burnAmount = values.amount.toString();
+        const burnAddress = values.targetAddress;
+        const burnTxHash = receipt.hash;
+        const burnMode = 'simple';
+        
+        setLastBurnAmount(burnAmount);
+        setLastBurnAddress(burnAddress);
+        setLastBurnTxHash(burnTxHash);
+        setLastBurnMode(burnMode);
+        saveLastBurnToStorage(burnAmount, burnAddress, burnTxHash, burnMode);
       }
       
       transferForm.resetFields();
@@ -1923,8 +1990,26 @@ const ZWToken: React.FC = () => {
             padding: '20px',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             borderRadius: 8,
+            position: 'relative',
           }}
         >
+          {/* Close button */}
+          <Button
+            type="text"
+            size="small"
+            icon={<CloseOutlined />}
+            onClick={clearLastBurnInfo}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              color: '#fff',
+              padding: 4,
+              height: 'auto',
+              minWidth: 'auto',
+            }}
+            title="Clear burn information"
+          />
           <div style={{ color: '#fff' }}>
             <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold' }}>
               🔥 Last Burn Information
@@ -1934,7 +2019,7 @@ const ZWToken: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>Amount:</span>
                 <span style={{ fontSize: 16, fontWeight: 'bold' }}>
-                  {parseFloat(lastBurnAmount).toFixed(6)} USDC
+                  {parseFloat(lastBurnAmount).toFixed(6)} {lastBurnMode === 'advanced' ? 'ZWUSDC' : 'USDC'}
                 </span>
               </div>
 
