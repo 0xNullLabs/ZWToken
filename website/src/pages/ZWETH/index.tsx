@@ -1802,13 +1802,13 @@ const ZWETH: React.FC = () => {
           >
             <div style={{ color: '#fff' }}>
               <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold' }}>
-                🔥 {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.title' })}
+                🔥 Last Burn Information
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* Amount */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>
-                    {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.amount' })}:
+                    Amount:
                   </span>
                   <span style={{ fontSize: 16, fontWeight: 'bold' }}>
                     {parseFloat(lastBurnAmount).toFixed(6)} ETH
@@ -1818,7 +1818,7 @@ const ZWETH: React.FC = () => {
                 {/* Address */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>
-                    {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.address' })}:
+                    Address:
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                     <span
@@ -1852,7 +1852,7 @@ const ZWETH: React.FC = () => {
                 {lastBurnTxHash && (
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>
-                      {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.txHash' })}:
+                      Tx Hash:
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                       <a
