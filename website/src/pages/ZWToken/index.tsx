@@ -1980,6 +1980,92 @@ const ZWToken: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {!isMobile && (
+              <div
+                style={{
+                  width: 1,
+                  height: 60,
+                  background: 'rgba(255, 255, 255, 0.2)',
+                }}
+              />
+            )}
+
+            <div
+              style={{
+                flex: '1 1 200px',
+                minWidth: '200px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  marginBottom: 8,
+                }}
+              >
+                {intl.formatMessage({ id: 'pages.zwtoken.balance.remintable' })}
+              </div>
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  wordBreak: 'break-all',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  cursor: account ? 'pointer' : 'default',
+                }}
+                onClick={(e) => {
+                  if (account) {
+                    e.stopPropagation();
+                    // Switch to remint tab based on current mode
+                    if (activeMainTab === 'simple') {
+                      setActiveSimpleTab('remint');
+                      // Trigger the Select button action after tab switch
+                      setTimeout(() => {
+                        handleRemintGenerateBySeedClick();
+                      }, 100);
+                    } else {
+                      setActiveAdvancedTab('remint');
+                      // Trigger the Select button action for Advanced mode after tab switch
+                      setTimeout(() => {
+                        handleAdvancedRemintGenerateBySeedClick();
+                      }, 100);
+                    }
+                    // Scroll to the card
+                    setTimeout(() => {
+                      const card = document.querySelector('.ant-card');
+                      if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 100);
+                  }
+                }}
+              >
+                {account ? (
+                  <>
+                    <span>****</span>
+                    <Button
+                      type="primary"
+                      size="small"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: 'none',
+                        color: '#fff',
+                      }}
+                    >
+                      {intl.formatMessage({ id: 'pages.zwtoken.balance.scan' })}
+                    </Button>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>
+                    {intl.formatMessage({ id: 'pages.zwtoken.balance.clickToConnect' })}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

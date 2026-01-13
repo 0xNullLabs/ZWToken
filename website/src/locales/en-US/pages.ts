@@ -8,6 +8,8 @@ export default {
   // Balance
   'pages.zwtoken.balance.usdc': 'USDC Balance',
   'pages.zwtoken.balance.zwusdc': 'ZWUSDC Balance',
+  'pages.zwtoken.balance.remintable': 'Remintable Balance',
+  'pages.zwtoken.balance.scan': 'Scan',
   'pages.zwtoken.balance.clickToConnect': 'Connect Wallet',
 
   // Faucet

@@ -7,6 +7,8 @@ export default {
   // 余额
   'pages.zwtoken.balance.usdc': 'USDC 余额',
   'pages.zwtoken.balance.zwusdc': 'ZWUSDC 余额',
+  'pages.zwtoken.balance.remintable': 'Remintable 余额',
+  'pages.zwtoken.balance.scan': 'Scan',
   'pages.zwtoken.balance.clickToConnect': '连接钱包',
 
   // 水龙头
