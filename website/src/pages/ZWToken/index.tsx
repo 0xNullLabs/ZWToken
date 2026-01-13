@@ -1864,7 +1864,7 @@ const ZWToken: React.FC = () => {
           >
             <span>{intl.formatMessage({ id: 'pages.zwtoken.title' })}</span>
             <a
-              href="https://ethereum-magicians.org/t/erc-8065-zero-knowledge-token-wrapper/26006"
+              href="https://eips.ethereum.org/EIPS/eip-8065"
               target="_blank"
               rel="noopener noreferrer"
               style={{
