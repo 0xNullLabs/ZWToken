@@ -298,8 +298,9 @@ export default {
 
   // Last Burn 信息
   'pages.zwtoken.lastBurn.tip': '保管好您的 Secret，用于后续重铸（Remint）操作。',
-  'pages.zwtoken.lastBurn.remintTip': '您可以使用此地址进行重铸（Remint）操作',
+  'pages.zwtoken.lastBurn.remintTip': '您可以重铸代币（Remint）（如果尚未重铸）',
   'pages.zwtoken.lastBurn.goToRemint': '前往重铸',
   'pages.zwtoken.lastBurn.noBurn': '暂无销毁记录',
   'pages.zwtoken.lastBurn.noBurnDesc': '执行销毁操作后，相关信息将显示在这里',
+  'pages.zwtoken.lastBurn.infoTooltip': '仅用作本地信息提示；即使他人获得该信息也无法重铸你的代币。',
 };

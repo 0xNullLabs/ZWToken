@@ -9,8 +9,9 @@ import {
   Modal,
   Table,
   Checkbox,
+  Tooltip,
 } from 'antd';
-import { CopyOutlined, CloseOutlined } from '@ant-design/icons';
+import { CopyOutlined, CloseOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { useConnectWallet } from '@web3-onboard/react';
 import { useIntl } from '@umijs/max';
@@ -2011,8 +2012,11 @@ const ZWToken: React.FC = () => {
             title="Clear burn information"
           />
           <div style={{ color: '#fff' }}>
-            <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold' }}>
+            <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8 }}>
               🔥 Last Burn Information
+              <Tooltip title={intl.formatMessage({ id: 'pages.zwtoken.lastBurn.infoTooltip' })}>
+                <InfoCircleOutlined style={{ fontSize: 16, cursor: 'pointer', opacity: 0.7 }} />
+              </Tooltip>
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Amount */}
