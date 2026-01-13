@@ -231,6 +231,7 @@ export default {
   // 通用
   'pages.zwtoken.error.connectWallet': '请先连接钱包',
   'pages.zwtoken.error.targetAddressRequired': '请先生成或输入目标地址',
+  'pages.zwtoken.error.insufficientBalance': '余额不足',
 
   'pages.layouts.userLayout.title': 'Ant Design 是西湖区最具影响力的 Web 设计规范',
   'pages.login.accountLogin.tab': '账户密码登录',

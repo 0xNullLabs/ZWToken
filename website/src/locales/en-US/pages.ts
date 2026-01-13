@@ -242,6 +242,7 @@ export default {
   // Common
   'pages.zwtoken.error.connectWallet': 'Please connect wallet first',
   'pages.zwtoken.error.targetAddressRequired': 'Please generate or enter Target Address first',
+  'pages.zwtoken.error.insufficientBalance': 'Insufficient Balance',
 
   'pages.layouts.userLayout.title':
     'Ant Design is the most influential web design specification in Xihu district',

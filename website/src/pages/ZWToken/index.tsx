@@ -1217,6 +1217,15 @@ const ZWToken: React.FC = () => {
       return;
     }
 
+    // 检查 USDC 余额是否足够
+    const usdcBalanceNum = parseFloat(usdcBalance);
+    if (usdcBalanceNum < values.amount) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: USDC ${usdcBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+      );
+      return;
+    }
+
     // 清除之前的交易哈希
     setSimpleBurnTxHash(null);
     setLoading(true);
@@ -1324,6 +1333,15 @@ const ZWToken: React.FC = () => {
 
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
+      return;
+    }
+
+    // 检查 USDC 余额是否足够
+    const usdcBalanceNum = parseFloat(usdcBalance);
+    if (usdcBalanceNum < values.amount) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: USDC ${usdcBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+      );
       return;
     }
 
@@ -1450,6 +1468,15 @@ const ZWToken: React.FC = () => {
       return;
     }
 
+    // 检查 ZWUSDC 余额是否足够
+    const zwusdcBalanceNum = parseFloat(zwusdcBalance);
+    if (zwusdcBalanceNum < values.amount) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ZWUSDC ${zwusdcBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+      );
+      return;
+    }
+
     // 清除之前的交易哈希
     setAdvancedWithdrawTxHash(null);
     setLoading(true);
@@ -1506,6 +1533,15 @@ const ZWToken: React.FC = () => {
   const handleTransfer = async (values: { targetAddress: string; amount: number }) => {
     if (!account) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.connectWallet' }));
+      return;
+    }
+
+    // 检查 ZWUSDC 余额是否足够
+    const zwusdcBalanceNum = parseFloat(zwusdcBalance);
+    if (zwusdcBalanceNum < values.amount) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ZWUSDC ${zwusdcBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+      );
       return;
     }
 
