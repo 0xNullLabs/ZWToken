@@ -2725,7 +2725,7 @@ const ZWETH: React.FC = () => {
                   }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2966,7 +2966,7 @@ const ZWETH: React.FC = () => {
                   }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3213,7 +3213,7 @@ const ZWETH: React.FC = () => {
                   }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3389,7 +3389,7 @@ const ZWETH: React.FC = () => {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3538,7 +3538,7 @@ const ZWETH: React.FC = () => {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

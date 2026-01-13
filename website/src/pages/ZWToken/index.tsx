@@ -57,17 +57,17 @@ const ZWToken: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [seed, setSeed] = useState<string>('');
   const [secretList, setSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   const [remintSeedModalVisible, setRemintSeedModalVisible] = useState(false);
   const [remintSecretList, setRemintSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
 
   // Advanced Mode Remint states
   const [advancedRemintSeedModalVisible, setAdvancedRemintSeedModalVisible] = useState(false);
   const [advancedRemintSecretList, setAdvancedRemintSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
 
   // Store selected max amount for remint
@@ -99,14 +99,14 @@ const ZWToken: React.FC = () => {
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
   const [depositSecretForm] = Form.useForm();
   const [depositSecretList, setDepositSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
 
   // Advanced Mode Deposit states
   const [advancedDepositSecretModalVisible, setAdvancedDepositSecretModalVisible] = useState(false);
   const [advancedDepositSecretForm] = Form.useForm();
   const [advancedDepositSecretList, setAdvancedDepositSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   const [advancedDepositSecretMode, setAdvancedDepositSecretMode] = useState<
     'manual' | 'seed' | undefined
@@ -627,6 +627,7 @@ const ZWToken: React.FC = () => {
       const secrets: Array<{
         index: number;
         secret: string;
+        address: string;
         amount: string;
         loading: boolean;
         isClaimed: boolean;
@@ -639,6 +640,7 @@ const ZWToken: React.FC = () => {
         secrets.push({
           index: i,
           secret: secretBigInt,
+          address: '',
           amount: '-',
           loading: true,
           isClaimed: false,
@@ -721,7 +723,7 @@ const ZWToken: React.FC = () => {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                  ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                   : item,
               ),
             );
@@ -729,7 +731,7 @@ const ZWToken: React.FC = () => {
             setSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                  ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                   : item,
               ),
             );
@@ -737,7 +739,7 @@ const ZWToken: React.FC = () => {
             setAdvancedDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                  ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                   : item,
               ),
             );
@@ -747,7 +749,7 @@ const ZWToken: React.FC = () => {
               setDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                     : item,
                 ),
               );
@@ -755,7 +757,7 @@ const ZWToken: React.FC = () => {
               setAdvancedDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                     : item,
                 ),
               );
@@ -763,7 +765,7 @@ const ZWToken: React.FC = () => {
               setSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                     : item,
                 ),
               );
@@ -775,7 +777,7 @@ const ZWToken: React.FC = () => {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                   : item,
               ),
             );
@@ -783,7 +785,7 @@ const ZWToken: React.FC = () => {
             setSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                   : item,
               ),
             );
@@ -791,7 +793,7 @@ const ZWToken: React.FC = () => {
             setAdvancedDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                   : item,
               ),
             );
@@ -801,7 +803,7 @@ const ZWToken: React.FC = () => {
               setDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                     : item,
                 ),
               );
@@ -809,7 +811,7 @@ const ZWToken: React.FC = () => {
               setAdvancedDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                     : item,
                 ),
               );
@@ -817,7 +819,7 @@ const ZWToken: React.FC = () => {
               setSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                     : item,
                 ),
               );
@@ -881,6 +883,7 @@ const ZWToken: React.FC = () => {
       const secrets: Array<{
         index: number;
         secret: string;
+        address: string;
         amount: string;
         loading: boolean;
         isClaimed: boolean;
@@ -893,6 +896,7 @@ const ZWToken: React.FC = () => {
         secrets.push({
           index: i,
           secret: secretBigInt,
+          address: '',
           amount: '-',
           loading: true,
           isClaimed: false,
@@ -958,7 +962,7 @@ const ZWToken: React.FC = () => {
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                 : item,
             ),
           );
@@ -967,7 +971,7 @@ const ZWToken: React.FC = () => {
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                 : item,
             ),
           );
@@ -1029,6 +1033,7 @@ const ZWToken: React.FC = () => {
       const secrets: Array<{
         index: number;
         secret: string;
+        address: string;
         amount: string;
         loading: boolean;
         isClaimed: boolean;
@@ -1041,6 +1046,7 @@ const ZWToken: React.FC = () => {
         secrets.push({
           index: i,
           secret: secretBigInt,
+          address: '',
           amount: '-',
           loading: true,
           isClaimed: false,
@@ -1106,7 +1112,7 @@ const ZWToken: React.FC = () => {
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                 : item,
             ),
           );
@@ -1115,7 +1121,7 @@ const ZWToken: React.FC = () => {
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                 : item,
             ),
           );
@@ -2993,12 +2999,12 @@ const ZWToken: React.FC = () => {
                   }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -3016,6 +3022,39 @@ const ZWToken: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({
@@ -3234,12 +3273,12 @@ const ZWToken: React.FC = () => {
                   }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -3257,6 +3296,39 @@ const ZWToken: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({
@@ -3481,12 +3553,12 @@ const ZWToken: React.FC = () => {
                   }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -3504,6 +3576,39 @@ const ZWToken: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({
@@ -3657,12 +3762,12 @@ const ZWToken: React.FC = () => {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -3680,6 +3785,39 @@ const ZWToken: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.amount' }),
@@ -3806,12 +3944,12 @@ const ZWToken: React.FC = () => {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
-                  width: 350,
+                  width: 120,
                   ellipsis: true,
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -3829,6 +3967,39 @@ const ZWToken: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.amount' }),
