@@ -73,6 +73,14 @@ const ZWToken: React.FC = () => {
   // Store selected max amount for remint
   const [selectedRemintMaxAmount, setSelectedRemintMaxAmount] = useState<string | null>(null);
 
+  // Transaction hash states for displaying submitted transactions
+  const [simpleBurnTxHash, setSimpleBurnTxHash] = useState<string | null>(null);
+  const [simpleRemintTxHash, setSimpleRemintTxHash] = useState<string | null>(null);
+  const [advancedDepositTxHash, setAdvancedDepositTxHash] = useState<string | null>(null);
+  const [advancedWithdrawTxHash, setAdvancedWithdrawTxHash] = useState<string | null>(null);
+  const [advancedTransferTxHash, setAdvancedTransferTxHash] = useState<string | null>(null);
+  const [advancedRemintTxHash, setAdvancedRemintTxHash] = useState<string | null>(null);
+
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
 
@@ -1209,6 +1217,8 @@ const ZWToken: React.FC = () => {
       return;
     }
 
+    // 清除之前的交易哈希
+    setSimpleBurnTxHash(null);
     setLoading(true);
     try {
       const provider = await getProvider();
@@ -1269,6 +1279,9 @@ const ZWToken: React.FC = () => {
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
       
+      // 保存交易哈希以显示
+      setSimpleBurnTxHash(receipt.hash);
+      
       // Save Last Burn information (Simple Mode - always burn)
       const burnAmount = values.amount.toString();
       const burnAddress = values.targetAddress;
@@ -1320,6 +1333,8 @@ const ZWToken: React.FC = () => {
       return;
     }
 
+    // 清除之前的交易哈希
+    setAdvancedDepositTxHash(null);
     setLoading(true);
     try {
       const provider = await getProvider();
@@ -1388,6 +1403,9 @@ const ZWToken: React.FC = () => {
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
       
+      // 保存交易哈希以显示
+      setAdvancedDepositTxHash(receipt.hash);
+      
       // Save Last Burn information (Advanced Mode with Direct Burn)
       // directBurn checkbox determines if this is a burn operation
       if (directBurn && values.targetAddress) {
@@ -1432,6 +1450,8 @@ const ZWToken: React.FC = () => {
       return;
     }
 
+    // 清除之前的交易哈希
+    setAdvancedWithdrawTxHash(null);
     setLoading(true);
     try {
       const provider = await getProvider();
@@ -1462,9 +1482,13 @@ const ZWToken: React.FC = () => {
       const tx = await contract.withdraw(signerAddress, 0, withdrawAmount, '0x');
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.withdraw.submitting' }), 0);
-      await tx.wait();
+      const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.withdraw.success' }));
+      
+      // 保存交易哈希以显示
+      setAdvancedWithdrawTxHash(receipt.hash);
+      
       withdrawForm.resetFields();
       // Refresh balances
       refreshBalances();
@@ -1485,6 +1509,8 @@ const ZWToken: React.FC = () => {
       return;
     }
 
+    // 清除之前的交易哈希
+    setAdvancedTransferTxHash(null);
     setLoading(true);
     try {
       const provider = await getProvider();
@@ -1516,6 +1542,9 @@ const ZWToken: React.FC = () => {
       const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.success' }));
+      
+      // 保存交易哈希以显示
+      setAdvancedTransferTxHash(receipt.hash);
       
       // Save Last Burn information (Transfer with Burn address)
       // If the target address matches the saved burn address, this is a burn transfer
@@ -1553,6 +1582,12 @@ const ZWToken: React.FC = () => {
       return;
     }
 
+    // 清除之前的交易哈希（根据当前模式）
+    if (activeMainTab === 'simple') {
+      setSimpleRemintTxHash(null);
+    } else {
+      setAdvancedRemintTxHash(null);
+    }
     setLoading(true);
     const hideLoading = message.loading(
       intl.formatMessage({ id: 'pages.zwtoken.remint.preparing' }),
@@ -1747,6 +1782,13 @@ const ZWToken: React.FC = () => {
         message.destroy();
         message.success(intl.formatMessage({ id: 'pages.zwtoken.remint.success' }));
         console.log(`✅ Remint succeeded! Gas used: ${receipt.gasUsed}`);
+
+        // 保存交易哈希以显示（根据当前模式）
+        if (activeMainTab === 'simple') {
+          setSimpleRemintTxHash(receipt.hash);
+        } else {
+          setAdvancedRemintTxHash(receipt.hash);
+        }
 
         remintForm.resetFields();
         setSelectedRemintMaxAmount(null);
@@ -2337,6 +2379,23 @@ const ZWToken: React.FC = () => {
                           : intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {simpleBurnTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${simpleBurnTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {simpleBurnTxHash.substring(0, 10)}...{simpleBurnTxHash.substring(simpleBurnTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2485,6 +2544,23 @@ const ZWToken: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {simpleRemintTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${simpleRemintTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {simpleRemintTxHash.substring(0, 10)}...{simpleRemintTxHash.substring(simpleRemintTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2634,6 +2710,23 @@ const ZWToken: React.FC = () => {
                         {advancedNeedsApproval ? 'Approve' : directBurn ? 'Wrap and Burn' : 'Wrap'}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {advancedDepositTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${advancedDepositTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {advancedDepositTxHash.substring(0, 10)}...{advancedDepositTxHash.substring(advancedDepositTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2687,6 +2780,23 @@ const ZWToken: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.withdraw.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {advancedWithdrawTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${advancedWithdrawTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {advancedWithdrawTxHash.substring(0, 10)}...{advancedWithdrawTxHash.substring(advancedWithdrawTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2773,6 +2883,23 @@ const ZWToken: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.transfer.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {advancedTransferTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${advancedTransferTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {advancedTransferTxHash.substring(0, 10)}...{advancedTransferTxHash.substring(advancedTransferTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2900,6 +3027,23 @@ const ZWToken: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {advancedRemintTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${advancedRemintTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {advancedRemintTxHash.substring(0, 10)}...{advancedRemintTxHash.substring(advancedRemintTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
