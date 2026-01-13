@@ -9,8 +9,9 @@ import {
   Modal,
   Table,
   Checkbox,
+  Tooltip,
 } from 'antd';
-import { CopyOutlined, CloseOutlined } from '@ant-design/icons';
+import { CopyOutlined, CloseOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { useConnectWallet } from '@web3-onboard/react';
 import { useIntl } from '@umijs/max';
@@ -55,21 +56,29 @@ const ZWETH: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [seed, setSeed] = useState<string>('');
   const [secretList, setSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   const [remintSeedModalVisible, setRemintSeedModalVisible] = useState(false);
   const [remintSecretList, setRemintSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
 
   // Advanced Mode Remint states
   const [advancedRemintSeedModalVisible, setAdvancedRemintSeedModalVisible] = useState(false);
   const [advancedRemintSecretList, setAdvancedRemintSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
 
   // Store selected max amount for remint
   const [selectedRemintMaxAmount, setSelectedRemintMaxAmount] = useState<string | null>(null);
+
+  // Transaction hash states for displaying submitted transactions
+  const [simpleBurnTxHash, setSimpleBurnTxHash] = useState<string | null>(null);
+  const [simpleRemintTxHash, setSimpleRemintTxHash] = useState<string | null>(null);
+  const [advancedDepositTxHash, setAdvancedDepositTxHash] = useState<string | null>(null);
+  const [advancedWithdrawTxHash, setAdvancedWithdrawTxHash] = useState<string | null>(null);
+  const [advancedTransferTxHash, setAdvancedTransferTxHash] = useState<string | null>(null);
+  const [advancedRemintTxHash, setAdvancedRemintTxHash] = useState<string | null>(null);
 
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
@@ -102,14 +111,14 @@ const ZWETH: React.FC = () => {
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
   const [depositSecretForm] = Form.useForm();
   const [depositSecretList, setDepositSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
 
   // Advanced Mode Deposit states
   const [advancedDepositSecretModalVisible, setAdvancedDepositSecretModalVisible] = useState(false);
   const [advancedDepositSecretForm] = Form.useForm();
   const [advancedDepositSecretList, setAdvancedDepositSecretList] = useState<
-    Array<{ index: number; secret: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
   >([]);
   const [advancedDepositSecretMode, setAdvancedDepositSecretMode] = useState<
     'manual' | 'seed' | undefined
@@ -581,6 +590,7 @@ const ZWETH: React.FC = () => {
       const secrets: Array<{
         index: number;
         secret: string;
+        address: string;
         amount: string;
         loading: boolean;
         isClaimed: boolean;
@@ -593,6 +603,7 @@ const ZWETH: React.FC = () => {
         secrets.push({
           index: i,
           secret: secretBigInt,
+          address: '',
           amount: '-',
           loading: true,
           isClaimed: false,
@@ -675,7 +686,7 @@ const ZWETH: React.FC = () => {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                  ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                   : item,
               ),
             );
@@ -683,7 +694,7 @@ const ZWETH: React.FC = () => {
             setSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                  ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                   : item,
               ),
             );
@@ -691,7 +702,7 @@ const ZWETH: React.FC = () => {
             setAdvancedDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                  ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                   : item,
               ),
             );
@@ -701,7 +712,7 @@ const ZWETH: React.FC = () => {
               setDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                     : item,
                 ),
               );
@@ -709,7 +720,7 @@ const ZWETH: React.FC = () => {
               setAdvancedDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                     : item,
                 ),
               );
@@ -717,7 +728,7 @@ const ZWETH: React.FC = () => {
               setSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                    ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                     : item,
                 ),
               );
@@ -729,7 +740,7 @@ const ZWETH: React.FC = () => {
             setDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                   : item,
               ),
             );
@@ -737,7 +748,7 @@ const ZWETH: React.FC = () => {
             setSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                   : item,
               ),
             );
@@ -745,7 +756,7 @@ const ZWETH: React.FC = () => {
             setAdvancedDepositSecretList((prev) =>
               prev.map((item, idx) =>
                 idx === i
-                  ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                  ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                   : item,
               ),
             );
@@ -755,7 +766,7 @@ const ZWETH: React.FC = () => {
               setDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                     : item,
                 ),
               );
@@ -763,7 +774,7 @@ const ZWETH: React.FC = () => {
               setAdvancedDepositSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                     : item,
                 ),
               );
@@ -771,7 +782,7 @@ const ZWETH: React.FC = () => {
               setSecretList((prev) =>
                 prev.map((item, idx) =>
                   idx === i
-                    ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                    ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                     : item,
                 ),
               );
@@ -835,6 +846,7 @@ const ZWETH: React.FC = () => {
       const secrets: Array<{
         index: number;
         secret: string;
+        address: string;
         amount: string;
         loading: boolean;
         isClaimed: boolean;
@@ -847,6 +859,7 @@ const ZWETH: React.FC = () => {
         secrets.push({
           index: i,
           secret: secretBigInt,
+          address: '',
           amount: '-',
           loading: true,
           isClaimed: false,
@@ -912,7 +925,7 @@ const ZWETH: React.FC = () => {
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                 : item,
             ),
           );
@@ -921,7 +934,7 @@ const ZWETH: React.FC = () => {
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                 : item,
             ),
           );
@@ -983,6 +996,7 @@ const ZWETH: React.FC = () => {
       const secrets: Array<{
         index: number;
         secret: string;
+        address: string;
         amount: string;
         loading: boolean;
         isClaimed: boolean;
@@ -995,6 +1009,7 @@ const ZWETH: React.FC = () => {
         secrets.push({
           index: i,
           secret: secretBigInt,
+          address: '',
           amount: '-',
           loading: true,
           isClaimed: false,
@@ -1060,7 +1075,7 @@ const ZWETH: React.FC = () => {
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: foundAmount, loading: false, isClaimed: isClaimed }
+                ? { ...item, address: privacyAddress, amount: foundAmount, loading: false, isClaimed: isClaimed }
                 : item,
             ),
           );
@@ -1069,7 +1084,7 @@ const ZWETH: React.FC = () => {
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: 'Query failed', loading: false, isClaimed: false }
+                ? { ...item, address: '', amount: 'Query failed', loading: false, isClaimed: false }
                 : item,
             ),
           );
@@ -1149,6 +1164,17 @@ const ZWETH: React.FC = () => {
       return;
     }
 
+    // 检查 ETH 余额是否足够
+    const ethBalanceNum = parseFloat(ethBalance);
+    if (ethBalanceNum < values.amount) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ETH ${ethBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+      );
+      return;
+    }
+
+    // 清除之前的交易哈希
+    setSimpleBurnTxHash(null);
     setLoading(true);
     try {
       const provider = await getProvider();
@@ -1181,6 +1207,9 @@ const ZWETH: React.FC = () => {
       const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
+      
+      // 保存交易哈希以显示
+      setSimpleBurnTxHash(receipt.hash);
       
       // Save Last Burn information (Simple Mode - always burn)
       const burnAmount = values.amount.toString();
@@ -1227,12 +1256,23 @@ const ZWETH: React.FC = () => {
       return;
     }
 
+    // 检查 ETH 余额是否足够
+    const ethBalanceNum = parseFloat(ethBalance);
+    if (ethBalanceNum < values.amount) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ETH ${ethBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+      );
+      return;
+    }
+
     // If directBurn is enabled, targetAddress is required
     if (directBurn && !values.targetAddress) {
       message.error(intl.formatMessage({ id: 'pages.zwtoken.error.targetAddressRequired' }));
       return;
     }
 
+    // 清除之前的交易哈希
+    setAdvancedDepositTxHash(null);
     setLoading(true);
     try {
       const provider = await getProvider();
@@ -1269,6 +1309,9 @@ const ZWETH: React.FC = () => {
       const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.deposit.success' }));
+      
+      // 保存交易哈希以显示
+      setAdvancedDepositTxHash(receipt.hash);
       
       // Save Last Burn information (Advanced Mode with Direct Burn)
       // directBurn checkbox determines if this is a burn operation
@@ -1314,6 +1357,17 @@ const ZWETH: React.FC = () => {
       return;
     }
 
+    // 检查 ZWETH 余额是否足够
+    const zwethBalanceNum = parseFloat(zwethBalance);
+    if (zwethBalanceNum < values.amount) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ZWETH ${zwethBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+      );
+      return;
+    }
+
+    // 清除之前的交易哈希
+    setAdvancedWithdrawTxHash(null);
     setLoading(true);
     try {
       const provider = await getProvider();
@@ -1344,9 +1398,13 @@ const ZWETH: React.FC = () => {
       const tx = await contract.withdraw(signerAddress, 0, withdrawAmount, '0x');
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.withdraw.submitting' }), 0);
-      await tx.wait();
+      const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.withdraw.success' }));
+      
+      // 保存交易哈希以显示
+      setAdvancedWithdrawTxHash(receipt.hash);
+      
       withdrawForm.resetFields();
       // Refresh balances
       refreshBalances();
@@ -1367,6 +1425,17 @@ const ZWETH: React.FC = () => {
       return;
     }
 
+    // 检查 ZWETH 余额是否足够
+    const zwethBalanceNum = parseFloat(zwethBalance);
+    if (zwethBalanceNum < values.amount) {
+      message.error(
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ZWETH ${zwethBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+      );
+      return;
+    }
+
+    // 清除之前的交易哈希
+    setAdvancedTransferTxHash(null);
     setLoading(true);
     try {
       const provider = await getProvider();
@@ -1398,6 +1467,9 @@ const ZWETH: React.FC = () => {
       const receipt = await tx.wait();
       message.destroy();
       message.success(intl.formatMessage({ id: 'pages.zwtoken.transfer.success' }));
+      
+      // 保存交易哈希以显示
+      setAdvancedTransferTxHash(receipt.hash);
       
       // Save Last Burn information (Transfer with Burn address)
       // If the target address matches the saved burn address, this is a burn transfer
@@ -1449,6 +1521,12 @@ const ZWETH: React.FC = () => {
       return;
     }
 
+    // 清除之前的交易哈希（根据当前模式）
+    if (activeMainTab === 'simple') {
+      setSimpleRemintTxHash(null);
+    } else {
+      setAdvancedRemintTxHash(null);
+    }
     setLoading(true);
     const hideLoading = message.loading(
       intl.formatMessage({ id: 'pages.zwtoken.remint.preparing' }),
@@ -1644,6 +1722,13 @@ const ZWETH: React.FC = () => {
         message.success(intl.formatMessage({ id: 'pages.zwtoken.remint.success' }));
         console.log(`✅ Remint succeeded! Gas used: ${receipt.gasUsed}`);
 
+        // 保存交易哈希以显示（根据当前模式）
+        if (activeMainTab === 'simple') {
+          setSimpleRemintTxHash(receipt.hash);
+        } else {
+          setAdvancedRemintTxHash(receipt.hash);
+        }
+
         remintForm.resetFields();
         setSelectedRemintMaxAmount(null);
         // Refresh balances
@@ -1682,7 +1767,7 @@ const ZWETH: React.FC = () => {
           >
             <span>{intl.formatMessage({ id: 'pages.zwtoken.title' })}</span>
             <a
-              href="https://ethereum-magicians.org/t/erc-8065-zero-knowledge-token-wrapper/26006"
+              href="https://eips.ethereum.org/EIPS/eip-8065"
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -1854,6 +1939,92 @@ const ZWETH: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {!isMobile && (
+              <div
+                style={{
+                  width: 1,
+                  height: 60,
+                  background: 'rgba(255, 255, 255, 0.2)',
+                }}
+              />
+            )}
+
+            <div
+              style={{
+                flex: '1 1 200px',
+                minWidth: '200px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  marginBottom: 8,
+                }}
+              >
+                {intl.formatMessage({ id: 'pages.zwtoken.balance.remintable' })}
+              </div>
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  wordBreak: 'break-all',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  cursor: account ? 'pointer' : 'default',
+                }}
+                onClick={(e) => {
+                  if (account) {
+                    e.stopPropagation();
+                    // Switch to remint tab based on current mode
+                    if (activeMainTab === 'simple') {
+                      setActiveSimpleTab('remint');
+                      // Trigger the Select button action after tab switch
+                      setTimeout(() => {
+                        handleRemintGenerateBySeedClick();
+                      }, 100);
+                    } else {
+                      setActiveAdvancedTab('remint');
+                      // Trigger the Select button action for Advanced mode after tab switch
+                      setTimeout(() => {
+                        handleAdvancedRemintGenerateBySeedClick();
+                      }, 100);
+                    }
+                    // Scroll to the card
+                    setTimeout(() => {
+                      const card = document.querySelector('.ant-card');
+                      if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 100);
+                  }
+                }}
+              >
+                {account ? (
+                  <>
+                    <span>****</span>
+                    <Button
+                      type="primary"
+                      size="small"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: 'none',
+                        color: '#fff',
+                      }}
+                    >
+                      {intl.formatMessage({ id: 'pages.zwtoken.balance.scan' })}
+                    </Button>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>
+                    {intl.formatMessage({ id: 'pages.zwtoken.balance.clickToConnect' })}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1884,11 +2055,14 @@ const ZWETH: React.FC = () => {
                 minWidth: 'auto',
               }}
               title="Clear burn information"
-            />
-            <div style={{ color: '#fff' }}>
-              <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold' }}>
-                🔥 Last Burn Information
-              </h3>
+          />
+          <div style={{ color: '#fff' }}>
+            <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8 }}>
+              🔥 Last Burn Information
+              <Tooltip title={intl.formatMessage({ id: 'pages.zwtoken.lastBurn.infoTooltip' })}>
+                <InfoCircleOutlined style={{ fontSize: 16, cursor: 'pointer', opacity: 0.7 }} />
+              </Tooltip>
+            </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* Amount */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -1991,12 +2165,16 @@ const ZWETH: React.FC = () => {
                     flexWrap: 'wrap',
                   }}
                 >
-                  💡 {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.remintTip' })}
+                  <span>💡 {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.remintTip' })}</span>
                   <Button
                     type="primary"
                     size="small"
                     onClick={handleGoToRemint}
-                    style={{ marginLeft: 'auto' }}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      border: 'none',
+                      color: '#fff',
+                    }}
                   >
                     {intl.formatMessage({ id: 'pages.zwtoken.lastBurn.goToRemint' })}
                   </Button>
@@ -2081,6 +2259,23 @@ const ZWETH: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.burn.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {simpleBurnTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${simpleBurnTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {simpleBurnTxHash.substring(0, 10)}...{simpleBurnTxHash.substring(simpleBurnTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2229,6 +2424,23 @@ const ZWETH: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {simpleRemintTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${simpleRemintTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {simpleRemintTxHash.substring(0, 10)}...{simpleRemintTxHash.substring(simpleRemintTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2360,6 +2572,23 @@ const ZWETH: React.FC = () => {
                         {directBurn ? 'Wrap and Burn' : 'Wrap'}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {advancedDepositTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${advancedDepositTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {advancedDepositTxHash.substring(0, 10)}...{advancedDepositTxHash.substring(advancedDepositTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2413,6 +2642,23 @@ const ZWETH: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.withdraw.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {advancedWithdrawTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${advancedWithdrawTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {advancedWithdrawTxHash.substring(0, 10)}...{advancedWithdrawTxHash.substring(advancedWithdrawTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2499,6 +2745,23 @@ const ZWETH: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.transfer.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {advancedTransferTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${advancedTransferTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {advancedTransferTxHash.substring(0, 10)}...{advancedTransferTxHash.substring(advancedTransferTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2626,6 +2889,23 @@ const ZWETH: React.FC = () => {
                         {intl.formatMessage({ id: 'pages.zwtoken.remint.button' })}
                       </Button>
                     </Form.Item>
+
+                    {/* 显示交易哈希 */}
+                    {advancedRemintTxHash && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                          Tx Submitted:{' '}
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${advancedRemintTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#1890ff', textDecoration: 'underline' }}
+                          >
+                            {advancedRemintTxHash.substring(0, 10)}...{advancedRemintTxHash.substring(advancedRemintTxHash.length - 8)}
+                          </a>
+                        </span>
+                      </div>
+                    )}
                   </Form>
 
                   <div
@@ -2730,7 +3010,7 @@ const ZWETH: React.FC = () => {
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -2748,6 +3028,39 @@ const ZWETH: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({
@@ -2971,7 +3284,7 @@ const ZWETH: React.FC = () => {
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -2989,6 +3302,39 @@ const ZWETH: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({
@@ -3218,7 +3564,7 @@ const ZWETH: React.FC = () => {
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -3236,6 +3582,39 @@ const ZWETH: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({
@@ -3394,7 +3773,7 @@ const ZWETH: React.FC = () => {
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -3412,6 +3791,39 @@ const ZWETH: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.amount' }),
@@ -3543,7 +3955,7 @@ const ZWETH: React.FC = () => {
                   render: (text: string) => (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                        {text.substring(0, 20)}...{text.substring(text.length - 20)}
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
                       </span>
                       <Button
                         type="link"
@@ -3561,6 +3973,39 @@ const ZWETH: React.FC = () => {
                       />
                     </div>
                   ),
+                },
+                {
+                  title: 'Burn Address',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string, record) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('Address copied!');
+                            } else {
+                              message.error('Failed to copy');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
                 },
                 {
                   title: intl.formatMessage({ id: 'pages.zwtoken.remint.seedModal.amount' }),
