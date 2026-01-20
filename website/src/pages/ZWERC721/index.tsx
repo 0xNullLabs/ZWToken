@@ -1,0 +1,2322 @@
+import {
+  Card,
+  Tabs,
+  Form,
+  InputNumber,
+  Input,
+  Button,
+  message,
+  Modal,
+  Table,
+  Checkbox,
+  Tooltip,
+  Tag,
+  Empty,
+} from 'antd';
+import { CopyOutlined, CloseOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { PageContainer } from '@ant-design/pro-components';
+import { useConnectWallet } from '@web3-onboard/react';
+import { useIntl } from '@umijs/max';
+import { ethers } from 'ethers';
+import React, { useState } from 'react';
+import { buildPoseidon } from 'circomlibjs';
+import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from '@/config/contracts';
+import {
+  deriveFromSecret,
+  rebuildMerkleTree,
+  findUserCommitment,
+  prepareCircuitInput,
+  getCommitLeavesInBatches,
+} from '@/utils/zkProof';
+// @ts-ignore
+import * as snarkjs from 'snarkjs';
+
+const { TabPane } = Tabs;
+
+// Sepolia testnet chainId
+const SEPOLIA_CHAIN_ID = 11155111;
+
+// LocalStorage keys for Last Burn information
+const LAST_BURN_STORAGE_KEY = 'zwerc721_last_burn_info';
+
+const ZWERC721: React.FC = () => {
+  const intl = useIntl();
+  const [{ wallet }, connect] = useConnectWallet();
+  const [simpleDepositForm] = Form.useForm(); // Simple Mode Burn form
+  const [advancedDepositForm] = Form.useForm(); // Advanced Mode Wrap form
+  const [withdrawForm] = Form.useForm();
+  const [transferForm] = Form.useForm();
+  const [remintForm] = Form.useForm();
+  const [secretForm] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [secretModalVisible, setSecretModalVisible] = useState(false);
+  const [nftBalance, setNftBalance] = useState<number>(0);
+  const [zwNftBalance, setZwNftBalance] = useState<number>(0);
+  const [userTokenIds, setUserTokenIds] = useState<number[]>([]);
+  const [zwUserTokenIds, setZwUserTokenIds] = useState<number[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const [seed, setSeed] = useState<string>('');
+  const [secretList, setSecretList] = useState<
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+  >([]);
+  const [remintSeedModalVisible, setRemintSeedModalVisible] = useState(false);
+  const [remintSecretList, setRemintSecretList] = useState<
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+  >([]);
+
+  // Advanced Mode Remint states
+  const [advancedRemintSeedModalVisible, setAdvancedRemintSeedModalVisible] = useState(false);
+  const [advancedRemintSecretList, setAdvancedRemintSecretList] = useState<
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+  >([]);
+
+  // Store selected tokenId for remint
+  const [selectedRemintTokenId, setSelectedRemintTokenId] = useState<number | null>(null);
+
+  // Transaction hash states for displaying submitted transactions
+  const [simpleBurnTxHash, setSimpleBurnTxHash] = useState<string | null>(null);
+  const [simpleRemintTxHash, setSimpleRemintTxHash] = useState<string | null>(null);
+  const [advancedDepositTxHash, setAdvancedDepositTxHash] = useState<string | null>(null);
+  const [advancedWithdrawTxHash, setAdvancedWithdrawTxHash] = useState<string | null>(null);
+  const [advancedTransferTxHash, setAdvancedTransferTxHash] = useState<string | null>(null);
+  const [advancedRemintTxHash, setAdvancedRemintTxHash] = useState<string | null>(null);
+
+  // Deposit Directly Burn related states
+  const [directBurn, setDirectBurn] = useState(false);
+
+  // Last Burn information cache - Initialize from localStorage
+  const getLastBurnInfoFromStorage = () => {
+    try {
+      const stored = localStorage.getItem(LAST_BURN_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Failed to read last burn info from localStorage:', error);
+    }
+    return { tokenId: null, address: null, txHash: null, mode: null };
+  };
+
+  const lastBurnInfo = getLastBurnInfoFromStorage();
+  const [lastBurnTokenId, setLastBurnTokenId] = useState<number | null>(lastBurnInfo.tokenId);
+  const [lastBurnAddress, setLastBurnAddress] = useState<string | null>(lastBurnInfo.address);
+  const [lastBurnTxHash, setLastBurnTxHash] = useState<string | null>(lastBurnInfo.txHash);
+  const [lastBurnMode, setLastBurnMode] = useState<'simple' | 'advanced' | null>(lastBurnInfo.mode);
+
+  // Simple Mode Deposit (Burn) states
+  const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
+  const [depositSecretForm] = Form.useForm();
+  const [depositSecretList, setDepositSecretList] = useState<
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+  >([]);
+
+  // Advanced Mode Deposit states
+  const [advancedDepositSecretModalVisible, setAdvancedDepositSecretModalVisible] = useState(false);
+  const [advancedDepositSecretForm] = Form.useForm();
+  const [advancedDepositSecretList, setAdvancedDepositSecretList] = useState<
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+  >([]);
+  const [advancedDepositSecretMode, setAdvancedDepositSecretMode] = useState<
+    'manual' | 'seed' | undefined
+  >(undefined);
+
+  // Transfer states
+  const [transferSecretMode, setTransferSecretMode] = useState<'manual' | 'seed' | undefined>(
+    undefined,
+  );
+  // Save the burn address generated for transfer, to detect if it's a burn transfer
+  const [transferBurnAddress, setTransferBurnAddress] = useState<string | null>(null);
+
+  // Get current account
+  const account = wallet?.accounts?.[0]?.address;
+
+  // Track current active tab (simple or advanced)
+  const [activeMainTab, setActiveMainTab] = useState<string>('simple');
+  const [activeSimpleTab, setActiveSimpleTab] = useState<string>('burn');
+  const [activeAdvancedTab, setActiveAdvancedTab] = useState<string>('deposit');
+
+  // Helper functions to manage Last Burn info in localStorage
+  const saveLastBurnToStorage = (tokenId: number, address: string, txHash: string, mode: 'simple' | 'advanced') => {
+    try {
+      const burnInfo = {
+        tokenId,
+        address,
+        txHash,
+        mode,
+      };
+      localStorage.setItem(LAST_BURN_STORAGE_KEY, JSON.stringify(burnInfo));
+    } catch (error) {
+      console.error('Failed to save last burn info to localStorage:', error);
+    }
+  };
+
+  const clearLastBurnInfo = () => {
+    try {
+      localStorage.removeItem(LAST_BURN_STORAGE_KEY);
+      setLastBurnTokenId(null);
+      setLastBurnAddress(null);
+      setLastBurnTxHash(null);
+      setLastBurnMode(null);
+      message.success('Last burn information cleared');
+    } catch (error) {
+      console.error('Failed to clear last burn info:', error);
+      message.error('Failed to clear information');
+    }
+  };
+
+  // Listen to window size changes
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 576);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Function to refresh balances by scanning token ownership
+  const refreshBalances = React.useCallback(async () => {
+    if (!wallet || !account) {
+      setNftBalance(0);
+      setZwNftBalance(0);
+      setUserTokenIds([]);
+      setZwUserTokenIds([]);
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) {
+      console.log('ZWERC721 contracts not configured yet');
+      setNftBalance(0);
+      setZwNftBalance(0);
+      setUserTokenIds([]);
+      setZwUserTokenIds([]);
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+
+      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+        console.log('Network is not Sepolia, skipping balance refresh');
+        setNftBalance(0);
+        setZwNftBalance(0);
+        setUserTokenIds([]);
+        setZwUserTokenIds([]);
+        return;
+      }
+
+      // Query underlying NFT contract
+      const underlyingContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
+        provider,
+      );
+      
+      // Get current max tokenId
+      const maxTokenId = await underlyingContract.getCurrentTokenId();
+      console.log('Max tokenId:', maxTokenId.toString());
+
+      // Scan all tokenIds from 0 to maxTokenId-1
+      const userTokens: number[] = [];
+      for (let i = 0; i < Number(maxTokenId); i++) {
+        try {
+          const owner = await underlyingContract.ownerOf(i);
+          if (owner.toLowerCase() === account.toLowerCase()) {
+            userTokens.push(i);
+          }
+        } catch (error) {
+          // Token doesn't exist or is burned
+          console.log(`TokenId ${i} doesn't exist`);
+        }
+      }
+
+      setNftBalance(userTokens.length);
+      setUserTokenIds(userTokens);
+
+      // Query ZWERC721 balance
+      const zwContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        provider,
+      );
+
+      // Scan ZWERC721 ownership
+      const zwUserTokens: number[] = [];
+      for (let i = 0; i < Number(maxTokenId); i++) {
+        try {
+          const tokenExistsInZw = await zwContract.tokenExists(i);
+          if (tokenExistsInZw) {
+            const owner = await zwContract.ownerOf(i);
+            if (owner.toLowerCase() === account.toLowerCase()) {
+              zwUserTokens.push(i);
+            }
+          }
+        } catch (error) {
+          // Token doesn't exist in ZW contract
+          console.log(`ZW TokenId ${i} doesn't exist`);
+        }
+      }
+
+      setZwNftBalance(zwUserTokens.length);
+      setZwUserTokenIds(zwUserTokens);
+
+      console.log('User NFTs:', userTokens);
+      console.log('User ZWERC721:', zwUserTokens);
+    } catch (error) {
+      console.error('Failed to fetch balances:', error);
+    }
+  }, [wallet, account]);
+
+  // Check and switch to Sepolia network
+  React.useEffect(() => {
+    const checkNetwork = async () => {
+      if (!wallet) return;
+
+      try {
+        // Don't pass chainId, get the actually connected network
+        const provider = new ethers.BrowserProvider(wallet.provider);
+        const network = await provider.getNetwork();
+
+        console.log('Currently connected network chainId:', Number(network.chainId));
+
+        if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+          message.error(
+            `错误：当前连接到 Chain ID ${Number(
+              network.chainId,
+            )} 网络，请切换到 Sepolia 测试网（Chain ID: 11155111）`,
+            10,
+          );
+
+          // Try to switch network
+          try {
+            await wallet.provider.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}` }],
+            });
+            message.success('成功切换到 Sepolia 测试网');
+          } catch (switchError: any) {
+            console.error('Failed to switch network:', switchError);
+            // If network doesn't exist, try to add network
+            if (switchError.code === 4902) {
+              try {
+                await wallet.provider.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [
+                    {
+                      chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
+                      chainName: 'Sepolia Test Network',
+                      nativeCurrency: {
+                        name: 'Sepolia ETH',
+                        symbol: 'SEP',
+                        decimals: 18,
+                      },
+                      rpcUrls: ['https://sepolia.infura.io/v3/'],
+                      blockExplorerUrls: ['https://sepolia.etherscan.io'],
+                    },
+                  ],
+                });
+                message.success('已添加并切换到 Sepolia 测试网');
+              } catch (addError) {
+                console.error('Failed to add network:', addError);
+                message.error('无法添加 Sepolia 网络，请在钱包中手动添加');
+              }
+            } else {
+              message.error('网络切换失败，请手动切换到 Sepolia 测试网');
+            }
+          }
+        } else {
+          console.log('✅ Connected to Sepolia testnet');
+        }
+      } catch (error) {
+        console.error('Failed to check network:', error);
+      }
+    };
+
+    checkNetwork();
+
+    // Listen to network change events
+    if (wallet?.provider) {
+      const handleChainChanged = (chainId: string) => {
+        const decimalChainId = parseInt(chainId, 16);
+        console.log('Network switched to chainId:', decimalChainId);
+
+        if (decimalChainId !== SEPOLIA_CHAIN_ID) {
+          message.warning(
+            `网络已切换到 Chain ID ${decimalChainId}，请切回 Sepolia 测试网（Chain ID: 11155111）`,
+          );
+          // Clear balance display
+          setNftBalance(0);
+          setZwNftBalance(0);
+          setUserTokenIds([]);
+          setZwUserTokenIds([]);
+        } else {
+          message.success('✅ 已连接到 Sepolia 测试网，正在刷新数据...');
+          // Refresh data instead of refreshing page
+          setTimeout(() => {
+            refreshBalances();
+          }, 500);
+        }
+      };
+
+      wallet.provider.on('chainChanged', handleChainChanged);
+
+      // Cleanup function
+      return () => {
+        if (wallet?.provider?.removeListener) {
+          wallet.provider.removeListener('chainChanged', handleChainChanged);
+        }
+      };
+    }
+  }, [wallet, refreshBalances]);
+
+  // Get balances
+  React.useEffect(() => {
+    refreshBalances();
+
+    // Refresh balances every 10 seconds
+    const interval = setInterval(refreshBalances, 10000);
+
+    return () => clearInterval(interval);
+  }, [refreshBalances]);
+
+  // Delay preloading circuits files to avoid blocking main page elements loading
+  React.useEffect(() => {
+    const preloadCircuits = () => {
+      try {
+        console.log('Starting to preload circuits files...');
+
+        // Use prefetch to preload circuits files
+        const link1 = document.createElement('link');
+        link1.rel = 'prefetch';
+        link1.as = 'fetch';
+        link1.href = '/circuits/remint.wasm';
+        document.head.appendChild(link1);
+
+        const link2 = document.createElement('link');
+        link2.rel = 'prefetch';
+        link2.as = 'fetch';
+        link2.href = '/circuits/remint_final.zkey';
+        document.head.appendChild(link2);
+
+        console.log('Circuits files preload links added');
+      } catch (error) {
+        console.error('Failed to preload circuits:', error);
+      }
+    };
+
+    // Use requestIdleCallback to load when browser is idle, or delay 3 seconds
+    if ('requestIdleCallback' in window) {
+      const idleCallbackId = (window as any).requestIdleCallback(
+        preloadCircuits,
+        { timeout: 3000 }, // Force execution after at most 3 seconds
+      );
+
+      return () => {
+        if ('cancelIdleCallback' in window) {
+          (window as any).cancelIdleCallback(idleCallbackId);
+        }
+      };
+    } else {
+      // Fallback: delay 3 seconds then load
+      const timeoutId = setTimeout(preloadCircuits, 3000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, []); // Empty dependency array, only execute once when component mounts
+
+  // When wallet address changes, update Simple Mode Remint form's recipient field
+  React.useEffect(() => {
+    if (account) {
+      const currentRecipient = remintForm.getFieldValue('recipient');
+      // Only auto-fill when recipient is empty
+      if (!currentRecipient) {
+        remintForm.setFieldsValue({ recipient: account });
+      }
+    }
+  }, [account, remintForm]);
+
+  // Get provider and signer, and check network
+  const getProvider = async () => {
+    if (!wallet) {
+      message.error('请先连接钱包');
+      return null;
+    }
+
+    const provider = new ethers.BrowserProvider(wallet.provider);
+    const network = await provider.getNetwork();
+
+    if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+      message.error(
+        `当前连接到 Chain ID ${Number(
+          network.chainId,
+        )} 网络，请切换到 Sepolia 测试网（Chain ID: 11155111）`,
+        5,
+      );
+      return null;
+    }
+
+    return provider;
+  };
+
+  // Copy text to clipboard with fallback
+  const copyToClipboard = async (text: string) => {
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return successful;
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      return false;
+    }
+  };
+
+  // Generate Burn Address from Secret
+  const generatePrivacyAddress = async (secret: string, tokenId: number) => {
+    try {
+      const poseidon = await buildPoseidon();
+      const secretBigInt = BigInt(secret);
+      const id = BigInt(tokenId);
+
+      // Reference logic from e2e.test.js and zkProof.ts
+      // For ERC721: addrScalar = Poseidon(8065, tokenId, secret)
+      const addrScalar = poseidon.F.toString(poseidon([8065n, id, secretBigInt]));
+      const addr20 = BigInt(addrScalar) & ((1n << 160n) - 1n);
+      const privacyAddress = ethers.getAddress('0x' + addr20.toString(16).padStart(40, '0'));
+
+      return privacyAddress;
+    } catch (error: any) {
+      console.error('Error generating privacy address:', error);
+      throw error;
+    }
+  };
+
+  // Handle Burn button click - Open Secret input modal (Transfer page)
+  const handleBurnClick = () => {
+    setSecretModalVisible(true);
+    // Reset state
+    setSeed('');
+    setSecretList([]);
+    setTransferBurnAddress(null);
+  };
+
+  // Handle Deposit Directly Burn button click (Simple Mode)
+  const handleDepositBurnClick = () => {
+    setDepositSecretModalVisible(true);
+    // Reset state
+    setSeed('');
+    setDepositSecretList([]);
+    // Auto generate seed
+    handleGenerateBySeed('deposit');
+  };
+
+  // Handle Advanced Mode Deposit Generate button click
+  const handleAdvancedDepositGenerateClick = () => {
+    setAdvancedDepositSecretModalVisible(true);
+    // Reset state
+    setSeed('');
+    setAdvancedDepositSecretList([]);
+    setAdvancedDepositSecretMode(undefined);
+  };
+
+  // Handle Deposit Secret confirmation - Generate Burn Address (Simple Mode)
+  const handleDepositSecretConfirm = async () => {
+    try {
+      const values = await depositSecretForm.validateFields();
+      const tokenId = simpleDepositForm.getFieldValue('tokenId');
+      
+      if (tokenId === undefined || tokenId === null) {
+        message.error('请先输入 Token ID');
+        return;
+      }
+
+      const privacyAddress = await generatePrivacyAddress(values.secret, tokenId);
+
+      // Set to Simple Deposit form targetAddress field
+      simpleDepositForm.setFieldsValue({ targetAddress: privacyAddress });
+
+      message.success('隐私地址已生成');
+      setDepositSecretModalVisible(false);
+      depositSecretForm.resetFields();
+      setDepositSecretList([]);
+    } catch (error: any) {
+      if (error.errorFields) {
+        // Form validation error, do nothing
+        return;
+      }
+      message.error(`生成失败: ${error.message}`);
+    }
+  };
+
+  // Select Secret for Deposit page (Simple Mode)
+  const handleSelectDepositSecret = async (secret: string) => {
+    try {
+      const tokenId = simpleDepositForm.getFieldValue('tokenId');
+      
+      if (tokenId === undefined || tokenId === null) {
+        message.error('请先输入 Token ID');
+        return;
+      }
+
+      const privacyAddress = await generatePrivacyAddress(secret, tokenId);
+      // Set to Simple Deposit form targetAddress field
+      simpleDepositForm.setFieldsValue({ targetAddress: privacyAddress });
+      message.success('隐私地址已生成');
+      setDepositSecretModalVisible(false);
+      depositSecretForm.resetFields();
+      setDepositSecretList([]);
+    } catch (error: any) {
+      message.error(`生成失败: ${error.message}`);
+    }
+  };
+
+  // Select Secret for Advanced Mode Deposit page
+  const handleSelectAdvancedDepositSecret = async (secret: string) => {
+    try {
+      const tokenId = advancedDepositForm.getFieldValue('tokenId');
+      
+      if (tokenId === undefined || tokenId === null) {
+        message.error('请先输入 Token ID');
+        return;
+      }
+
+      const privacyAddress = await generatePrivacyAddress(secret, tokenId);
+      // Set to Advanced Deposit form targetAddress field
+      advancedDepositForm.setFieldsValue({ targetAddress: privacyAddress });
+      message.success('隐私地址已生成');
+      setAdvancedDepositSecretModalVisible(false);
+      advancedDepositSecretForm.resetFields();
+      setAdvancedDepositSecretList([]);
+    } catch (error: any) {
+      message.error(`生成失败: ${error.message}`);
+    }
+  };
+
+  // Handle Advanced Deposit Secret confirmation - Generate Burn Address
+  const handleAdvancedDepositSecretConfirm = async () => {
+    try {
+      const values = await advancedDepositSecretForm.validateFields();
+      const tokenId = advancedDepositForm.getFieldValue('tokenId');
+      
+      if (tokenId === undefined || tokenId === null) {
+        message.error('请先输入 Token ID');
+        return;
+      }
+
+      const privacyAddress = await generatePrivacyAddress(values.secret, tokenId);
+
+      // Set to Advanced Deposit form targetAddress field
+      advancedDepositForm.setFieldsValue({ targetAddress: privacyAddress });
+
+      message.success('隐私地址已生成');
+      setAdvancedDepositSecretModalVisible(false);
+      advancedDepositSecretForm.resetFields();
+      setAdvancedDepositSecretList([]);
+    } catch (error: any) {
+      if (error.errorFields) {
+        // Form validation error, do nothing
+        return;
+      }
+      message.error(`生成失败: ${error.message}`);
+    }
+  };
+
+  // Generate Seed through wallet signature
+  const handleGenerateBySeed = async (targetMode?: 'deposit' | 'transfer' | 'advancedDeposit') => {
+    if (!wallet || !account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721) {
+      message.error('ZWERC721 合约地址未配置');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      const signer = await provider.getSigner();
+
+      // Construct signature message
+      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC721}, chainId: ${network.chainId}`;
+
+      // Request signature
+      const signature = await signer.signMessage(signMessage);
+
+      // Signature result as Seed
+      setSeed(signature);
+
+      // Generate 10 SecretBySeed
+      const secrets: Array<{
+        index: number;
+        secret: string;
+        address: string;
+        amount: string;
+        loading: boolean;
+        isClaimed: boolean;
+      }> = [];
+      for (let i = 1; i <= 10; i++) {
+        // Seed + index, hash
+        const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
+        // Convert to BigInt format string (remove 0x prefix)
+        const secretBigInt = BigInt(secretBySeed).toString();
+        secrets.push({
+          index: i,
+          secret: secretBigInt,
+          address: '',
+          amount: '-',
+          loading: true,
+          isClaimed: false,
+        });
+      }
+
+      // Update the corresponding list based on target mode
+      if (targetMode === 'deposit') {
+        setDepositSecretList(secrets);
+      } else if (targetMode === 'transfer') {
+        setSecretList(secrets);
+      } else if (targetMode === 'advancedDeposit') {
+        setAdvancedDepositSecretList(secrets);
+      } else {
+        // Fallback: check which modal is open
+        if (depositSecretModalVisible) {
+          setDepositSecretList(secrets);
+        } else if (advancedDepositSecretModalVisible) {
+          setAdvancedDepositSecretList(secrets);
+        } else {
+          setSecretList(secrets);
+        }
+      }
+      message.success('Seed 已生成，正在查询余额...');
+
+      // Note: For ERC721, we need tokenId to query
+      // For now, mark all as loading and let user select
+      // In a real implementation, you might want to scan for specific tokenIds
+      
+      // Mark all as ready (no balance query needed for address generation)
+      setTimeout(() => {
+        const updatedSecrets = secrets.map(s => ({ ...s, loading: false, amount: 'N/A', isClaimed: false }));
+        if (targetMode === 'deposit') {
+          setDepositSecretList(updatedSecrets);
+        } else if (targetMode === 'transfer') {
+          setSecretList(updatedSecrets);
+        } else if (targetMode === 'advancedDeposit') {
+          setAdvancedDepositSecretList(updatedSecrets);
+        } else {
+          if (depositSecretModalVisible) {
+            setDepositSecretList(updatedSecrets);
+          } else if (advancedDepositSecretModalVisible) {
+            setAdvancedDepositSecretList(updatedSecrets);
+          } else {
+            setSecretList(updatedSecrets);
+          }
+        }
+        message.success('查询完成');
+      }, 500);
+    } catch (error: any) {
+      console.error('Failed to generate Seed:', error);
+      message.error(`生成 Seed 失败: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Select a SecretBySeed for Transfer page
+  const handleSelectSecret = async (secret: string) => {
+    try {
+      const tokenId = transferForm.getFieldValue('tokenId');
+      
+      if (tokenId === undefined || tokenId === null) {
+        message.error('请先输入 Token ID');
+        return;
+      }
+
+      const privacyAddress = await generatePrivacyAddress(secret, tokenId);
+      // Set to Transfer form targetAddress field
+      transferForm.setFieldsValue({ targetAddress: privacyAddress });
+      // Save the generated burn address for later detection
+      setTransferBurnAddress(privacyAddress);
+      message.success('隐私地址已生成');
+      setSecretModalVisible(false);
+      secretForm.resetFields();
+      setSecretList([]);
+    } catch (error: any) {
+      message.error(`生成失败: ${error.message}`);
+    }
+  };
+
+  // Click button to open modal and generate Seed immediately
+  const handleRemintGenerateBySeedClick = async () => {
+    if (!wallet || !account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721) {
+      message.error('ZWERC721 合约地址未配置');
+      return;
+    }
+
+    // Open modal first
+    setRemintSeedModalVisible(true);
+    setRemintSecretList([]);
+
+    try {
+      setLoading(true);
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      const signer = await provider.getSigner();
+
+      // Construct signature message
+      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC721}, chainId: ${network.chainId}`;
+
+      // Request signature
+      const signature = await signer.signMessage(signMessage);
+
+      // Generate 10 SecretBySeed
+      const secrets: Array<{
+        index: number;
+        secret: string;
+        address: string;
+        amount: string;
+        loading: boolean;
+        isClaimed: boolean;
+      }> = [];
+      for (let i = 1; i <= 10; i++) {
+        // Seed + index, hash
+        const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
+        // Convert to BigInt format string (remove 0x prefix)
+        const secretBigInt = BigInt(secretBySeed).toString();
+        secrets.push({
+          index: i,
+          secret: secretBigInt,
+          address: '',
+          amount: '-',
+          loading: true,
+          isClaimed: false,
+        });
+      }
+
+      setRemintSecretList(secrets);
+      message.success('Seed 已生成，正在查询余额...');
+
+      // Mark as ready (simplified for NFTs)
+      setTimeout(() => {
+        const updatedSecrets = secrets.map(s => ({ ...s, loading: false, amount: 'N/A', isClaimed: false }));
+        setRemintSecretList(updatedSecrets);
+        message.success('查询完成');
+      }, 500);
+    } catch (error: any) {
+      console.error('Failed to generate Seed:', error);
+      message.error(`生成 Seed 失败: ${error.message}`);
+      // If failed, close modal
+      setRemintSeedModalVisible(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Select SecretBySeed for Remint page
+  const handleSelectRemintSecret = (secret: string, tokenIdFromList?: number) => {
+    remintForm.setFieldsValue({ secret });
+
+    // If tokenId is provided, set it
+    if (tokenIdFromList !== undefined && tokenIdFromList !== null) {
+      remintForm.setFieldsValue({ tokenId: tokenIdFromList });
+      setSelectedRemintTokenId(tokenIdFromList);
+    }
+
+    setRemintSeedModalVisible(false);
+    message.success('Secret 已选择');
+  };
+
+  // Advanced Mode Remint - Click button to open modal and generate Seed
+  const handleAdvancedRemintGenerateBySeedClick = async () => {
+    if (!wallet || !account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721) {
+      message.error('ZWERC721 合约地址未配置');
+      return;
+    }
+
+    // Open modal first
+    setAdvancedRemintSeedModalVisible(true);
+    setAdvancedRemintSecretList([]);
+
+    try {
+      setLoading(true);
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      const signer = await provider.getSigner();
+
+      // Construct signature message
+      const signMessage = `ZWToken: ${CONTRACT_ADDRESSES.ZWERC721}, chainId: ${network.chainId}`;
+
+      // Request signature
+      const signature = await signer.signMessage(signMessage);
+
+      // Generate 10 SecretBySeed
+      const secrets: Array<{
+        index: number;
+        secret: string;
+        address: string;
+        amount: string;
+        loading: boolean;
+        isClaimed: boolean;
+      }> = [];
+      for (let i = 1; i <= 10; i++) {
+        // Seed + index, hash
+        const secretBySeed = ethers.keccak256(ethers.toUtf8Bytes(signature + i.toString()));
+        // Convert to BigInt format string (remove 0x prefix)
+        const secretBigInt = BigInt(secretBySeed).toString();
+        secrets.push({
+          index: i,
+          secret: secretBigInt,
+          address: '',
+          amount: '-',
+          loading: true,
+          isClaimed: false,
+        });
+      }
+
+      setAdvancedRemintSecretList(secrets);
+      message.success('Seed 已生成，正在查询余额...');
+
+      // Mark as ready (simplified for NFTs)
+      setTimeout(() => {
+        const updatedSecrets = secrets.map(s => ({ ...s, loading: false, amount: 'N/A', isClaimed: false }));
+        setAdvancedRemintSecretList(updatedSecrets);
+        message.success('查询完成');
+      }, 500);
+    } catch (error: any) {
+      console.error('Failed to generate Seed:', error);
+      message.error(`生成 Seed 失败: ${error.message}`);
+      // If failed, close modal
+      setAdvancedRemintSeedModalVisible(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Advanced Mode Remint - Select SecretBySeed
+  const handleAdvancedRemintSelectSecret = (secret: string, tokenIdFromList?: number) => {
+    remintForm.setFieldsValue({ secret });
+
+    // If tokenId is provided, set it
+    if (tokenIdFromList !== undefined && tokenIdFromList !== null) {
+      remintForm.setFieldsValue({ tokenId: tokenIdFromList });
+      setSelectedRemintTokenId(tokenIdFromList);
+    }
+
+    setAdvancedRemintSeedModalVisible(false);
+    message.success('Secret 已选择');
+  };
+
+  // Handle Secret confirmation - Generate Burn Address
+  const handleSecretConfirm = async () => {
+    try {
+      const values = await secretForm.validateFields();
+      const tokenId = transferForm.getFieldValue('tokenId');
+      
+      if (tokenId === undefined || tokenId === null) {
+        message.error('请先输入 Token ID');
+        return;
+      }
+
+      const privacyAddress = await generatePrivacyAddress(values.secret, tokenId);
+
+      // Set to Transfer form targetAddress field
+      transferForm.setFieldsValue({ targetAddress: privacyAddress });
+      
+      // Save the generated burn address for later detection
+      setTransferBurnAddress(privacyAddress);
+
+      message.success('隐私地址已生成');
+      setSecretModalVisible(false);
+      secretForm.resetFields();
+      setSecretList([]);
+    } catch (error: any) {
+      if (error.errorFields) {
+        // Form validation error, do nothing
+        return;
+      }
+      message.error(`生成失败: ${error.message}`);
+    }
+  };
+
+  // Simple Mode Deposit (Burn) - targetAddress is required
+  const handleSimpleDeposit = async (values: { tokenId: number; targetAddress: string }) => {
+    console.log('🔵 [Simple Mode] handleSimpleDeposit called with:', values);
+
+    if (!account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) {
+      message.error('合约地址未配置');
+      return;
+    }
+
+    if (!values.targetAddress) {
+      message.error('目标地址为必填项');
+      return;
+    }
+
+    // Check if user owns this NFT
+    if (!userTokenIds.includes(values.tokenId)) {
+      message.error(`您不拥有 Token ID ${values.tokenId}`);
+      return;
+    }
+
+    // 清除之前的交易哈希
+    setSimpleBurnTxHash(null);
+    setLoading(true);
+    try {
+      const provider = await getProvider();
+      if (!provider) {
+        setLoading(false);
+        return;
+      }
+
+      const signer = await provider.getSigner();
+
+      const underlyingContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
+        signer,
+      );
+
+      // Check if NFT is approved
+      const approvedAddress = await underlyingContract.getApproved(values.tokenId);
+      
+      if (approvedAddress.toLowerCase() !== CONTRACT_ADDRESSES.ZWERC721.toLowerCase()) {
+        console.log('[Simple] Starting approval...');
+        message.loading('正在授权...', 0);
+        const approveTx = await underlyingContract.approve(CONTRACT_ADDRESSES.ZWERC721, values.tokenId);
+        await approveTx.wait();
+        message.destroy();
+        message.success('授权成功');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[Simple] Approval sufficient, proceeding to burn...');
+
+      // Execute deposit with targetAddress (Burn)
+      const zwTokenContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        signer,
+      );
+
+      const tx = await zwTokenContract.deposit(values.targetAddress, values.tokenId, 1, '0x');
+
+      message.loading('正在提交交易...', 0);
+      const receipt = await tx.wait();
+      message.destroy();
+      message.success('销毁成功');
+      
+      // 保存交易哈希以显示
+      setSimpleBurnTxHash(receipt.hash);
+      
+      // Save Last Burn information (Simple Mode - always burn)
+      const burnTokenId = values.tokenId;
+      const burnAddress = values.targetAddress;
+      const burnTxHash = receipt.hash;
+      const burnMode = 'simple';
+      
+      setLastBurnTokenId(burnTokenId);
+      setLastBurnAddress(burnAddress);
+      setLastBurnTxHash(burnTxHash);
+      setLastBurnMode(burnMode);
+      saveLastBurnToStorage(burnTokenId, burnAddress, burnTxHash, burnMode);
+      
+      simpleDepositForm.resetFields();
+      refreshBalances();
+    } catch (error: any) {
+      console.error('❌ [Simple] Deposit/Approve error:', error);
+      message.destroy();
+
+      let errorMessage = error.message || 'Unknown error';
+      if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+        errorMessage = '用户拒绝了交易';
+      }
+
+      message.error(`操作失败: ${errorMessage}`);
+    } finally {
+      console.log('🏁 [Simple] handleSimpleDeposit finished');
+      setLoading(false);
+    }
+  };
+
+  // Advanced Mode Deposit (Wrap) - targetAddress is optional
+  const handleAdvancedDeposit = async (values: { tokenId: number; targetAddress?: string }) => {
+    console.log('🟢 [Advanced Mode] handleAdvancedDeposit called with:', {
+      ...values,
+      directBurn,
+    });
+
+    if (!account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) {
+      message.error('合约地址未配置');
+      return;
+    }
+
+    // Check if user owns this NFT
+    if (!userTokenIds.includes(values.tokenId)) {
+      message.error(`您不拥有 Token ID ${values.tokenId}`);
+      return;
+    }
+
+    // If directBurn is enabled, targetAddress is required
+    if (directBurn && !values.targetAddress) {
+      message.error('目标地址为必填项');
+      return;
+    }
+
+    // 清除之前的交易哈希
+    setAdvancedDepositTxHash(null);
+    setLoading(true);
+    try {
+      const provider = await getProvider();
+      if (!provider) {
+        setLoading(false);
+        return;
+      }
+
+      const signer = await provider.getSigner();
+
+      const underlyingContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
+        signer,
+      );
+
+      // Check if NFT is approved
+      const approvedAddress = await underlyingContract.getApproved(values.tokenId);
+      
+      if (approvedAddress.toLowerCase() !== CONTRACT_ADDRESSES.ZWERC721.toLowerCase()) {
+        console.log('[Advanced] Starting approval...');
+        message.loading('正在授权...', 0);
+        const approveTx = await underlyingContract.approve(CONTRACT_ADDRESSES.ZWERC721, values.tokenId);
+        await approveTx.wait();
+        message.destroy();
+        message.success('授权成功');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[Advanced] Approval sufficient, proceeding to wrap...');
+
+      // Execute deposit
+      const zwTokenContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        signer,
+      );
+
+      // Determine to address: use targetAddress if provided (burn mode), otherwise use account
+      const toAddress = values.targetAddress || account;
+      const tx = await zwTokenContract.deposit(toAddress, values.tokenId, 1, '0x');
+
+      message.loading('正在提交交易...', 0);
+      const receipt = await tx.wait();
+      message.destroy();
+      message.success('包装成功');
+      
+      // 保存交易哈希以显示
+      setAdvancedDepositTxHash(receipt.hash);
+      
+      // Save Last Burn information (Advanced Mode with Direct Burn)
+      // directBurn checkbox determines if this is a burn operation
+      if (directBurn && values.targetAddress) {
+        const burnTokenId = values.tokenId;
+        const burnAddress = values.targetAddress;
+        const burnTxHash = receipt.hash;
+        const burnMode = 'advanced';
+        
+        setLastBurnTokenId(burnTokenId);
+        setLastBurnAddress(burnAddress);
+        setLastBurnTxHash(burnTxHash);
+        setLastBurnMode(burnMode);
+        saveLastBurnToStorage(burnTokenId, burnAddress, burnTxHash, burnMode);
+      }
+      
+      advancedDepositForm.resetFields();
+      setDirectBurn(false);
+      refreshBalances();
+    } catch (error: any) {
+      console.error('❌ [Advanced] Deposit/Approve error:', error);
+      message.destroy();
+
+      let errorMessage = error.message || 'Unknown error';
+      if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+        errorMessage = '用户拒绝了交易';
+      }
+
+      message.error(`操作失败: ${errorMessage}`);
+    } finally {
+      console.log('🏁 [Advanced] handleAdvancedDeposit finished');
+      setLoading(false);
+    }
+  };
+
+  // Withdraw operation
+  const handleWithdraw = async (values: { tokenId: number }) => {
+    if (!account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721) {
+      message.error('合约地址未配置');
+      return;
+    }
+
+    // Check if user owns this ZWERC721 token
+    if (!zwUserTokenIds.includes(values.tokenId)) {
+      message.error(`您不拥有 ZWERC721 Token ID ${values.tokenId}`);
+      return;
+    }
+
+    // 清除之前的交易哈希
+    setAdvancedWithdrawTxHash(null);
+    setLoading(true);
+    try {
+      const provider = await getProvider();
+      if (!provider) {
+        setLoading(false);
+        return;
+      }
+
+      const signer = await provider.getSigner();
+
+      // Use contract address from config file
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        signer,
+      );
+
+      console.log(`Withdraw tokenId: ${values.tokenId}`);
+
+      // withdraw(address to, uint256 id, uint256 amount, bytes data)
+      const signerAddress = await signer.getAddress();
+      const tx = await contract.withdraw(signerAddress, values.tokenId, 1, '0x');
+
+      message.loading('正在提交交易...', 0);
+      const receipt = await tx.wait();
+      message.destroy();
+      message.success('解包成功');
+      
+      // 保存交易哈希以显示
+      setAdvancedWithdrawTxHash(receipt.hash);
+      
+      withdrawForm.resetFields();
+      // Refresh balances
+      refreshBalances();
+    } catch (error: any) {
+      message.destroy();
+      message.error(`解包失败: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Transfer operation
+  const handleTransfer = async (values: { targetAddress: string; tokenId: number }) => {
+    if (!account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721) {
+      message.error('合约地址未配置');
+      return;
+    }
+
+    // Check if user owns this ZWERC721 token
+    if (!zwUserTokenIds.includes(values.tokenId)) {
+      message.error(`您不拥有 ZWERC721 Token ID ${values.tokenId}`);
+      return;
+    }
+
+    // 清除之前的交易哈希
+    setAdvancedTransferTxHash(null);
+    setLoading(true);
+    try {
+      const provider = await getProvider();
+      if (!provider) {
+        setLoading(false);
+        return;
+      }
+
+      const signer = await provider.getSigner();
+
+      // Use contract address from config file
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        signer,
+      );
+
+      console.log(`Transfer tokenId: ${values.tokenId} to ${values.targetAddress}`);
+
+      const tx = await contract.transferFrom(account, values.targetAddress, values.tokenId);
+
+      message.loading('正在提交交易...', 0);
+      const receipt = await tx.wait();
+      message.destroy();
+      message.success('转账成功');
+      
+      // 保存交易哈希以显示
+      setAdvancedTransferTxHash(receipt.hash);
+      
+      // Save Last Burn information (Transfer with Burn address)
+      // If the target address matches the saved burn address, this is a burn transfer
+      if (transferBurnAddress && values.targetAddress.toLowerCase() === transferBurnAddress.toLowerCase()) {
+        const burnTokenId = values.tokenId;
+        const burnAddress = values.targetAddress;
+        const burnTxHash = receipt.hash;
+        const burnMode = 'simple';
+        
+        setLastBurnTokenId(burnTokenId);
+        setLastBurnAddress(burnAddress);
+        setLastBurnTxHash(burnTxHash);
+        setLastBurnMode(burnMode);
+        saveLastBurnToStorage(burnTokenId, burnAddress, burnTxHash, burnMode);
+      }
+      
+      transferForm.resetFields();
+      setTransferBurnAddress(null); // Clear the saved burn address
+      // Refresh balances
+      refreshBalances();
+    } catch (error: any) {
+      message.destroy();
+      message.error(`转账失败: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Remint operation
+  const handleRemint = async (values: any) => {
+    if (!account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ZWERC721) {
+      message.error('合约地址未配置');
+      return;
+    }
+
+    // 清除之前的交易哈希（根据当前模式）
+    if (activeMainTab === 'simple') {
+      setSimpleRemintTxHash(null);
+    } else {
+      setAdvancedRemintTxHash(null);
+    }
+    setLoading(true);
+    const hideLoading = message.loading('正在准备 ZK 证明...', 0);
+
+    try {
+      const provider = await getProvider();
+      if (!provider) {
+        hideLoading();
+        setLoading(false);
+        return;
+      }
+
+      const signer = await provider.getSigner();
+
+      // Use contract address from config file
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        signer,
+      );
+
+      const tokenId = values.tokenId;
+
+      // === Step 1: Derive parameters from Secret ===
+      console.log('Step 1: Deriving from secret...');
+      const { privacyAddress, addr20, q, nullifier, secret } = await deriveFromSecret(
+        values.secret,
+        tokenId,  // Pass tokenId for ERC721
+      );
+      console.log(`Privacy address: ${privacyAddress}`);
+      console.log(`Nullifier: 0x${nullifier.toString(16)}`);
+
+      // Check if nullifier is already used
+      const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+      const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+      if (isNullifierUsed) {
+        hideLoading();
+        message.error('该 nullifier 已被使用');
+        return;
+      }
+
+      // Check if privacy address owns this token
+      try {
+        const currentOwner = await contract.ownerOf(tokenId);
+        if (currentOwner.toLowerCase() !== privacyAddress.toLowerCase()) {
+          hideLoading();
+          message.error(`隐私地址不拥有 Token ID ${tokenId}`);
+          return;
+        }
+      } catch (error) {
+        hideLoading();
+        message.error(`Token ID ${tokenId} 不存在或已被销毁`);
+        return;
+      }
+
+      // === Step 2: Rebuild Merkle tree from chain ===
+      hideLoading();
+      message.loading('正在重建 Merkle 树...', 0);
+      console.log('Step 2: Rebuilding Merkle tree from chain...');
+
+      const poseidon = await buildPoseidon();
+      const tree = await rebuildMerkleTree(contract, poseidon);
+
+      const onchainRoot = await contract.root();
+      const localRoot = '0x' + tree.root.toString(16).padStart(64, '0');
+      console.log(`On-chain root: ${onchainRoot}`);
+      console.log(`Local root:    ${localRoot}`);
+
+      if (localRoot !== onchainRoot) {
+        message.destroy();
+        message.error('Merkle 根不匹配');
+        return;
+      }
+
+      // === Step 3: Find user's commitment ===
+      message.destroy();
+      message.loading('正在查找 commitment...', 0);
+      console.log('Step 3: Finding user commitment...');
+
+      const userCommitment = await findUserCommitment(contract, privacyAddress, poseidon, tokenId);
+      if (!userCommitment) {
+        message.destroy();
+        message.error('未找到 commitment');
+        return;
+      }
+
+      console.log(`Found commitment at index ${userCommitment.index}`);
+      console.log(`First receipt tokenId: ${tokenId}`);
+
+      // For NFTs, amount is always 1
+      const remintAmount = 1n;
+
+      // === Step 4: Generate Merkle proof ===
+      message.destroy();
+      message.loading('正在生成 Merkle 证明...', 0);
+      console.log('Step 4: Generating Merkle proof...');
+
+      const merkleProof = tree.getProof(userCommitment.index);
+      console.log(`Merkle proof generated (${merkleProof.pathElements.length} elements)`);
+
+      // === Step 5: Prepare circuit input ===
+      const redeem = values.redeem || false;
+      const relayerFee = 0; // Always 0 for NFTs
+
+      const circuitInput = prepareCircuitInput({
+        root: tree.root,
+        nullifier,
+        recipient: values.recipient,
+        remintAmount: remintAmount,
+        id: BigInt(tokenId),  // Use actual tokenId for ERC721
+        redeem: redeem,
+        relayerFee: BigInt(relayerFee),
+        secret,
+        addr20,
+        commitAmount: userCommitment.amount,  // Always 1 for NFTs
+        q,
+        merkleProof,
+      });
+
+      console.log('Circuit input prepared:', circuitInput);
+
+      // === Step 6: Generate ZK proof ===
+      message.destroy();
+      message.loading('正在生成零知识证明（这可能需要 10-30 秒）...', 0);
+      console.log('Step 6: Generating ZK proof (this may take 10-30 seconds)...');
+
+      try {
+        // Use circuit to generate real ZK proof (if preloaded, browser will read from cache)
+        const { proof: zkProof, publicSignals } = await snarkjs.groth16.fullProve(
+          circuitInput,
+          '/circuits/remint.wasm',
+          '/circuits/remint_final.zkey',
+        );
+
+        console.log('✅ ZK proof generated!');
+        console.log('Public signals:', publicSignals);
+
+        // Format as Solidity calldata
+        const calldata = await snarkjs.groth16.exportSolidityCallData(zkProof, publicSignals);
+        const calldataJson = JSON.parse('[' + calldata + ']');
+
+        const solidityProof = {
+          a: calldataJson[0],
+          b: calldataJson[1],
+          c: calldataJson[2],
+        };
+
+        console.log('✅ Proof formatted for Solidity');
+
+        // Encode proof bytes
+        const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+        const proofBytes = abiCoder.encode(
+          ['uint256[2]', 'uint256[2][2]', 'uint256[2]'],
+          [solidityProof.a, solidityProof.b, solidityProof.c],
+        );
+
+        // === Step 7: Submit remint transaction ===
+        message.destroy();
+        message.loading('正在提交 remint 交易...', 0);
+        console.log('Step 7: Submitting remint transaction...');
+
+        // Encode relayerData (always empty for NFTs)
+        const relayerData = '0x';
+
+        const tx = await contract.remint(
+          values.recipient, // to
+          tokenId, // id (actual tokenId for NFTs)
+          remintAmount, // amount (always 1 for NFTs)
+          {
+            // RemintData struct (ERC-8065 spec)
+            commitment: localRoot,
+            nullifiers: [nullifierHex],
+            proverData: '0x',
+            relayerData: relayerData,
+            redeem: redeem, // redeem flag is now inside RemintData
+            proof: proofBytes,
+          },
+        );
+
+        console.log('Transaction submitted, waiting for confirmation...');
+        const receipt = await tx.wait();
+
+        message.destroy();
+        message.success('Remint 成功！');
+        console.log(`✅ Remint succeeded! Gas used: ${receipt.gasUsed}`);
+
+        // 保存交易哈希以显示（根据当前模式）
+        if (activeMainTab === 'simple') {
+          setSimpleRemintTxHash(receipt.hash);
+        } else {
+          setAdvancedRemintTxHash(receipt.hash);
+        }
+
+        remintForm.resetFields();
+        setSelectedRemintTokenId(null);
+        // Refresh balances
+        refreshBalances();
+      } catch (proofError: any) {
+        message.destroy();
+        console.error('ZK proof generation or remint error:', proofError);
+        message.error(`Remint 失败: ${proofError.message}`);
+      }
+    } catch (error: any) {
+      message.destroy();
+      console.error('Remint error:', error);
+      message.error(`Remint 失败: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <PageContainer
+      header={{
+        title: (
+          <div
+            style={{
+              wordBreak: 'break-word',
+              whiteSpace: 'normal',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              maxWidth: '100%',
+            }}
+          >
+            <span>ZWERC721 - 零知识包装 NFT</span>
+            <a
+              href="https://eips.ethereum.org/EIPS/eip-8065"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#1890ff',
+                fontSize: '18px',
+                fontWeight: 500,
+                textDecoration: 'none',
+              }}
+            >
+              基于 <span style={{ textDecoration: 'underline' }}>ERC-8065</span> 标准实现的 NFT 隐私保护
+            </a>
+          </div>
+        ),
+      }}
+    >
+      {/* Balance display card */}
+      <div
+        style={{
+          marginBottom: 24,
+          padding: '20px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: 8,
+          cursor: account ? 'default' : 'pointer',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+        onClick={() => {
+          if (!account) {
+            connect();
+          }
+        }}
+        onMouseEnter={(e) => {
+          if (!account) {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 16px rgba(102, 126, 234, 0.3)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!account) {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }
+        }}
+      >
+          {/* Faucet tip */}
+          <div
+            style={{
+              marginBottom: 16,
+              paddingBottom: 16,
+              borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ color: '#fff', fontSize: 14 }}>
+              💡 获取测试 NFT：水龙头地址待配置
+            </span>
+          </div>
+
+          {/* Balance information */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: 'space-around',
+              alignItems: 'center',
+              gap: 16,
+            }}
+          >
+            <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  marginBottom: 8,
+                }}
+              >
+                NFT 余额
+              </div>
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {account ? (
+                  <>
+                    {nftBalance}{' '}
+                    {CONTRACT_ADDRESSES.UnderlyingNFT ? (
+                      <a
+                        href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.UnderlyingNFT}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: '#fff',
+                          textDecoration: 'underline',
+                          textDecorationColor: 'rgba(255, 255, 255, 0.6)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        NFT
+                      </a>
+                    ) : (
+                      <span>NFT</span>
+                    )}
+                  </>
+                ) : (
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>点击连接钱包</span>
+                )}
+              </div>
+              {account && userTokenIds.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  {userTokenIds.map((tokenId) => (
+                    <Tag key={tokenId} color="blue" style={{ marginBottom: 4 }}>
+                      #{tokenId}
+                    </Tag>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {!isMobile && (
+              <div
+                style={{
+                  width: 1,
+                  height: 60,
+                  background: 'rgba(255, 255, 255, 0.2)',
+                }}
+              />
+            )}
+
+            <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  marginBottom: 8,
+                }}
+              >
+                ZWNFT 余额
+              </div>
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {account ? (
+                  <>
+                    {zwNftBalance}{' '}
+                    {CONTRACT_ADDRESSES.ZWERC721 ? (
+                      <a
+                        href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ZWERC721}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: '#fff',
+                          textDecoration: 'underline',
+                          textDecorationColor: 'rgba(255, 255, 255, 0.6)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        ZWNFT
+                      </a>
+                    ) : (
+                      <span>ZWNFT</span>
+                    )}
+                  </>
+                ) : (
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>点击连接钱包</span>
+                )}
+              </div>
+              {account && zwUserTokenIds.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  {zwUserTokenIds.map((tokenId) => (
+                    <Tag key={tokenId} color="purple" style={{ marginBottom: 4 }}>
+                      #{tokenId}
+                    </Tag>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {!isMobile && (
+              <div
+                style={{
+                  width: 1,
+                  height: 60,
+                  background: 'rgba(255, 255, 255, 0.2)',
+                }}
+              />
+            )}
+
+            <div
+              style={{
+                flex: '1 1 200px',
+                minWidth: '200px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  marginBottom: 8,
+                }}
+              >
+                可重铸余额
+              </div>
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  wordBreak: 'break-all',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  cursor: account ? 'pointer' : 'default',
+                }}
+                onClick={(e) => {
+                  if (account) {
+                    e.stopPropagation();
+                    // Switch to remint tab based on current mode
+                    if (activeMainTab === 'simple') {
+                      setActiveSimpleTab('remint');
+                      // Trigger the Select button action after tab switch
+                      setTimeout(() => {
+                        handleRemintGenerateBySeedClick();
+                      }, 100);
+                    } else {
+                      setActiveAdvancedTab('remint');
+                      // Trigger the Select button action for Advanced mode after tab switch
+                      setTimeout(() => {
+                        handleAdvancedRemintGenerateBySeedClick();
+                      }, 100);
+                    }
+                    // Scroll to the card
+                    setTimeout(() => {
+                      const card = document.querySelector('.ant-card');
+                      if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 100);
+                  }
+                }}
+              >
+                {account ? (
+                  <>
+                    <span>****</span>
+                    <Button
+                      type="primary"
+                      size="small"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: 'none',
+                        color: '#fff',
+                      }}
+                    >
+                      扫描
+                    </Button>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>点击连接钱包</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      {/* Last Burn Information card */}
+      {lastBurnTokenId !== null && lastBurnAddress && (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: '20px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 8,
+            position: 'relative',
+          }}
+        >
+          {/* Close button */}
+          <Button
+            type="text"
+            size="small"
+            icon={<CloseOutlined />}
+            onClick={clearLastBurnInfo}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              color: '#fff',
+              padding: 4,
+              height: 'auto',
+              minWidth: 'auto',
+            }}
+            title="清除销毁信息"
+          />
+          <div style={{ color: '#fff' }}>
+            <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8 }}>
+              🔥 上次销毁信息
+              <Tooltip title="这是您上次销毁操作的记录，包含了销毁的 Token ID 和生成的隐私地址。使用对应的 Secret 可以重铸该 NFT。">
+                <InfoCircleOutlined style={{ fontSize: 16, cursor: 'pointer', opacity: 0.7 }} />
+              </Tooltip>
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Token ID */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>Token ID:</span>
+                <span style={{ fontSize: 16, fontWeight: 'bold' }}>
+                  #{lastBurnTokenId}
+                </span>
+              </div>
+
+              {/* Address */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>地址:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <span
+                    style={{
+                      fontSize: isMobile ? 12 : 14,
+                      fontFamily: 'monospace',
+                      wordBreak: 'break-all',
+                      flex: 1,
+                    }}
+                  >
+                    {lastBurnAddress}
+                  </span>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={async () => {
+                      const success = await copyToClipboard(lastBurnAddress);
+                      if (success) {
+                        message.success('地址已复制！');
+                      } else {
+                        message.error('复制失败');
+                      }
+                    }}
+                    style={{ color: '#fff', padding: 0, height: 'auto' }}
+                  />
+                </div>
+              </div>
+
+              {/* Transaction Hash */}
+              {lastBurnTxHash && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>交易哈希:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${lastBurnTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontSize: isMobile ? 12 : 14,
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-all',
+                        flex: 1,
+                        color: '#fff',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      {lastBurnTxHash}
+                    </a>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={async () => {
+                        const success = await copyToClipboard(lastBurnTxHash);
+                        if (success) {
+                          message.success('交易哈希已复制！');
+                        } else {
+                          message.error('复制失败');
+                        }
+                      }}
+                      style={{ color: '#fff', padding: 0, height: 'auto' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tip with Remint button */}
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: 12,
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  opacity: 0.95,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span>💡 使用对应的 Secret 可以在重铸页面重铸该 NFT</span>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => {
+                    // Switch to remint tab based on current mode
+                    if (activeMainTab === 'simple') {
+                      setActiveSimpleTab('remint');
+                    } else {
+                      setActiveAdvancedTab('remint');
+                    }
+                    // Scroll to the card
+                    setTimeout(() => {
+                      const card = document.querySelector('.ant-card');
+                      if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 100);
+                  }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    border: 'none',
+                    color: '#fff',
+                  }}
+                >
+                  前往重铸
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Card>
+        {/* Outer main Tab: Simple Mode and Advanced Mode */}
+        <Tabs 
+          defaultActiveKey="simple" 
+          type="card" 
+          size="large"
+          onChange={(key) => setActiveMainTab(key)}
+        >
+          {/* Simple Mode - Only includes Burn and Remint */}
+          <TabPane tab="简易模式" key="simple">
+            <Tabs 
+              activeKey={activeSimpleTab}
+              onChange={(key) => setActiveSimpleTab(key)}
+              type="line" 
+              style={{ marginTop: 16 }}
+            >
+              <TabPane tab="销毁" key="burn">
+                <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                  {!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT ? (
+                    <Empty description="合约地址未配置，请先部署合约" />
+                  ) : (
+                    <Form form={simpleDepositForm} layout="vertical" onFinish={handleSimpleDeposit}>
+                      <Form.Item
+                        label="Token ID"
+                        name="tokenId"
+                        rules={[
+                          {
+                            required: true,
+                            message: '请输入 Token ID',
+                          },
+                          {
+                            type: 'number',
+                            min: 0,
+                            message: 'Token ID 必须大于等于 0',
+                          },
+                        ]}
+                      >
+                        <InputNumber
+                          style={{ width: '100%' }}
+                          placeholder="输入要销毁的 NFT Token ID"
+                          precision={0}
+                          min={0}
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="隐私地址"
+                        name="targetAddress"
+                        rules={[
+                          {
+                            required: true,
+                            message: '隐私地址为必填项',
+                          },
+                          {
+                            pattern: /^0x[a-fA-F0-9]{40}$/,
+                            message: '请输入有效的以太坊地址',
+                          },
+                        ]}
+                      >
+                        <Input
+                          placeholder="点击"生成"按钮生成隐私地址"
+                          maxLength={42}
+                          addonBefore={
+                            <Button
+                              type="link"
+                              onClick={handleDepositBurnClick}
+                              style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
+                            >
+                              生成
+                            </Button>
+                          }
+                        />
+                      </Form.Item>
+
+                      <Form.Item>
+                        <Button type="primary" htmlType="submit" loading={loading} block>
+                          销毁
+                        </Button>
+                      </Form.Item>
+
+                      {/* 显示交易哈希 */}
+                      {simpleBurnTxHash && (
+                        <div style={{ marginTop: 12, textAlign: 'center' }}>
+                          <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                            交易已提交:{' '}
+                            <a
+                              href={`https://sepolia.etherscan.io/tx/${simpleBurnTxHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#1890ff', textDecoration: 'underline' }}
+                            >
+                              {simpleBurnTxHash.substring(0, 10)}...{simpleBurnTxHash.substring(simpleBurnTxHash.length - 8)}
+                            </a>
+                          </span>
+                        </div>
+                      )}
+                    </Form>
+                  )}
+
+                  <div
+                    style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
+                  >
+                    <h4>什么是"销毁"？</h4>
+                    <p>
+                      <strong>销毁操作</strong>会将您的 NFT 包装并转移到一个由 Secret 生成的隐私地址。
+                    </p>
+                    <p>
+                      <strong>如何使用：</strong>
+                    </p>
+                    <p>1. 输入您要销毁的 NFT Token ID</p>
+                    <p>2. 点击"生成"按钮，通过钱包签名生成 Secret 和对应的隐私地址</p>
+                    <p>3. 点击"销毁"按钮完成操作。请务必保存好您的 Secret！</p>
+                  </div>
+                </div>
+              </TabPane>
+
+              <TabPane tab="重铸" key="remint">
+                <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                  {!CONTRACT_ADDRESSES.ZWERC721 ? (
+                    <Empty description="合约地址未配置，请先部署合约" />
+                  ) : (
+                    <Form
+                      form={remintForm}
+                      layout="vertical"
+                      onFinish={handleRemint}
+                      initialValues={{
+                        recipient: account || undefined,
+                        redeem: true,
+                      }}
+                    >
+                      <Form.Item
+                        label="Token ID"
+                        name="tokenId"
+                        rules={[
+                          {
+                            required: true,
+                            message: '请输入 Token ID',
+                          },
+                          {
+                            type: 'number',
+                            min: 0,
+                            message: 'Token ID 必须大于等于 0',
+                          },
+                        ]}
+                      >
+                        <InputNumber
+                          style={{ width: '100%' }}
+                          placeholder="输入要重铸的 NFT Token ID"
+                          precision={0}
+                          min={0}
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="Secret"
+                        name="secret"
+                        rules={[
+                          {
+                            required: true,
+                            message: 'Secret 为必填项',
+                          },
+                        ]}
+                      >
+                        <Input.Password
+                          placeholder="输入销毁时使用的 Secret"
+                          addonBefore={
+                            <Button
+                              type="link"
+                              onClick={handleRemintGenerateBySeedClick}
+                              style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
+                            >
+                              {isMobile ? '选择' : '从 Seed 选择'}
+                            </Button>
+                          }
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="接收地址"
+                        name="recipient"
+                        rules={[
+                          {
+                            required: true,
+                            message: '接收地址为必填项',
+                          },
+                          {
+                            pattern: /^0x[a-fA-F0-9]{40}$/,
+                            message: '请输入有效的以太坊地址',
+                          },
+                        ]}
+                      >
+                        <Input
+                          placeholder={account || '输入接收地址'}
+                          maxLength={42}
+                        />
+                      </Form.Item>
+
+                      <Form.Item name="redeem" valuePropName="checked" initialValue={true} hidden>
+                        <Checkbox>直接赎回底层 NFT</Checkbox>
+                      </Form.Item>
+
+                      <Form.Item>
+                        <Button type="primary" htmlType="submit" loading={loading} block>
+                          重铸
+                        </Button>
+                      </Form.Item>
+
+                      {/* 显示交易哈希 */}
+                      {simpleRemintTxHash && (
+                        <div style={{ marginTop: 12, textAlign: 'center' }}>
+                          <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                            交易已提交:{' '}
+                            <a
+                              href={`https://sepolia.etherscan.io/tx/${simpleRemintTxHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#1890ff', textDecoration: 'underline' }}
+                            >
+                              {simpleRemintTxHash.substring(0, 10)}...{simpleRemintTxHash.substring(simpleRemintTxHash.length - 8)}
+                            </a>
+                          </span>
+                        </div>
+                      )}
+                    </Form>
+                  )}
+
+                  <div
+                    style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
+                  >
+                    <h4>什么是"重铸"？</h4>
+                    <p>
+                      <strong>重铸操作</strong>使用零知识证明，在不暴露 Secret 的情况下，证明您拥有某个隐私地址的 NFT，并将其重铸到新地址或直接赎回底层 NFT。
+                    </p>
+                    <p>
+                      <strong>如何使用：</strong>
+                    </p>
+                    <p>1. 输入要重铸的 Token ID 和对应的 Secret</p>
+                    <p>2. 输入接收地址（默认为当前钱包地址）</p>
+                    <p>3. 点击"重铸"按钮。系统会生成零知识证明并提交交易（这可能需要 10-30 秒）</p>
+                    <p style={{ color: '#1890ff', marginTop: 12 }}>
+                      <strong>注意：</strong>简易模式默认启用"赎回"功能，重铸后会直接解包为底层 NFT。
+                    </p>
+                  </div>
+                </div>
+              </TabPane>
+            </Tabs>
+          </TabPane>
+
+          {/* Advanced Mode - Includes all four Tabs */}
+          <TabPane tab="高级模式" key="advanced">
+            {!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT ? (
+              <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                <Empty description="合约地址未配置，请先部署 ZWERC721 合约" />
+              </div>
+            ) : (
+              <Tabs 
+                activeKey={activeAdvancedTab}
+                onChange={(key) => setActiveAdvancedTab(key)}
+                type="line" 
+                style={{ marginTop: 16 }}
+              >
+                <TabPane tab="包装" key="deposit">
+                  <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                    <p style={{ color: '#666', marginBottom: 16 }}>高级模式包装功能待实现...</p>
+                  </div>
+                </TabPane>
+
+                <TabPane tab="解包" key="withdraw">
+                  <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                    <p style={{ color: '#666', marginBottom: 16 }}>高级模式解包功能待实现...</p>
+                  </div>
+                </TabPane>
+
+                <TabPane tab="转账" key="transfer">
+                  <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                    <p style={{ color: '#666', marginBottom: 16 }}>高级模式转账功能待实现...</p>
+                  </div>
+                </TabPane>
+
+                <TabPane tab="重铸" key="remint">
+                  <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
+                    <p style={{ color: '#666', marginBottom: 16 }}>高级模式重铸功能待实现...</p>
+                  </div>
+                </TabPane>
+              </Tabs>
+            )}
+          </TabPane>
+
+          {/* Tutorial Tab */}
+          <TabPane tab="教程" key="tutorial">
+            <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 0' }}>
+              <Empty description="教程视频待添加" />
+            </div>
+          </TabPane>
+        </Tabs>
+      </Card>
+
+      {/* Modals for secret management - simplified for now */}
+      {/* Add modals similar to ZWToken if needed */}
+    </PageContainer>
+  );
+};
+
+export default ZWERC721;

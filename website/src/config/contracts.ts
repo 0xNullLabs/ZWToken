@@ -22,6 +22,12 @@ export const CONTRACT_ADDRESSES = {
 
   // ZWETH Verifier
   ZWETHVerifier: '0x524a87356540B36BBD82F470B5189ec973B2D759',
+
+  // ZWERC721 (placeholder - need deployment)
+  ZWERC721: '',
+  
+  // Underlying ERC721 Mock
+  UnderlyingNFT: '',
 } as const;
 
 /**
@@ -86,6 +92,45 @@ export const CONTRACT_ABIS = {
     'function previewWithdraw(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',
     'function previewRemint(address to, uint256 id, uint256 amount, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bool redeem, bytes proof) data) external view returns (uint256)',
   ],
+
+  // ERC721 basic functions
+  ERC721: [
+    'function approve(address to, uint256 tokenId) external',
+    'function setApprovalForAll(address operator, bool approved) external',
+    'function getApproved(uint256 tokenId) external view returns (address)',
+    'function isApprovedForAll(address owner, address operator) external view returns (bool)',
+    'function ownerOf(uint256 tokenId) external view returns (address)',
+    'function balanceOf(address owner) external view returns (uint256)',
+    'function tokenURI(uint256 tokenId) external view returns (string memory)',
+    'function getCurrentTokenId() external view returns (uint256)',
+  ],
+
+  // ZWERC721 contract (same structure as ZWERC20 but for NFTs)
+  ZWERC721: [
+    // Core IERC8065 functions
+    'function deposit(address to, uint256 id, uint256 amount, bytes data) external payable',
+    'function withdraw(address to, uint256 id, uint256 amount, bytes data) external',
+    'function remint(address to, uint256 id, uint256 amount, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bool redeem, bytes proof) data) external',
+    // ERC721 functions
+    'function ownerOf(uint256 tokenId) external view returns (address)',
+    'function balanceOf(address account) external view returns (uint256)',
+    'function transferFrom(address from, address to, uint256 tokenId) external',
+    'function tokenURI(uint256 tokenId) external view returns (string memory)',
+    // Query functions
+    'function root() external view returns (bytes32)',
+    'function getCommitLeafCount(uint256 id) external view returns (uint256)',
+    'function getCommitLeaves(uint256 id, uint256 startIndex, uint256 length) external view returns (bytes32[] memory commitHashes, address[] memory recipients, uint256[] memory amounts)',
+    'function getLatestCommitment(uint256 id) external view returns (bytes32)',
+    'function hasCommitment(uint256 id, bytes32 commitment) external view returns (bool)',
+    'function hasTokenFirstReceiptRecorded(uint256 id, address account) external view returns (bool)',
+    'function nullifierUsed(bytes32 nullifier) external view returns (bool)',
+    'function tokenExists(uint256 tokenId) external view returns (bool)',
+    // Preview functions
+    'function previewDeposit(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',
+    'function previewWithdraw(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',
+    'function previewRemint(address to, uint256 id, uint256 amount, tuple(bytes32 commitment, bytes32[] nullifiers, bytes proverData, bytes relayerData, bool redeem, bytes proof) data) external view returns (uint256)',
+    'function getUnderlying() external view returns (address)',
+  ],
 } as const;
 
 /**
@@ -103,5 +148,11 @@ export const TOKEN_INFO = {
     symbol: 'ZWETH',
     underlyingName: 'ETH',
     underlyingSymbol: 'ETH',
+  },
+  ZWNFT: {
+    name: 'ZK Wrapper NFT',
+    symbol: 'ZWNFT',
+    underlyingName: 'NFT',
+    underlyingSymbol: 'NFT',
   },
 } as const;
