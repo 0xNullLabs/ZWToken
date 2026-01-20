@@ -1576,7 +1576,7 @@ const ZWERC721: React.FC = () => {
               maxWidth: '100%',
             }}
           >
-            <span>ZWERC721 - 零知识包装 NFT</span>
+            <span>ZWERC721 - Zero Knowledge Wrapper NFT</span>
             <a
               href="https://eips.ethereum.org/EIPS/eip-8065"
               target="_blank"
@@ -1588,7 +1588,7 @@ const ZWERC721: React.FC = () => {
                 textDecoration: 'none',
               }}
             >
-              基于 <span style={{ textDecoration: 'underline' }}>ERC-8065</span> 标准实现的 NFT 隐私保护
+We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero Knowledge Token Wrapper to achieve our goal.
             </a>
           </div>
         ),
@@ -1636,7 +1636,7 @@ const ZWERC721: React.FC = () => {
             }}
           >
             <span style={{ color: '#fff', fontSize: 14 }}>
-              💡 获取测试 NFT：水龙头地址待配置
+              💡 需要测试 NFT？水龙头地址待配置
             </span>
           </div>
 
@@ -1844,11 +1844,11 @@ const ZWERC721: React.FC = () => {
                         color: '#fff',
                       }}
                     >
-                      扫描
+                      Scan
                     </Button>
                   </>
                 ) : (
-                  <span style={{ fontSize: 16, opacity: 0.9 }}>点击连接钱包</span>
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>连接钱包</span>
                 )}
               </div>
             </div>
@@ -2025,14 +2025,14 @@ const ZWERC721: React.FC = () => {
           onChange={(key) => setActiveMainTab(key)}
         >
           {/* Simple Mode - Only includes Burn and Remint */}
-          <TabPane tab="简易模式" key="simple">
+          <TabPane tab="Simple Mode" key="simple">
             <Tabs 
               activeKey={activeSimpleTab}
               onChange={(key) => setActiveSimpleTab(key)}
               type="line" 
               style={{ marginTop: 16 }}
             >
-              <TabPane tab="销毁" key="burn">
+              <TabPane tab="🔥 销毁" key="burn">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                   {!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT ? (
                     <Empty description="合约地址未配置，请先部署合约" />
@@ -2076,7 +2076,7 @@ const ZWERC721: React.FC = () => {
                         ]}
                       >
                         <Input
-                          placeholder="点击"生成"按钮生成隐私地址"
+                          placeholder="输入或生成隐私地址"
                           maxLength={42}
                           addonBefore={
                             <Button
@@ -2118,16 +2118,18 @@ const ZWERC721: React.FC = () => {
                   <div
                     style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
                   >
-                    <h4>什么是"销毁"？</h4>
+                    <h4>💡 使用技巧</h4>
                     <p>
-                      <strong>销毁操作</strong>会将您的 NFT 包装并转移到一个由 Secret 生成的隐私地址。
+                      <strong>什么是简易模式销毁？</strong>
                     </p>
+                    <p>简易模式销毁会封装您的 NFT 并自动将封装后的 ZW NFT 销毁到销毁地址（黑洞地址）。这提供了最大的隐私保护。</p>
                     <p>
                       <strong>如何使用：</strong>
                     </p>
                     <p>1. 输入您要销毁的 NFT Token ID</p>
-                    <p>2. 点击"生成"按钮，通过钱包签名生成 Secret 和对应的隐私地址</p>
-                    <p>3. 点击"销毁"按钮完成操作。请务必保存好您的 Secret！</p>
+                    <p>2. 使用您的 secret 生成销毁地址（或手动创建）。请妥善保管您的 secret - 稍后重铸时需要用到。</p>
+                    <p>3. 销毁的 NFT 只能使用生成销毁地址时使用的正确 secret 来重铸。</p>
+                    <p>4. 您的 NFT 现在处于隐私保护状态，可以随时匿名重铸。</p>
                   </div>
                 </div>
               </TabPane>
@@ -2245,18 +2247,20 @@ const ZWERC721: React.FC = () => {
                   <div
                     style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
                   >
-                    <h4>什么是"重铸"？</h4>
+                    <h4>💡 使用技巧</h4>
                     <p>
-                      <strong>重铸操作</strong>使用零知识证明，在不暴露 Secret 的情况下，证明您拥有某个隐私地址的 NFT，并将其重铸到新地址或直接赎回底层 NFT。
+                      <strong>什么是简易模式重铸？</strong>
                     </p>
+                    <p>简易模式重铸会使用您的 secret 重铸您的 ZW NFT，并自动将它解封装为底层 NFT。接收者将直接收到原始 NFT。</p>
                     <p>
                       <strong>如何使用：</strong>
                     </p>
-                    <p>1. 输入要重铸的 Token ID 和对应的 Secret</p>
-                    <p>2. 输入接收地址（默认为当前钱包地址）</p>
-                    <p>3. 点击"重铸"按钮。系统会生成零知识证明并提交交易（这可能需要 10-30 秒）</p>
+                    <p>1. 输入您销毁 NFT 时使用的 Token ID 和 secret。这可以在不透露您身份的情况下证明所有权。</p>
+                    <p>2. 接收者地址（默认：您当前的钱包）将直接收到解封装后的底层 NFT。</p>
+                    <p>3. 重铸需要生成 ZK 证明，大约需要 10-30 秒。</p>
                     <p style={{ color: '#1890ff', marginTop: 12 }}>
-                      <strong>注意：</strong>简易模式默认启用"赎回"功能，重铸后会直接解包为底层 NFT。
+                      <strong>注意：</strong>
+                      在简易模式下，"解封装底层 NFT"选项自动启用，因此您将直接收到原始 NFT 而不是 ZWNFT。这提供了无缝体验。
                     </p>
                   </div>
                 </div>
@@ -2265,7 +2269,7 @@ const ZWERC721: React.FC = () => {
           </TabPane>
 
           {/* Advanced Mode - Includes all four Tabs */}
-          <TabPane tab="高级模式" key="advanced">
+          <TabPane tab="Advanced Mode" key="advanced">
             {!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT ? (
               <div style={{ padding: '40px 0', textAlign: 'center' }}>
                 <Empty description="合约地址未配置，请先部署 ZWERC721 合约" />
@@ -2277,25 +2281,25 @@ const ZWERC721: React.FC = () => {
                 type="line" 
                 style={{ marginTop: 16 }}
               >
-                <TabPane tab="包装" key="deposit">
+                <TabPane tab="💰 包装" key="deposit">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                     <p style={{ color: '#666', marginBottom: 16 }}>高级模式包装功能待实现...</p>
                   </div>
                 </TabPane>
 
-                <TabPane tab="解包" key="withdraw">
+                <TabPane tab="💳 解包" key="withdraw">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                     <p style={{ color: '#666', marginBottom: 16 }}>高级模式解包功能待实现...</p>
                   </div>
                 </TabPane>
 
-                <TabPane tab="转账" key="transfer">
+                <TabPane tab="🔄 转账" key="transfer">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                     <p style={{ color: '#666', marginBottom: 16 }}>高级模式转账功能待实现...</p>
                   </div>
                 </TabPane>
 
-                <TabPane tab="重铸" key="remint">
+                <TabPane tab="🎁 重铸" key="remint">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                     <p style={{ color: '#666', marginBottom: 16 }}>高级模式重铸功能待实现...</p>
                   </div>
@@ -2305,7 +2309,7 @@ const ZWERC721: React.FC = () => {
           </TabPane>
 
           {/* Tutorial Tab */}
-          <TabPane tab="教程" key="tutorial">
+          <TabPane tab="Tutorial" key="tutorial">
             <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 0' }}>
               <Empty description="教程视频待添加" />
             </div>
