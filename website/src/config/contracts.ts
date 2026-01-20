@@ -23,11 +23,11 @@ export const CONTRACT_ADDRESSES = {
   // ZWETH Verifier
   ZWETHVerifier: '0x524a87356540B36BBD82F470B5189ec973B2D759',
 
-  // ZWERC721 (placeholder - need deployment)
-  ZWERC721: '',
+  // ZWERC721
+  ZWERC721: '0xb3687A20f67618af09D1c9ff73CaA266d04067DC',
   
   // Underlying ERC721 Mock
-  UnderlyingNFT: '',
+  UnderlyingNFT: '0xBF85386b4489b51672e23E9cBf9312A13D3D5093',
 } as const;
 
 /**
