@@ -808,17 +808,17 @@ const ZWERC721: React.FC = () => {
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
               const privacyAddressLower = privacyAddress.toLowerCase();
               
+              // Check if nullifier for this tokenId is already used (regardless of ownership)
+              const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+              const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+              if (isNullifierUsed) {
+                hasClaimedNullifier = true;
+              }
+              
               // Check if this privacy address owns this specific tokenId
               const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
               if (ownedByAddress.includes(tokenId)) {
                 ownedTokenIds.push(tokenId);
-                
-                // Check if nullifier for this tokenId is already used
-                const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-                const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
-                if (isNullifierUsed) {
-                  hasClaimedNullifier = true;
-                }
               }
             } catch (deriveError) {
               console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
@@ -996,16 +996,17 @@ const ZWERC721: React.FC = () => {
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
               const privacyAddressLower = privacyAddress.toLowerCase();
               
+              // Check if nullifier for this tokenId is already used (regardless of ownership)
+              const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+              const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+              if (isNullifierUsed) {
+                hasClaimedNullifier = true;
+              }
+              
               // Check if this privacy address owns this specific tokenId
               const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
               if (ownedByAddress.includes(tokenId)) {
                 ownedTokenIds.push(tokenId);
-                
-                const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-                const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
-                if (isNullifierUsed) {
-                  hasClaimedNullifier = true;
-                }
               }
             } catch (deriveError) {
               console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
@@ -1187,16 +1188,17 @@ const ZWERC721: React.FC = () => {
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
               const privacyAddressLower = privacyAddress.toLowerCase();
               
+              // Check if nullifier for this tokenId is already used (regardless of ownership)
+              const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+              const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+              if (isNullifierUsed) {
+                hasClaimedNullifier = true;
+              }
+              
               // Check if this privacy address owns this specific tokenId
               const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
               if (ownedByAddress.includes(tokenId)) {
                 ownedTokenIds.push(tokenId);
-                
-                const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-                const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
-                if (isNullifierUsed) {
-                  hasClaimedNullifier = true;
-                }
               }
             } catch (deriveError) {
               console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
