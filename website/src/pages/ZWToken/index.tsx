@@ -203,7 +203,7 @@ const ZWToken: React.FC = () => {
     }
   }, [wallet]);
 
-  // Function to refresh balances
+  // Function to refresh balances - Scan ERC721 NFTs
   const refreshBalances = React.useCallback(async () => {
     if (!wallet || !account) {
       setUsdcBalance('0');
@@ -224,27 +224,60 @@ const ZWToken: React.FC = () => {
         return;
       }
 
-      // Query USDC balance
-      const usdcContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.UnderlyingToken,
-        CONTRACT_ABIS.ERC20,
+      // Query NFT balance by scanning ownerOf for each tokenId
+      const nftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
         provider,
       );
-      const usdcBal = await usdcContract.balanceOf(account);
-      setUsdcBalance(ethers.formatUnits(usdcBal, tokenDecimals));
+      
+      // Get current token counter
+      const currentTokenId = await nftContract.getCurrentTokenId();
+      console.log(`Scanning NFTs from tokenId 0 to ${currentTokenId - 1}`);
+      
+      // Count NFTs owned by user
+      let userNFTCount = 0;
+      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+        try {
+          const owner = await nftContract.ownerOf(tokenId);
+          if (owner.toLowerCase() === account.toLowerCase()) {
+            userNFTCount++;
+          }
+        } catch (error) {
+          // Token might be burned or not exist, skip
+          console.log(`Token ${tokenId} does not exist or is burned`);
+        }
+      }
+      
+      setUsdcBalance(userNFTCount.toString());
+      console.log(`User owns ${userNFTCount} NFTs`);
 
-      // Query Allowance
-      const allowanceBigInt = await usdcContract.allowance(account, CONTRACT_ADDRESSES.ZWERC20);
-      setAllowance(ethers.formatUnits(allowanceBigInt, tokenDecimals));
+      // Query if user has approved all NFTs to ZWERC721
+      const isApprovedForAll = await nftContract.isApprovedForAll(account, CONTRACT_ADDRESSES.ZWERC721);
+      setAllowance(isApprovedForAll ? '999999' : '0');
 
-      // Query ZWUSDC balance
-      const zwusdcContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWERC20,
-        CONTRACT_ABIS.ZWERC20,
+      // Query ZWNFT balance by scanning ZWERC721
+      const zwnftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
         provider,
       );
-      const zwusdcBal = await zwusdcContract.balanceOf(account);
-      setZwusdcBalance(ethers.formatUnits(zwusdcBal, tokenDecimals));
+      
+      // Get current token counter from underlying NFT (ZWERC721 tracks same tokenIds)
+      let userZWNFTCount = 0;
+      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+        try {
+          const owner = await zwnftContract.ownerOf(tokenId);
+          if (owner.toLowerCase() === account.toLowerCase()) {
+            userZWNFTCount++;
+          }
+        } catch (error) {
+          // Token might not exist in ZWERC721, skip
+        }
+      }
+      
+      setZwusdcBalance(userZWNFTCount.toString());
+      console.log(`User owns ${userZWNFTCount} ZWNFTs`);
     } catch (error) {
       console.error('Failed to fetch balances:', error);
     }
@@ -674,57 +707,51 @@ const ZWToken: React.FC = () => {
       }
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
-      // Asynchronously query amount for each Secret
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWERC20,
-        CONTRACT_ABIS.ZWERC20,
+      // Query NFT balance for each burn address
+      const nftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
         provider,
       );
 
-      // Get all leafs from chain (fetch in batches)
-      const leafCount = await contract.getCommitLeafCount(0);
-      console.log(`Found ${leafCount} commitment(s)`);
+      // Get current token counter to know how many NFTs to scan
+      const currentTokenId = await nftContract.getCurrentTokenId();
+      console.log(`Scanning NFTs from tokenId 0 to ${currentTokenId - 1} for burn addresses`);
 
-      let leaves: any[] = [];
-      if (leafCount > 0n) {
-        leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
-        console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
-      }
+      // ZWERC721 contract for checking nullifier
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        provider,
+      );
 
-      // Query amount and IsClaimed status one by one
+      // Query NFT count for each Secret's burn address
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
           const { privacyAddress, nullifier } = await deriveFromSecret(secret);
 
-          // Find matching privacy address in leaves to get first receipt amount
-          let foundAmount = '0';
-          for (const leaf of leaves) {
-            if (leaf.to.toLowerCase() === privacyAddress.toLowerCase()) {
-              foundAmount = ethers.formatUnits(leaf.amount, tokenDecimals);
-              break;
+          // Count NFTs owned by this burn address
+          let nftCount = 0;
+          for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+            try {
+              const owner = await nftContract.ownerOf(tokenId);
+              if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
+                nftCount++;
+              }
+            } catch (error) {
+              // Token might be burned or not exist, skip
             }
           }
 
-          // Check if this address has ever received tokens
-          const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
+          const foundAmount = nftCount.toString();
 
-          let isClaimed = false;
+          // Check if nullifier is already used (reminted)
+          const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+          const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
 
-          if (hasFirstReceipt) {
-            // Address has received tokens before, check if claimed
-            const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-            const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
-
-            // Check current balance of privacy address
-            const currentBalance = await contract.balanceOf(privacyAddress);
-
-            // Claimed if nullifier used OR balance is 0
-            isClaimed = isNullifierUsed || currentBalance === 0n;
-          } else {
-            // Address has never received tokens, so it's available (not claimed)
-            isClaimed = false;
-          }
+          // Address is claimed if nullifier used OR no NFTs left
+          const isClaimed = isNullifierUsed || nftCount === 0;
 
           // Update the corresponding list based on target mode
           if (targetMode === 'deposit') {
@@ -914,57 +941,51 @@ const ZWToken: React.FC = () => {
       setRemintSecretList(secrets);
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
-      // Asynchronously query amount for each Secret
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWERC20,
-        CONTRACT_ABIS.ZWERC20,
+      // Query NFT balance for each burn address
+      const nftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
         provider,
       );
 
-      // Get all leafs from chain (fetch in batches)
-      const leafCount = await contract.getCommitLeafCount(0);
-      console.log(`Found ${leafCount} commitment(s)`);
+      // Get current token counter to know how many NFTs to scan
+      const currentTokenId = await nftContract.getCurrentTokenId();
+      console.log(`Scanning NFTs from tokenId 0 to ${currentTokenId - 1} for remint addresses`);
 
-      let leaves: any[] = [];
-      if (leafCount > 0n) {
-        leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
-        console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
-      }
+      // ZWERC721 contract for checking nullifier
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        provider,
+      );
 
-      // Query amount and IsClaimed status one by one
+      // Query NFT count for each Secret's burn address
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
           const { privacyAddress, nullifier } = await deriveFromSecret(secret);
 
-          // Find matching privacy address in leaves to get first receipt amount
-          let foundAmount = '0';
-          for (const leaf of leaves) {
-            if (leaf.to.toLowerCase() === privacyAddress.toLowerCase()) {
-              foundAmount = ethers.formatUnits(leaf.amount, tokenDecimals);
-              break;
+          // Count NFTs owned by this burn address
+          let nftCount = 0;
+          for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+            try {
+              const owner = await nftContract.ownerOf(tokenId);
+              if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
+                nftCount++;
+              }
+            } catch (error) {
+              // Token might be burned or not exist, skip
             }
           }
 
-          // Check if this address has ever received tokens
-          const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
+          const foundAmount = nftCount.toString();
 
-          let isClaimed = false;
+          // Check if nullifier is already used (reminted)
+          const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+          const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
 
-          if (hasFirstReceipt) {
-            // Address has received tokens before, check if claimed
-            const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-            const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
-
-            // Check current balance of privacy address
-            const currentBalance = await contract.balanceOf(privacyAddress);
-
-            // Claimed if nullifier used OR balance is 0
-            isClaimed = isNullifierUsed || currentBalance === 0n;
-          } else {
-            // Address has never received tokens, so it's available (not claimed)
-            isClaimed = false;
-          }
+          // Address is claimed if nullifier used OR no NFTs left
+          const isClaimed = isNullifierUsed || nftCount === 0;
 
           // Update state
           setRemintSecretList((prev) =>
@@ -1064,57 +1085,51 @@ const ZWToken: React.FC = () => {
       setAdvancedRemintSecretList(secrets);
       message.success(intl.formatMessage({ id: 'pages.zwtoken.message.seedGeneratedQuerying' }));
 
-      // Asynchronously query amount for each Secret
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWERC20,
-        CONTRACT_ABIS.ZWERC20,
+      // Query NFT balance for each burn address
+      const nftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
         provider,
       );
 
-      // Get all leafs from chain (fetch in batches)
-      const leafCount = await contract.getCommitLeafCount(0);
-      console.log(`Found ${leafCount} commitment(s)`);
+      // Get current token counter to know how many NFTs to scan
+      const currentTokenId = await nftContract.getCurrentTokenId();
+      console.log(`Scanning NFTs from tokenId 0 to ${currentTokenId - 1} for advanced remint addresses`);
 
-      let leaves: any[] = [];
-      if (leafCount > 0n) {
-        leaves = await getCommitLeavesInBatches(contract, 0, 0, leafCount, 100);
-        console.log(`Retrieved ${leaves.length} leaf(s) from storage`);
-      }
+      // ZWERC721 contract for checking nullifier
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        provider,
+      );
 
-      // Query amount and IsClaimed status one by one
+      // Query NFT count for each Secret's burn address
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
           const { privacyAddress, nullifier } = await deriveFromSecret(secret);
 
-          // Find matching privacy address in leaves to get first receipt amount
-          let foundAmount = '0';
-          for (const leaf of leaves) {
-            if (leaf.to.toLowerCase() === privacyAddress.toLowerCase()) {
-              foundAmount = ethers.formatUnits(leaf.amount, tokenDecimals);
-              break;
+          // Count NFTs owned by this burn address
+          let nftCount = 0;
+          for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+            try {
+              const owner = await nftContract.ownerOf(tokenId);
+              if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
+                nftCount++;
+              }
+            } catch (error) {
+              // Token might be burned or not exist, skip
             }
           }
 
-          // Check if this address has ever received tokens
-          const hasFirstReceipt = await contract.hasFirstReceiptRecorded(privacyAddress);
+          const foundAmount = nftCount.toString();
 
-          let isClaimed = false;
+          // Check if nullifier is already used (reminted)
+          const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+          const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
 
-          if (hasFirstReceipt) {
-            // Address has received tokens before, check if claimed
-            const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-            const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
-
-            // Check current balance of privacy address
-            const currentBalance = await contract.balanceOf(privacyAddress);
-
-            // Claimed if nullifier used OR balance is 0
-            isClaimed = isNullifierUsed || currentBalance === 0n;
-          } else {
-            // Address has never received tokens, so it's available (not claimed)
-            isClaimed = false;
-          }
+          // Address is claimed if nullifier used OR no NFTs left
+          const isClaimed = isNullifierUsed || nftCount === 0;
 
           // Update state
           setAdvancedRemintSecretList((prev) =>
@@ -1191,16 +1206,18 @@ const ZWToken: React.FC = () => {
     }
   };
 
-  // Check if approval is needed - Simple Mode
+  // Check if approval is needed - Simple Mode (NFT uses approveForAll)
   const simpleNeedsApproval = React.useMemo(() => {
     if (!simpleDepositAmount || simpleDepositAmount <= 0) return false;
-    return parseFloat(allowance) < simpleDepositAmount;
+    // For NFT, allowance is either 0 (not approved) or 999999 (approved for all)
+    return parseInt(allowance) === 0;
   }, [simpleDepositAmount, allowance]);
 
-  // Check if approval is needed - Advanced Mode
+  // Check if approval is needed - Advanced Mode (NFT uses approveForAll)
   const advancedNeedsApproval = React.useMemo(() => {
     if (!advancedDepositAmount || advancedDepositAmount <= 0) return false;
-    return parseFloat(allowance) < advancedDepositAmount;
+    // For NFT, allowance is either 0 (not approved) or 999999 (approved for all)
+    return parseInt(allowance) === 0;
   }, [advancedDepositAmount, allowance]);
 
   // Simple Mode Deposit (Burn) - targetAddress is required
@@ -1217,11 +1234,11 @@ const ZWToken: React.FC = () => {
       return;
     }
 
-    // 检查 USDC 余额是否足够
-    const usdcBalanceNum = parseFloat(usdcBalance);
-    if (usdcBalanceNum < values.amount) {
+    // 检查 NFT 余额是否足够
+    const nftBalanceNum = parseInt(usdcBalance);
+    if (nftBalanceNum < values.amount) {
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: USDC ${usdcBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: NFT ${nftBalanceNum} < ${values.amount}`
       );
       return;
     }
@@ -1238,31 +1255,27 @@ const ZWToken: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      const underlyingContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.UnderlyingToken,
-        CONTRACT_ABIS.ERC20,
+      const nftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
         signer,
       );
 
-      const depositAmountBigInt = ethers.parseUnits(values.amount.toString(), tokenDecimals);
-      console.log(
-        `[Simple] Deposit amount: ${
-          values.amount
-        } tokens = ${depositAmountBigInt.toString()} units`,
-      );
+      console.log(`[Simple] Deposit amount: ${values.amount} NFT(s)`);
 
-      const currentAllowance = await underlyingContract.allowance(
+      // Check if approved for all
+      const isApprovedForAll = await nftContract.isApprovedForAll(
         account,
-        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ADDRESSES.ZWERC721,
       );
 
-      // If allowance is insufficient, only execute approval
-      if (currentAllowance < depositAmountBigInt) {
-        console.log('[Simple] Starting approval...');
+      // If not approved, execute approval
+      if (!isApprovedForAll) {
+        console.log('[Simple] Starting approval for all...');
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.approving' }), 0);
-        const approveTx = await underlyingContract.approve(
-          CONTRACT_ADDRESSES.ZWERC20,
-          depositAmountBigInt,
+        const approveTx = await nftContract.setApprovalForAll(
+          CONTRACT_ADDRESSES.ZWERC721,
+          true,
         );
         await approveTx.wait();
         message.destroy();
@@ -1272,16 +1285,39 @@ const ZWToken: React.FC = () => {
         return;
       }
 
-      console.log('[Simple] Allowance sufficient, proceeding to burn...');
+      console.log('[Simple] Already approved, proceeding to burn...');
 
-      // Execute depositTo with targetAddress (Burn)
-      const zwTokenContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWERC20,
-        CONTRACT_ABIS.ZWERC20,
+      // Execute deposit with targetAddress (Burn)
+      const zwnftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
         signer,
       );
 
-      const tx = await zwTokenContract.deposit(values.targetAddress, 0, depositAmountBigInt, '0x');
+      // For NFT, we need to get the tokenId from user's NFTs
+      // Get the first tokenId owned by user
+      const currentTokenId = await nftContract.getCurrentTokenId();
+      let userTokenId = -1;
+      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+        try {
+          const owner = await nftContract.ownerOf(tokenId);
+          if (owner.toLowerCase() === account.toLowerCase()) {
+            userTokenId = tokenId;
+            break;
+          }
+        } catch (error) {
+          // Token might not exist, skip
+        }
+      }
+
+      if (userTokenId === -1) {
+        message.error('No NFT found to deposit');
+        setLoading(false);
+        return;
+      }
+
+      console.log(`[Simple] Depositing tokenId ${userTokenId} to burn address`);
+      const tx = await zwnftContract.deposit(values.targetAddress, userTokenId, 1, '0x');
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
       const receipt = await tx.wait();
@@ -1336,11 +1372,11 @@ const ZWToken: React.FC = () => {
       return;
     }
 
-    // 检查 USDC 余额是否足够
-    const usdcBalanceNum = parseFloat(usdcBalance);
-    if (usdcBalanceNum < values.amount) {
+    // 检查 NFT 余额是否足够
+    const nftBalanceNum = parseInt(usdcBalance);
+    if (nftBalanceNum < values.amount) {
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: USDC ${usdcBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: NFT ${nftBalanceNum} < ${values.amount}`
       );
       return;
     }
@@ -1363,37 +1399,32 @@ const ZWToken: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      const underlyingContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.UnderlyingToken,
-        CONTRACT_ABIS.ERC20,
+      const nftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721,
         signer,
       );
 
-      const depositAmountBigInt = ethers.parseUnits(values.amount.toString(), tokenDecimals);
-      console.log(
-        `[Advanced] Deposit amount: ${
-          values.amount
-        } tokens = ${depositAmountBigInt.toString()} units`,
-      );
+      console.log(`[Advanced] Deposit amount: ${values.amount} NFT(s)`);
 
-      const currentAllowance = await underlyingContract.allowance(
+      // Check if approved for all
+      const isApprovedForAll = await nftContract.isApprovedForAll(
         account,
-        CONTRACT_ADDRESSES.ZWERC20,
+        CONTRACT_ADDRESSES.ZWERC721,
       );
 
-      console.log('[Advanced] Allowance check:', {
-        currentAllowance: currentAllowance.toString(),
-        depositAmountBigInt: depositAmountBigInt.toString(),
-        needsApproval: currentAllowance < depositAmountBigInt,
+      console.log('[Advanced] Approval check:', {
+        isApprovedForAll,
+        needsApproval: !isApprovedForAll,
       });
 
-      // If allowance is insufficient, only execute approval
-      if (currentAllowance < depositAmountBigInt) {
-        console.log('[Advanced] Starting approval...');
+      // If not approved, execute approval
+      if (!isApprovedForAll) {
+        console.log('[Advanced] Starting approval for all...');
         message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.approving' }), 0);
-        const approveTx = await underlyingContract.approve(
-          CONTRACT_ADDRESSES.ZWERC20,
-          depositAmountBigInt,
+        const approveTx = await nftContract.setApprovalForAll(
+          CONTRACT_ADDRESSES.ZWERC721,
+          true,
         );
         await approveTx.wait();
         message.destroy();
@@ -1403,18 +1434,41 @@ const ZWToken: React.FC = () => {
         return;
       }
 
-      console.log('[Advanced] Allowance sufficient, proceeding to wrap...');
+      console.log('[Advanced] Already approved, proceeding to wrap...');
 
-      // Execute depositTo
-      const zwTokenContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWERC20,
-        CONTRACT_ABIS.ZWERC20,
+      // Execute deposit
+      const zwnftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
         signer,
       );
 
+      // For NFT, we need to get the tokenId from user's NFTs
+      // Get the first tokenId owned by user
+      const currentTokenId = await nftContract.getCurrentTokenId();
+      let userTokenId = -1;
+      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+        try {
+          const owner = await nftContract.ownerOf(tokenId);
+          if (owner.toLowerCase() === account.toLowerCase()) {
+            userTokenId = tokenId;
+            break;
+          }
+        } catch (error) {
+          // Token might not exist, skip
+        }
+      }
+
+      if (userTokenId === -1) {
+        message.error('No NFT found to deposit');
+        setLoading(false);
+        return;
+      }
+
       // Determine to address: use targetAddress if provided (burn mode), otherwise use account
       const toAddress = values.targetAddress || account;
-      const tx = await zwTokenContract.deposit(toAddress, 0, depositAmountBigInt, '0x');
+      console.log(`[Advanced] Depositing tokenId ${userTokenId} to ${toAddress}`);
+      const tx = await zwnftContract.deposit(toAddress, userTokenId, 1, '0x');
 
       message.loading(intl.formatMessage({ id: 'pages.zwtoken.deposit.submitting' }), 0);
       const receipt = await tx.wait();
@@ -1468,11 +1522,11 @@ const ZWToken: React.FC = () => {
       return;
     }
 
-    // 检查 ZWUSDC 余额是否足够
-    const zwusdcBalanceNum = parseFloat(zwusdcBalance);
-    if (zwusdcBalanceNum < values.amount) {
+    // 检查 ZWNFT 余额是否足够
+    const zwnftBalanceNum = parseInt(zwusdcBalance);
+    if (zwnftBalanceNum < values.amount) {
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ZWUSDC ${zwusdcBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ZWNFT ${zwnftBalanceNum} < ${values.amount}`
       );
       return;
     }
@@ -1536,11 +1590,11 @@ const ZWToken: React.FC = () => {
       return;
     }
 
-    // 检查 ZWUSDC 余额是否足够
-    const zwusdcBalanceNum = parseFloat(zwusdcBalance);
-    if (zwusdcBalanceNum < values.amount) {
+    // 检查 ZWNFT 余额是否足够
+    const zwnftBalanceNum = parseInt(zwusdcBalance);
+    if (zwnftBalanceNum < values.amount) {
       message.error(
-        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ZWUSDC ${zwusdcBalanceNum.toFixed(6)} < ${values.amount.toFixed(6)}`
+        `${intl.formatMessage({ id: 'pages.zwtoken.error.insufficientBalance' })}: ZWNFT ${zwnftBalanceNum} < ${values.amount}`
       );
       return;
     }
@@ -1989,9 +2043,9 @@ const ZWToken: React.FC = () => {
               >
                 {account ? (
                   <>
-                    {parseFloat(usdcBalance).toFixed(6)}{' '}
+                    {parseInt(usdcBalance)}{' '}
                     <a
-                      href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.UnderlyingToken}`}
+                      href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.UnderlyingNFT}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -2001,7 +2055,7 @@ const ZWToken: React.FC = () => {
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      USDC
+                      NFT
                     </a>
                   </>
                 ) : (
@@ -2042,9 +2096,9 @@ const ZWToken: React.FC = () => {
               >
                 {account ? (
                   <>
-                    {parseFloat(zwusdcBalance).toFixed(6)}{' '}
+                    {parseInt(zwusdcBalance)}{' '}
                     <a
-                      href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ZWERC20}`}
+                      href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ZWERC721}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -2054,7 +2108,7 @@ const ZWToken: React.FC = () => {
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      ZWUSDC
+                      ZWNFT
                     </a>
                   </>
                 ) : (
@@ -2193,7 +2247,7 @@ const ZWToken: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>Amount:</span>
                 <span style={{ fontSize: 16, fontWeight: 'bold' }}>
-                  {parseFloat(lastBurnAmount).toFixed(6)} {lastBurnMode === 'advanced' ? 'ZWUSDC' : 'USDC'}
+                  {parseInt(lastBurnAmount)} NFT{parseInt(lastBurnAmount) > 1 ? 's' : ''}
                 </span>
               </div>
 
@@ -2369,7 +2423,7 @@ const ZWToken: React.FC = () => {
                         }}
                       >
                         {intl.formatMessage({ id: 'pages.zwtoken.deposit.currentAllowance' })}:{' '}
-                        {parseFloat(allowance).toFixed(6)} USDC
+                        {parseInt(allowance) > 0 ? 'Approved for All' : 'Not Approved'}
                       </div>
                     )}
 
@@ -2686,7 +2740,7 @@ const ZWToken: React.FC = () => {
                         }}
                       >
                         {intl.formatMessage({ id: 'pages.zwtoken.deposit.currentAllowance' })}:{' '}
-                        {parseFloat(allowance).toFixed(6)} USDC
+                        {parseInt(allowance) > 0 ? 'Approved for All' : 'Not Approved'}
                       </div>
                     )}
 
@@ -3044,7 +3098,7 @@ const ZWToken: React.FC = () => {
                         }}
                       >
                         💡 {intl.formatMessage({ id: 'pages.zwtoken.remint.maxAmountTip' })}:{' '}
-                        {parseFloat(selectedRemintMaxAmount).toFixed(6)} ZWUSDC
+                        {parseInt(selectedRemintMaxAmount)} NFT{parseInt(selectedRemintMaxAmount) > 1 ? 's' : ''}
                       </div>
                     )}
 
@@ -3263,11 +3317,11 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
-                    const amountNum = parseFloat(amount);
+                    const amountNum = parseInt(amount);
                     if (amountNum > 0) {
                       return (
                         <span style={{ color: '#faad14', fontWeight: 'bold' }}>
-                          {parseFloat(amount).toFixed(6)} USDC
+                          {amountNum} NFT{amountNum > 1 ? 's' : ''}
                         </span>
                       );
                     }
@@ -3275,11 +3329,11 @@ const ZWToken: React.FC = () => {
                     if (record.isClaimed) {
                       return (
                         <span style={{ color: '#999' }}>
-                          0 USDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
+                          0 NFT ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
                         </span>
                       );
                     }
-                    return <span style={{ color: '#52c41a' }}>0 USDC</span>;
+                    return <span style={{ color: '#52c41a' }}>0 NFT</span>;
                   },
                 },
                 {
@@ -3537,11 +3591,11 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
-                    const amountNum = parseFloat(amount);
+                    const amountNum = parseInt(amount);
                     if (amountNum > 0) {
                       return (
                         <span style={{ color: '#faad14', fontWeight: 'bold' }}>
-                          {parseFloat(amount).toFixed(6)} ZWUSDC
+                          {amountNum} NFT{amountNum > 1 ? 's' : ''}
                         </span>
                       );
                     }
@@ -3549,11 +3603,11 @@ const ZWToken: React.FC = () => {
                     if (record.isClaimed) {
                       return (
                         <span style={{ color: '#999' }}>
-                          0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
+                          0 NFT ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
                         </span>
                       );
                     }
-                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
+                    return <span style={{ color: '#52c41a' }}>0 NFT</span>;
                   },
                 },
                 {
@@ -3817,11 +3871,11 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
-                    const amountNum = parseFloat(amount);
+                    const amountNum = parseInt(amount);
                     if (amountNum > 0) {
                       return (
                         <span style={{ color: '#faad14', fontWeight: 'bold' }}>
-                          {parseFloat(amount).toFixed(6)} ZWUSDC
+                          {amountNum} NFT{amountNum > 1 ? 's' : ''}
                         </span>
                       );
                     }
@@ -3829,11 +3883,11 @@ const ZWToken: React.FC = () => {
                     if (record.isClaimed) {
                       return (
                         <span style={{ color: '#999' }}>
-                          0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
+                          0 NFT ({intl.formatMessage({ id: 'pages.zwtoken.table.claimed' })})
                         </span>
                       );
                     }
-                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
+                    return <span style={{ color: '#52c41a' }}>0 NFT</span>;
                   },
                 },
                 {
@@ -4202,11 +4256,11 @@ const ZWToken: React.FC = () => {
                         </span>
                       );
                     }
-                    const amountNum = parseFloat(amount);
+                    const amountNum = parseInt(amount);
                     if (amountNum > 0) {
                       return (
                         <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
-                          {parseFloat(amount).toFixed(6)} ZWUSDC
+                          {amountNum} NFT{amountNum > 1 ? 's' : ''}
                         </span>
                       );
                     }
@@ -4214,11 +4268,11 @@ const ZWToken: React.FC = () => {
                     if (record.isClaimed) {
                       return (
                         <span style={{ color: '#999' }}>
-                          0 ZWUSDC ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})
+                          0 NFT ({intl.formatMessage({ id: 'pages.zwtoken.table.reminted' })})
                         </span>
                       );
                     }
-                    return <span style={{ color: '#52c41a' }}>0 ZWUSDC</span>;
+                    return <span style={{ color: '#52c41a' }}>0 NFT</span>;
                   },
                 },
                 {

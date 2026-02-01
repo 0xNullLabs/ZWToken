@@ -127,6 +127,10 @@ const ZWERC721: React.FC = () => {
   // Save the burn address generated for transfer, to detect if it's a burn transfer
   const [transferBurnAddress, setTransferBurnAddress] = useState<string | null>(null);
 
+  // Faucet modal state
+  const [faucetModalVisible, setFaucetModalVisible] = useState(false);
+  const [faucetLoading, setFaucetLoading] = useState(false);
+
   // Get current account
   const account = wallet?.accounts?.[0]?.address;
 
@@ -1333,6 +1337,80 @@ const ZWERC721: React.FC = () => {
     }
   };
 
+  // Faucet mint operation
+  const handleFaucetMint = async () => {
+    if (!account) {
+      message.error('请先连接钱包');
+      return;
+    }
+
+    // Check if contract addresses are configured
+    if (!CONTRACT_ADDRESSES.ERC721Faucet) {
+      message.error('水龙头合约地址未配置');
+      return;
+    }
+
+    setFaucetLoading(true);
+    try {
+      const provider = await getProvider();
+      if (!provider) {
+        setFaucetLoading(false);
+        return;
+      }
+
+      const signer = await provider.getSigner();
+
+      const faucetContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ERC721Faucet,
+        CONTRACT_ABIS.ERC721Faucet,
+        signer,
+      );
+
+      console.log('Calling faucetMint for:', account);
+
+      const tx = await faucetContract.faucetMint(account);
+
+      message.loading('正在铸造 NFT...', 0);
+      const receipt = await tx.wait();
+      message.destroy();
+
+      // Parse the Transfer event to get the tokenId
+      const transferEvent = receipt.logs.find((log: any) => {
+        try {
+          const parsed = faucetContract.interface.parseLog(log);
+          return parsed?.name === 'Transfer';
+        } catch {
+          return false;
+        }
+      });
+
+      let tokenId = 'N/A';
+      if (transferEvent) {
+        const parsed = faucetContract.interface.parseLog(transferEvent);
+        tokenId = parsed?.args?.tokenId?.toString() || 'N/A';
+      }
+
+      message.success(`成功铸造 NFT #${tokenId}！`);
+      console.log(`✅ Minted NFT #${tokenId}, tx: ${receipt.hash}`);
+
+      setFaucetModalVisible(false);
+      // Refresh balances
+      refreshBalances();
+    } catch (error: any) {
+      message.destroy();
+      console.error('Faucet mint error:', error);
+
+      let errorMessage = error.message || 'Unknown error';
+      if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+        errorMessage = '用户拒绝了交易';
+      }
+
+      message.error(`铸造失败: ${errorMessage}`);
+    } finally {
+      setFaucetLoading(false);
+    }
+  };
+
   // Remint operation
   const handleRemint = async (values: any) => {
     if (!account) {
@@ -1636,8 +1714,28 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             }}
           >
             <span style={{ color: '#fff', fontSize: 14 }}>
-              💡 需要测试 NFT？水龙头地址待配置
+              💡 需要测试 NFT？
             </span>
+            <Button
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!account) {
+                  message.warning('请先连接钱包');
+                  connect();
+                } else {
+                  setFaucetModalVisible(true);
+                }
+              }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                color: '#fff',
+                fontWeight: 'bold',
+              }}
+            >
+              NFT 水龙头
+            </Button>
           </div>
 
           {/* Balance information */}
@@ -1691,7 +1789,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     )}
                   </>
                 ) : (
-                  <span style={{ fontSize: 16, opacity: 0.9 }}>点击连接钱包</span>
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>连接钱包</span>
                 )}
               </div>
               {account && userTokenIds.length > 0 && (
@@ -1755,7 +1853,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     )}
                   </>
                 ) : (
-                  <span style={{ fontSize: 16, opacity: 0.9 }}>点击连接钱包</span>
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>连接钱包</span>
                 )}
               </div>
               {account && zwUserTokenIds.length > 0 && (
@@ -2316,6 +2414,89 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           </TabPane>
         </Tabs>
       </Card>
+
+      {/* Faucet Modal */}
+      <Modal
+        title="🚰 NFT 水龙头"
+        open={faucetModalVisible}
+        onCancel={() => setFaucetModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setFaucetModalVisible(false)}>
+            取消
+          </Button>,
+          <Button
+            key="mint"
+            type="primary"
+            loading={faucetLoading}
+            onClick={handleFaucetMint}
+          >
+            铸造 NFT
+          </Button>,
+        ]}
+      >
+        <div style={{ padding: '20px 0' }}>
+          <div style={{ marginBottom: 20, textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🎁</div>
+            <p style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
+              从水龙头免费铸造一个测试 NFT
+            </p>
+            {account && (
+              <div
+                style={{
+                  padding: 12,
+                  background: '#f5f5f5',
+                  borderRadius: 4,
+                  marginTop: 16,
+                  wordBreak: 'break-all',
+                }}
+              >
+                <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>
+                  接收地址:
+                </div>
+                <div style={{ fontSize: 14, fontFamily: 'monospace', color: '#1890ff' }}>
+                  {account}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ background: '#e6f7ff', padding: 16, borderRadius: 4, border: '1px solid #91d5ff' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <InfoCircleOutlined style={{ color: '#1890ff', marginTop: 2 }} />
+              <div style={{ fontSize: 12, color: '#666' }}>
+                <p style={{ margin: '0 0 8px 0' }}>
+                  <strong>水龙头说明：</strong>
+                </p>
+                <p style={{ margin: '0 0 4px 0' }}>
+                  • 每次调用会铸造一个新的 NFT
+                </p>
+                <p style={{ margin: '0 0 4px 0' }}>
+                  • Token ID 会自动递增
+                </p>
+                <p style={{ margin: '0 0 4px 0' }}>
+                  • 铸造完成后会自动刷新您的余额
+                </p>
+                <p style={{ margin: 0 }}>
+                  • 仅用于测试，请勿在主网使用
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {CONTRACT_ADDRESSES.ERC721Faucet && (
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              <a
+                href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.ERC721Faucet}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 12, color: '#1890ff' }}
+              >
+                查看水龙头合约 ↗
+              </a>
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* Modals for secret management - simplified for now */}
       {/* Add modals similar to ZWToken if needed */}

@@ -26,8 +26,11 @@ export const CONTRACT_ADDRESSES = {
   // ZWERC721
   ZWERC721: '0xb3687A20f67618af09D1c9ff73CaA266d04067DC',
   
-  // Underlying ERC721 Mock
+  // Underlying ERC721 Mock (also serves as faucet)
   UnderlyingNFT: '0xBF85386b4489b51672e23E9cBf9312A13D3D5093',
+  
+  // ERC721 Faucet (same as UnderlyingNFT)
+  ERC721Faucet: '0xBF85386b4489b51672e23E9cBf9312A13D3D5093',
 } as const;
 
 /**
@@ -103,6 +106,15 @@ export const CONTRACT_ABIS = {
     'function balanceOf(address owner) external view returns (uint256)',
     'function tokenURI(uint256 tokenId) external view returns (string memory)',
     'function getCurrentTokenId() external view returns (uint256)',
+  ],
+
+  // ERC721 Faucet functions
+  ERC721Faucet: [
+    'function faucetMint(address to) external returns (uint256)',
+    'function tokenIdCounter() external view returns (uint256)',
+    'function getCurrentTokenId() external view returns (uint256)',
+    'function ownerOf(uint256 tokenId) external view returns (address)',
+    'function balanceOf(address owner) external view returns (uint256)',
   ],
 
   // ZWERC721 contract (same structure as ZWERC20 but for NFTs)
