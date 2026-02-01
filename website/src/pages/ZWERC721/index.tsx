@@ -530,6 +530,8 @@ const ZWERC721: React.FC = () => {
     setSeed('');
     setSecretList([]);
     setTransferBurnAddress(null);
+    // Auto generate seed
+    handleGenerateBySeed('transfer');
   };
 
   // Handle Deposit Directly Burn button click (Simple Mode)
@@ -549,6 +551,8 @@ const ZWERC721: React.FC = () => {
     setSeed('');
     setAdvancedDepositSecretList([]);
     setAdvancedDepositSecretMode(undefined);
+    // Auto generate seed
+    handleGenerateBySeed('advancedDeposit');
   };
 
   // Handle Deposit Secret confirmation - Generate Burn Address (Simple Mode)
@@ -863,6 +867,19 @@ const ZWERC721: React.FC = () => {
     }
 
     setRemintSeedModalVisible(false);
+    message.success('Secret 已选择');
+  };
+
+  // Select SecretBySeed for Advanced Remint page
+  const handleSelectAdvancedRemintSecret = (secret: string, tokenIdFromList?: number) => {
+    withdrawForm.setFieldsValue({ secret });
+
+    // If tokenId is provided, set it
+    if (tokenIdFromList !== undefined && tokenIdFromList !== null) {
+      withdrawForm.setFieldsValue({ tokenId: tokenIdFromList });
+    }
+
+    setAdvancedRemintSeedModalVisible(false);
     message.success('Secret 已选择');
   };
 
@@ -2509,8 +2526,504 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
         </div>
       </Modal>
 
-      {/* Modals for secret management - simplified for now */}
-      {/* Add modals similar to ZWToken if needed */}
+      {/* Simple Mode Deposit Secret Modal - 选择隐私地址 */}
+      <Modal
+        title="选择隐私地址"
+        open={depositSecretModalVisible}
+        onCancel={() => {
+          setDepositSecretModalVisible(false);
+          depositSecretForm.resetFields();
+          setSeed('');
+          setDepositSecretList([]);
+        }}
+        footer={null}
+        width={900}
+      >
+        {depositSecretList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <p>正在生成隐私地址，请稍候...</p>
+          </div>
+        ) : (
+          <div>
+            <Table
+              dataSource={depositSecretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 300, x: 'max-content' }}
+              columns={[
+                {
+                  title: '序号',
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: 'Secret',
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret 已复制!');
+                          } else {
+                            message.error('复制失败');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'loading',
+                  key: 'status',
+                  width: 100,
+                  align: 'center',
+                  render: (loading: boolean) => {
+                    if (loading) {
+                      return <span style={{ color: '#999' }}>加载中...</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => (
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleSelectDepositSecret(record.secret)}
+                      disabled={record.loading}
+                    >
+                      选择
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+            <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              提示: 选择一个隐私地址用于存入您的 NFT。每个地址只能存入一个 NFT。
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Advanced Mode Deposit Secret Modal - 选择隐私地址 */}
+      <Modal
+        title="选择隐私地址 (高级模式)"
+        open={advancedDepositSecretModalVisible}
+        onCancel={() => {
+          setAdvancedDepositSecretModalVisible(false);
+          advancedDepositSecretForm.resetFields();
+          setSeed('');
+          setAdvancedDepositSecretList([]);
+        }}
+        footer={null}
+        width={900}
+      >
+        {advancedDepositSecretList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <p>正在生成隐私地址，请稍候...</p>
+          </div>
+        ) : (
+          <div>
+            <Table
+              dataSource={advancedDepositSecretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 300, x: 'max-content' }}
+              columns={[
+                {
+                  title: '序号',
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: 'Secret',
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret 已复制!');
+                          } else {
+                            message.error('复制失败');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'loading',
+                  key: 'status',
+                  width: 100,
+                  align: 'center',
+                  render: (loading: boolean) => {
+                    if (loading) {
+                      return <span style={{ color: '#999' }}>加载中...</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => (
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleSelectAdvancedDepositSecret(record.secret)}
+                      disabled={record.loading}
+                    >
+                      选择
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+            <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              提示: 选择一个隐私地址用于存入您的 NFT。每个地址只能存入一个 NFT。
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Transfer Secret Modal - 选择隐私地址 */}
+      <Modal
+        title="选择隐私地址 (转账)"
+        open={secretModalVisible}
+        onCancel={() => {
+          setSecretModalVisible(false);
+          secretForm.resetFields();
+          setSeed('');
+          setSecretList([]);
+        }}
+        footer={null}
+        width={900}
+      >
+        {secretList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <p>正在生成隐私地址，请稍候...</p>
+          </div>
+        ) : (
+          <div>
+            <Table
+              dataSource={secretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 300, x: 'max-content' }}
+              columns={[
+                {
+                  title: '序号',
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: 'Secret',
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret 已复制!');
+                          } else {
+                            message.error('复制失败');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'loading',
+                  key: 'status',
+                  width: 100,
+                  align: 'center',
+                  render: (loading: boolean) => {
+                    if (loading) {
+                      return <span style={{ color: '#999' }}>加载中...</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => (
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleSelectSecret(record.secret)}
+                      disabled={record.loading}
+                    >
+                      选择
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+            <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              提示: 选择一个隐私地址作为转账目标地址。
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Simple Mode Remint Secret Modal - 选择隐私地址 */}
+      <Modal
+        title="选择隐私地址 (提取)"
+        open={remintSeedModalVisible}
+        onCancel={() => {
+          setRemintSeedModalVisible(false);
+          setRemintSecretList([]);
+        }}
+        footer={[
+          <Button key="close" onClick={() => setRemintSeedModalVisible(false)}>
+            关闭
+          </Button>,
+        ]}
+        width={900}
+      >
+        {remintSecretList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <p>正在生成隐私地址，请稍候...</p>
+          </div>
+        ) : (
+          <div>
+            <Table
+              dataSource={remintSecretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 300, x: 'max-content' }}
+              columns={[
+                {
+                  title: '序号',
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: 'Secret',
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret 已复制!');
+                          } else {
+                            message.error('复制失败');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'loading',
+                  key: 'status',
+                  width: 100,
+                  align: 'center',
+                  render: (loading: boolean) => {
+                    if (loading) {
+                      return <span style={{ color: '#999' }}>加载中...</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => (
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleSelectRemintSecret(record.secret)}
+                      disabled={record.loading}
+                    >
+                      选择
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+            <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              提示: 选择一个隐私地址用于提取您的 NFT。
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Advanced Mode Remint Secret Modal - 选择隐私地址 */}
+      <Modal
+        title="选择隐私地址 (高级提取)"
+        open={advancedRemintSeedModalVisible}
+        onCancel={() => {
+          setAdvancedRemintSeedModalVisible(false);
+          setAdvancedRemintSecretList([]);
+        }}
+        footer={[
+          <Button key="close" onClick={() => setAdvancedRemintSeedModalVisible(false)}>
+            关闭
+          </Button>,
+        ]}
+        width={900}
+      >
+        {advancedRemintSecretList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <p>正在生成隐私地址，请稍候...</p>
+          </div>
+        ) : (
+          <div>
+            <Table
+              dataSource={advancedRemintSecretList}
+              rowKey="index"
+              pagination={false}
+              size="small"
+              scroll={{ y: 300, x: 'max-content' }}
+              columns={[
+                {
+                  title: '序号',
+                  dataIndex: 'index',
+                  key: 'index',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: 'Secret',
+                  dataIndex: 'secret',
+                  key: 'secret',
+                  width: 120,
+                  ellipsis: true,
+                  render: (text: string) => (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                        {text.substring(0, 4)}...{text.substring(text.length - 4)}
+                      </span>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={async () => {
+                          const success = await copyToClipboard(text);
+                          if (success) {
+                            message.success('Secret 已复制!');
+                          } else {
+                            message.error('复制失败');
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto' }}
+                        icon={<CopyOutlined />}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'loading',
+                  key: 'status',
+                  width: 100,
+                  align: 'center',
+                  render: (loading: boolean) => {
+                    if (loading) {
+                      return <span style={{ color: '#999' }}>加载中...</span>;
+                    }
+                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  align: 'center',
+                  render: (_, record) => (
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleSelectAdvancedRemintSecret(record.secret)}
+                      disabled={record.loading}
+                    >
+                      选择
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+            <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              提示: 选择一个隐私地址用于提取您的 NFT。
+            </p>
+          </div>
+        )}
+      </Modal>
     </PageContainer>
   );
 };
