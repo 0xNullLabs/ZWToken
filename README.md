@@ -770,3 +770,58 @@ Made with ❤️ using Circom, Solidity, and ethers.js
 **Deployer:** `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`
 
 **Status:** ✅ All contracts verified on Etherscan
+
+### Sepolia - February 1, 2026 at 11:28 AM
+
+**Contract Addresses:**
+
+- PoseidonT3: [`0x0305de4B19eaae16947d8b7bec64d29A86B22189`](https://sepolia.etherscan.io/address/0x0305de4B19eaae16947d8b7bec64d29A86B22189)
+
+**ZWETH Token:**
+
+- ZWETH: [`0x48E4C0f0BE2a996b36F72dED5A21C170a2404796`](https://sepolia.etherscan.io/address/0x48E4C0f0BE2a996b36F72dED5A21C170a2404796)
+- Verifier: [`0x524a87356540B36BBD82F470B5189ec973B2D759`](https://sepolia.etherscan.io/address/0x524a87356540B36BBD82F470B5189ec973B2D759)
+- Name: ZK Wrapper ETH
+- Symbol: ZWETH
+
+**ZWERC20 Token:**
+
+- ZWERC20: [`0x7E45741E01F5830Ff69a9faB1B6bd3f953da0503`](https://sepolia.etherscan.io/address/0x7E45741E01F5830Ff69a9faB1B6bd3f953da0503)
+- Verifier: [`0x8C559486527EE8Ed6EA492a1fB061ead7187Db74`](https://sepolia.etherscan.io/address/0x8C559486527EE8Ed6EA492a1fB061ead7187Db74)
+- Underlying Token (USDC): [`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`](https://sepolia.etherscan.io/address/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
+- Name: ZK Wrapper USDC
+- Symbol: ZWUSDC
+- Decimals: 6
+
+**ZWERC721 Token:**
+
+- ZWERC721: [`0x12E93b79773B38c0f2bE019D41B23175EDb0254b`](https://sepolia.etherscan.io/address/0x12E93b79773B38c0f2bE019D41B23175EDb0254b) ⭐ **NEW**
+- Verifier: [`0x8C559486527EE8Ed6EA492a1fB061ead7187Db74`](https://sepolia.etherscan.io/address/0x8C559486527EE8Ed6EA492a1fB061ead7187Db74)
+- Underlying Token: [`0xBF85386b4489b51672e23E9cBf9312A13D3D5093`](https://sepolia.etherscan.io/address/0xBF85386b4489b51672e23E9cBf9312A13D3D5093)
+- Name: ZK Wrapper Test ERC721 Faucet
+- Symbol: ZWTEST721
+
+**ZWERC1155 Token:**
+
+- ZWERC1155: [`0xc3DB1B665E323cb19fAddAa33aBe49E663560A28`](https://sepolia.etherscan.io/address/0xc3DB1B665E323cb19fAddAa33aBe49E663560A28)
+- Verifier: [`0x8C559486527EE8Ed6EA492a1fB061ead7187Db74`](https://sepolia.etherscan.io/address/0x8C559486527EE8Ed6EA492a1fB061ead7187Db74)
+- Underlying Token: [`0x70989278F35C73A204819E8e73c5f3EBa93f3900`](https://sepolia.etherscan.io/address/0x70989278F35C73A204819E8e73c5f3EBa93f3900)
+- Name: ZK Wrapper Test ERC1155 Faucet
+- Symbol: ZWTEST1155
+
+**Fee Configuration:**
+
+- Fee Collector: `0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e`
+- Fee Denominator: 10000
+- Deposit Fee: 0 (0.00%)
+- Remint Fee: 0 (0.00%)
+- Withdraw Fee: 0 (0.00%)
+- Min Deposit Fee: 0
+- Min Withdraw Fee: 0
+- Min Remint Fee: 0
+
+**Deployer:** `0xb54cCfa7eDFcF0236D109fe9e7535D3c7b761cCb`
+
+**Status:** ✅ All contracts verified on Etherscan
+
+**Note:** ZWERC721 contract has been redeployed with updated code. Previous address: `0xb3687A20f67618af09D1c9ff73CaA266d04067DC`
