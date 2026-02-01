@@ -726,32 +726,138 @@ const ZWERC721: React.FC = () => {
           setSecretList(secrets);
         }
       }
-      message.success('Seed 已生成，正在查询余额...');
+      message.success('Seed 已生成，正在查询 NFT...');
 
-      // Note: For ERC721, we need tokenId to query
-      // For now, mark all as loading and let user select
-      // In a real implementation, you might want to scan for specific tokenIds
-      
-      // Mark all as ready (no balance query needed for address generation)
-      setTimeout(() => {
-        const updatedSecrets = secrets.map(s => ({ ...s, loading: false, amount: 'N/A', isClaimed: false }));
+      // Get underlying NFT contract to get current token counter
+      // Use ERC721Faucet ABI which has tokenIdCounter
+      const underlyingNftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721Faucet,
+        provider,
+      );
+
+      // ZWERC721 contract for checking owner and nullifier
+      const zwerc721Contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        provider,
+      );
+
+      // Get current token counter to know how many NFTs to scan
+      // Try tokenIdCounter first, then getCurrentTokenId as fallback
+      let currentTokenId: number;
+      try {
+        currentTokenId = Number(await underlyingNftContract.tokenIdCounter());
+        console.log(`Got tokenIdCounter: ${currentTokenId}`);
+      } catch (e) {
+        try {
+          currentTokenId = Number(await underlyingNftContract.getCurrentTokenId());
+          console.log(`Got getCurrentTokenId: ${currentTokenId}`);
+        } catch (e2) {
+          console.error('Failed to get token counter, defaulting to 100:', e2);
+          currentTokenId = 100; // Default fallback
+        }
+      }
+      console.log(`Scanning NFTs from tokenId 0 to ${currentTokenId - 1} for burn addresses`);
+
+      // Helper function to update state based on target mode
+      const updateSecretList = (
+        updater: (prev: typeof secrets) => typeof secrets
+      ) => {
         if (targetMode === 'deposit') {
-          setDepositSecretList(updatedSecrets);
+          setDepositSecretList(updater);
         } else if (targetMode === 'transfer') {
-          setSecretList(updatedSecrets);
+          setSecretList(updater);
         } else if (targetMode === 'advancedDeposit') {
-          setAdvancedDepositSecretList(updatedSecrets);
+          setAdvancedDepositSecretList(updater);
         } else {
           if (depositSecretModalVisible) {
-            setDepositSecretList(updatedSecrets);
+            setDepositSecretList(updater);
           } else if (advancedDepositSecretModalVisible) {
-            setAdvancedDepositSecretList(updatedSecrets);
+            setAdvancedDepositSecretList(updater);
           } else {
-            setSecretList(updatedSecrets);
+            setSecretList(updater);
           }
         }
-        message.success('查询完成');
-      }, 500);
+      };
+
+      // Query NFT ownership for each Secret
+      for (let i = 0; i < secrets.length; i++) {
+        try {
+          const secret = secrets[i].secret;
+          const ownedTokenIds: number[] = [];
+          let hasClaimedNullifier = false;
+
+          // For each tokenId, check if this secret owns it in ZWERC721
+          for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+            try {
+              // Generate privacy address for this secret + tokenId combination
+              const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
+
+              // Check if this privacy address owns this tokenId in ZWERC721
+              try {
+                const owner = await zwerc721Contract.ownerOf(tokenId);
+                if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
+                  ownedTokenIds.push(tokenId);
+
+                  // Check if nullifier for this tokenId is already used
+                  const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+                  const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+                  if (isNullifierUsed) {
+                    hasClaimedNullifier = true;
+                  }
+                }
+              } catch (ownerError) {
+                // Token might not exist in ZWERC721, skip
+              }
+            } catch (deriveError) {
+              // Skip this tokenId if derive fails
+              console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
+            }
+          }
+
+          // Format amount as tokenId list or "0 NFT"
+          const amountDisplay = ownedTokenIds.length > 0
+            ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
+            : '0 NFT';
+
+          // Address display: always generate an address using tokenId=0 as representative
+          // For ERC721, each secret+tokenId has a unique address, we show tokenId=0's address as reference
+          let displayAddress = '';
+          if (ownedTokenIds.length > 0) {
+            // Show the first owned NFT's address
+            const { privacyAddress } = await deriveFromSecret(secret, BigInt(ownedTokenIds[0]));
+            displayAddress = privacyAddress;
+          } else {
+            // Show tokenId=0's address as representative (marked in UI that actual address depends on tokenId)
+            const { privacyAddress } = await deriveFromSecret(secret, 0n);
+            displayAddress = privacyAddress;
+          }
+
+          // isClaimed is true only if nullifier is used (not based on whether NFTs exist)
+          // For deposit mode, isClaimed=false means available for deposit
+          const isClaimed = hasClaimedNullifier;
+
+          updateSecretList((prev) =>
+            prev.map((item, idx) =>
+              idx === i
+                ? { ...item, address: displayAddress, amount: amountDisplay, loading: false, isClaimed }
+                : item
+            )
+          );
+        } catch (error) {
+          console.error(`Failed to query Secret ${i + 1}:`, error);
+          updateSecretList((prev) =>
+            prev.map((item, idx) =>
+              idx === i
+                ? { ...item, address: '', amount: '查询失败', loading: false, isClaimed: false }
+                : item
+            )
+          );
+        }
+      }
+
+      message.success('查询完成');
     } catch (error: any) {
       console.error('Failed to generate Seed:', error);
       message.error(`生成 Seed 失败: ${error.message}`);
@@ -838,14 +944,99 @@ const ZWERC721: React.FC = () => {
       }
 
       setRemintSecretList(secrets);
-      message.success('Seed 已生成，正在查询余额...');
+      message.success('Seed 已生成，正在查询 NFT...');
 
-      // Mark as ready (simplified for NFTs)
-      setTimeout(() => {
-        const updatedSecrets = secrets.map(s => ({ ...s, loading: false, amount: 'N/A', isClaimed: false }));
-        setRemintSecretList(updatedSecrets);
-        message.success('查询完成');
-      }, 500);
+      // Get underlying NFT contract to get current token counter
+      const underlyingNftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721Faucet,
+        provider,
+      );
+
+      // ZWERC721 contract for checking owner and nullifier
+      const zwerc721Contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        provider,
+      );
+
+      // Get current token counter
+      let currentTokenId: number;
+      try {
+        currentTokenId = Number(await underlyingNftContract.tokenIdCounter());
+      } catch (e) {
+        try {
+          currentTokenId = Number(await underlyingNftContract.getCurrentTokenId());
+        } catch (e2) {
+          currentTokenId = 100;
+        }
+      }
+
+      // Query NFT ownership for each Secret
+      for (let i = 0; i < secrets.length; i++) {
+        try {
+          const secret = secrets[i].secret;
+          const ownedTokenIds: number[] = [];
+          let hasClaimedNullifier = false;
+
+          for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+            try {
+              const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
+              try {
+                const owner = await zwerc721Contract.ownerOf(tokenId);
+                if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
+                  ownedTokenIds.push(tokenId);
+                  const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+                  const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+                  if (isNullifierUsed) {
+                    hasClaimedNullifier = true;
+                  }
+                }
+              } catch (ownerError) {
+                // Token might not exist in ZWERC721
+              }
+            } catch (deriveError) {
+              console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
+            }
+          }
+
+          const amountDisplay = ownedTokenIds.length > 0
+            ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
+            : '0 NFT';
+
+          // Always generate an address using tokenId=0 as representative
+          let displayAddress = '';
+          if (ownedTokenIds.length > 0) {
+            const { privacyAddress } = await deriveFromSecret(secret, BigInt(ownedTokenIds[0]));
+            displayAddress = privacyAddress;
+          } else {
+            const { privacyAddress } = await deriveFromSecret(secret, 0n);
+            displayAddress = privacyAddress;
+          }
+
+          // For remint, isClaimed is true if nullifier is used
+          const isClaimed = hasClaimedNullifier;
+
+          setRemintSecretList((prev) =>
+            prev.map((item, idx) =>
+              idx === i
+                ? { ...item, address: displayAddress, amount: amountDisplay, loading: false, isClaimed }
+                : item
+            )
+          );
+        } catch (error) {
+          console.error(`Failed to query Secret ${i + 1}:`, error);
+          setRemintSecretList((prev) =>
+            prev.map((item, idx) =>
+              idx === i
+                ? { ...item, address: '', amount: '查询失败', loading: false, isClaimed: false }
+                : item
+            )
+          );
+        }
+      }
+
+      message.success('查询完成');
     } catch (error: any) {
       console.error('Failed to generate Seed:', error);
       message.error(`生成 Seed 失败: ${error.message}`);
@@ -937,14 +1128,99 @@ const ZWERC721: React.FC = () => {
       }
 
       setAdvancedRemintSecretList(secrets);
-      message.success('Seed 已生成，正在查询余额...');
+      message.success('Seed 已生成，正在查询 NFT...');
 
-      // Mark as ready (simplified for NFTs)
-      setTimeout(() => {
-        const updatedSecrets = secrets.map(s => ({ ...s, loading: false, amount: 'N/A', isClaimed: false }));
-        setAdvancedRemintSecretList(updatedSecrets);
-        message.success('查询完成');
-      }, 500);
+      // Get underlying NFT contract to get current token counter
+      const underlyingNftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721Faucet,
+        provider,
+      );
+
+      // ZWERC721 contract for checking owner and nullifier
+      const zwerc721Contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
+        provider,
+      );
+
+      // Get current token counter
+      let currentTokenId: number;
+      try {
+        currentTokenId = Number(await underlyingNftContract.tokenIdCounter());
+      } catch (e) {
+        try {
+          currentTokenId = Number(await underlyingNftContract.getCurrentTokenId());
+        } catch (e2) {
+          currentTokenId = 100;
+        }
+      }
+
+      // Query NFT ownership for each Secret
+      for (let i = 0; i < secrets.length; i++) {
+        try {
+          const secret = secrets[i].secret;
+          const ownedTokenIds: number[] = [];
+          let hasClaimedNullifier = false;
+
+          for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+            try {
+              const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
+              try {
+                const owner = await zwerc721Contract.ownerOf(tokenId);
+                if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
+                  ownedTokenIds.push(tokenId);
+                  const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+                  const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+                  if (isNullifierUsed) {
+                    hasClaimedNullifier = true;
+                  }
+                }
+              } catch (ownerError) {
+                // Token might not exist in ZWERC721
+              }
+            } catch (deriveError) {
+              console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
+            }
+          }
+
+          const amountDisplay = ownedTokenIds.length > 0
+            ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
+            : '0 NFT';
+
+          // Always generate an address using tokenId=0 as representative
+          let displayAddress = '';
+          if (ownedTokenIds.length > 0) {
+            const { privacyAddress } = await deriveFromSecret(secret, BigInt(ownedTokenIds[0]));
+            displayAddress = privacyAddress;
+          } else {
+            const { privacyAddress } = await deriveFromSecret(secret, 0n);
+            displayAddress = privacyAddress;
+          }
+
+          // For remint, isClaimed is true if nullifier is used
+          const isClaimed = hasClaimedNullifier;
+
+          setAdvancedRemintSecretList((prev) =>
+            prev.map((item, idx) =>
+              idx === i
+                ? { ...item, address: displayAddress, amount: amountDisplay, loading: false, isClaimed }
+                : item
+            )
+          );
+        } catch (error) {
+          console.error(`Failed to query Secret ${i + 1}:`, error);
+          setAdvancedRemintSecretList((prev) =>
+            prev.map((item, idx) =>
+              idx === i
+                ? { ...item, address: '', amount: '查询失败', loading: false, isClaimed: false }
+                : item
+            )
+          );
+        }
+      }
+
+      message.success('查询完成');
     } catch (error: any) {
       console.error('Failed to generate Seed:', error);
       message.error(`生成 Seed 失败: ${error.message}`);
@@ -2556,7 +2832,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   title: '序号',
                   dataIndex: 'index',
                   key: 'index',
-                  width: 80,
+                  width: 60,
                   align: 'center',
                 },
                 {
@@ -2588,14 +2864,69 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '状态',
-                  dataIndex: 'loading',
-                  key: 'status',
+                  title: '隐私地址',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 130,
+                  ellipsis: true,
+                  render: (text: string, record: any) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('地址已复制!');
+                            } else {
+                              message.error('复制失败');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
+                },
+                {
+                  title: 'NFT 数量',
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 180,
+                  render: (amount: string, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>查询中...</span>;
+                    }
+                    if (amount === '查询失败') {
+                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    }
+                    // Check if has NFTs
+                    if (amount.startsWith('0 NFT')) {
+                      return <span style={{ color: '#52c41a' }}>{amount}</span>;
+                    }
+                    return <span style={{ color: '#faad14', fontWeight: 'bold' }}>{amount}</span>;
+                  },
+                },
+                {
+                  title: '是否已提取',
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
                   width: 100,
                   align: 'center',
-                  render: (loading: boolean) => {
-                    if (loading) {
-                      return <span style={{ color: '#999' }}>加载中...</span>;
+                  render: (isClaimed: boolean, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
                     }
                     return <span style={{ color: '#52c41a' }}>可用</span>;
                   },
@@ -2603,23 +2934,28 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 {
                   title: '操作',
                   key: 'action',
-                  width: 100,
+                  width: 80,
                   align: 'center',
-                  render: (_, record) => (
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() => handleSelectDepositSecret(record.secret)}
-                      disabled={record.loading}
-                    >
-                      选择
-                    </Button>
-                  ),
+                  render: (_: any, record: any) => {
+                    // For deposit, we want addresses with 0 NFT (available for deposit)
+                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
+                    return (
+                      <Button
+                        type={hasNfts ? 'default' : 'primary'}
+                        size="small"
+                        onClick={() => handleSelectDepositSecret(record.secret)}
+                        disabled={record.loading || hasNfts}
+                        title={hasNfts ? '该地址已有 NFT' : '选择此地址'}
+                      >
+                        选择
+                      </Button>
+                    );
+                  },
                 },
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个隐私地址用于存入您的 NFT。每个地址只能存入一个 NFT。
+              提示: 选择一个隐私地址用于存入您的 NFT。已有 NFT 的地址不可选择。
             </p>
           </div>
         )}
@@ -2636,7 +2972,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           setAdvancedDepositSecretList([]);
         }}
         footer={null}
-        width={900}
+        width={1000}
       >
         {advancedDepositSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
@@ -2655,7 +2991,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   title: '序号',
                   dataIndex: 'index',
                   key: 'index',
-                  width: 80,
+                  width: 60,
                   align: 'center',
                 },
                 {
@@ -2687,14 +3023,68 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '状态',
-                  dataIndex: 'loading',
-                  key: 'status',
+                  title: '隐私地址',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 130,
+                  ellipsis: true,
+                  render: (text: string, record: any) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('地址已复制!');
+                            } else {
+                              message.error('复制失败');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
+                },
+                {
+                  title: 'NFT 数量',
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 180,
+                  render: (amount: string, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>查询中...</span>;
+                    }
+                    if (amount === '查询失败') {
+                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    }
+                    if (amount.startsWith('0 NFT')) {
+                      return <span style={{ color: '#52c41a' }}>{amount}</span>;
+                    }
+                    return <span style={{ color: '#faad14', fontWeight: 'bold' }}>{amount}</span>;
+                  },
+                },
+                {
+                  title: '是否已提取',
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
                   width: 100,
                   align: 'center',
-                  render: (loading: boolean) => {
-                    if (loading) {
-                      return <span style={{ color: '#999' }}>加载中...</span>;
+                  render: (isClaimed: boolean, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
                     }
                     return <span style={{ color: '#52c41a' }}>可用</span>;
                   },
@@ -2702,23 +3092,27 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 {
                   title: '操作',
                   key: 'action',
-                  width: 100,
+                  width: 80,
                   align: 'center',
-                  render: (_, record) => (
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() => handleSelectAdvancedDepositSecret(record.secret)}
-                      disabled={record.loading}
-                    >
-                      选择
-                    </Button>
-                  ),
+                  render: (_: any, record: any) => {
+                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
+                    return (
+                      <Button
+                        type={hasNfts ? 'default' : 'primary'}
+                        size="small"
+                        onClick={() => handleSelectAdvancedDepositSecret(record.secret)}
+                        disabled={record.loading || hasNfts}
+                        title={hasNfts ? '该地址已有 NFT' : '选择此地址'}
+                      >
+                        选择
+                      </Button>
+                    );
+                  },
                 },
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个隐私地址用于存入您的 NFT。每个地址只能存入一个 NFT。
+              提示: 选择一个隐私地址用于存入您的 NFT。已有 NFT 的地址不可选择。
             </p>
           </div>
         )}
@@ -2735,7 +3129,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           setSecretList([]);
         }}
         footer={null}
-        width={900}
+        width={1000}
       >
         {secretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
@@ -2754,7 +3148,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   title: '序号',
                   dataIndex: 'index',
                   key: 'index',
-                  width: 80,
+                  width: 60,
                   align: 'center',
                 },
                 {
@@ -2786,14 +3180,68 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '状态',
-                  dataIndex: 'loading',
-                  key: 'status',
+                  title: '隐私地址',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 130,
+                  ellipsis: true,
+                  render: (text: string, record: any) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('地址已复制!');
+                            } else {
+                              message.error('复制失败');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
+                },
+                {
+                  title: 'NFT 数量',
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 180,
+                  render: (amount: string, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>查询中...</span>;
+                    }
+                    if (amount === '查询失败') {
+                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    }
+                    if (amount.startsWith('0 NFT')) {
+                      return <span style={{ color: '#52c41a' }}>{amount}</span>;
+                    }
+                    return <span style={{ color: '#faad14', fontWeight: 'bold' }}>{amount}</span>;
+                  },
+                },
+                {
+                  title: '是否已提取',
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
                   width: 100,
                   align: 'center',
-                  render: (loading: boolean) => {
-                    if (loading) {
-                      return <span style={{ color: '#999' }}>加载中...</span>;
+                  render: (isClaimed: boolean, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
                     }
                     return <span style={{ color: '#52c41a' }}>可用</span>;
                   },
@@ -2801,18 +3249,21 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 {
                   title: '操作',
                   key: 'action',
-                  width: 100,
+                  width: 80,
                   align: 'center',
-                  render: (_, record) => (
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() => handleSelectSecret(record.secret)}
-                      disabled={record.loading}
-                    >
-                      选择
-                    </Button>
-                  ),
+                  render: (_: any, record: any) => {
+                    // For transfer, allow selecting any address (even with NFTs)
+                    return (
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={() => handleSelectSecret(record.secret)}
+                        disabled={record.loading}
+                      >
+                        选择
+                      </Button>
+                    );
+                  },
                 },
               ]}
             />
@@ -2836,7 +3287,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             关闭
           </Button>,
         ]}
-        width={900}
+        width={1000}
       >
         {remintSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
@@ -2855,7 +3306,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   title: '序号',
                   dataIndex: 'index',
                   key: 'index',
-                  width: 80,
+                  width: 60,
                   align: 'center',
                 },
                 {
@@ -2887,14 +3338,68 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '状态',
-                  dataIndex: 'loading',
-                  key: 'status',
+                  title: '隐私地址',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 130,
+                  ellipsis: true,
+                  render: (text: string, record: any) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('地址已复制!');
+                            } else {
+                              message.error('复制失败');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
+                },
+                {
+                  title: 'NFT 数量',
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 180,
+                  render: (amount: string, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>查询中...</span>;
+                    }
+                    if (amount === '查询失败') {
+                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    }
+                    if (amount.startsWith('0 NFT')) {
+                      return <span style={{ color: '#999' }}>{amount}</span>;
+                    }
+                    return <span style={{ color: '#faad14', fontWeight: 'bold' }}>{amount}</span>;
+                  },
+                },
+                {
+                  title: '是否已提取',
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
                   width: 100,
                   align: 'center',
-                  render: (loading: boolean) => {
-                    if (loading) {
-                      return <span style={{ color: '#999' }}>加载中...</span>;
+                  render: (isClaimed: boolean, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
                     }
                     return <span style={{ color: '#52c41a' }}>可用</span>;
                   },
@@ -2902,23 +3407,32 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 {
                   title: '操作',
                   key: 'action',
-                  width: 100,
+                  width: 80,
                   align: 'center',
-                  render: (_, record) => (
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() => handleSelectRemintSecret(record.secret)}
-                      disabled={record.loading}
-                    >
-                      选择
-                    </Button>
-                  ),
+                  render: (_: any, record: any) => {
+                    // For remint, only allow selecting addresses with NFTs
+                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
+                    const isAlreadyClaimed = record.isClaimed;
+                    return (
+                      <Button
+                        type={hasNfts && !isAlreadyClaimed ? 'primary' : 'default'}
+                        size="small"
+                        onClick={() => handleSelectRemintSecret(record.secret)}
+                        disabled={record.loading || !hasNfts || isAlreadyClaimed}
+                        title={
+                          isAlreadyClaimed ? '已提取' : 
+                          !hasNfts ? '没有可提取的 NFT' : '选择此地址'
+                        }
+                      >
+                        选择
+                      </Button>
+                    );
+                  },
                 },
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个隐私地址用于提取您的 NFT。
+              提示: 选择一个有 NFT 且未提取的隐私地址来提取您的 NFT。
             </p>
           </div>
         )}
@@ -2937,7 +3451,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             关闭
           </Button>,
         ]}
-        width={900}
+        width={1000}
       >
         {advancedRemintSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
@@ -2956,7 +3470,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   title: '序号',
                   dataIndex: 'index',
                   key: 'index',
-                  width: 80,
+                  width: 60,
                   align: 'center',
                 },
                 {
@@ -2988,14 +3502,68 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '状态',
-                  dataIndex: 'loading',
-                  key: 'status',
+                  title: '隐私地址',
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 130,
+                  ellipsis: true,
+                  render: (text: string, record: any) => {
+                    if (record.loading || !text) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
+                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
+                        </span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            const success = await copyToClipboard(text);
+                            if (success) {
+                              message.success('地址已复制!');
+                            } else {
+                              message.error('复制失败');
+                            }
+                          }}
+                          style={{ padding: 0, height: 'auto' }}
+                          icon={<CopyOutlined />}
+                        />
+                      </div>
+                    );
+                  },
+                },
+                {
+                  title: 'NFT 数量',
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 180,
+                  render: (amount: string, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>查询中...</span>;
+                    }
+                    if (amount === '查询失败') {
+                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    }
+                    if (amount.startsWith('0 NFT')) {
+                      return <span style={{ color: '#999' }}>{amount}</span>;
+                    }
+                    return <span style={{ color: '#faad14', fontWeight: 'bold' }}>{amount}</span>;
+                  },
+                },
+                {
+                  title: '是否已提取',
+                  dataIndex: 'isClaimed',
+                  key: 'isClaimed',
                   width: 100,
                   align: 'center',
-                  render: (loading: boolean) => {
-                    if (loading) {
-                      return <span style={{ color: '#999' }}>加载中...</span>;
+                  render: (isClaimed: boolean, record: any) => {
+                    if (record.loading) {
+                      return <span style={{ color: '#999' }}>-</span>;
+                    }
+                    if (isClaimed) {
+                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
                     }
                     return <span style={{ color: '#52c41a' }}>可用</span>;
                   },
@@ -3003,23 +3571,31 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 {
                   title: '操作',
                   key: 'action',
-                  width: 100,
+                  width: 80,
                   align: 'center',
-                  render: (_, record) => (
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() => handleSelectAdvancedRemintSecret(record.secret)}
-                      disabled={record.loading}
-                    >
-                      选择
-                    </Button>
-                  ),
+                  render: (_: any, record: any) => {
+                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
+                    const isAlreadyClaimed = record.isClaimed;
+                    return (
+                      <Button
+                        type={hasNfts && !isAlreadyClaimed ? 'primary' : 'default'}
+                        size="small"
+                        onClick={() => handleSelectAdvancedRemintSecret(record.secret)}
+                        disabled={record.loading || !hasNfts || isAlreadyClaimed}
+                        title={
+                          isAlreadyClaimed ? '已提取' : 
+                          !hasNfts ? '没有可提取的 NFT' : '选择此地址'
+                        }
+                      >
+                        选择
+                      </Button>
+                    );
+                  },
                 },
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个隐私地址用于提取您的 NFT。
+              提示: 选择一个有 NFT 且未提取的隐私地址来提取您的 NFT。
             </p>
           </div>
         )}
