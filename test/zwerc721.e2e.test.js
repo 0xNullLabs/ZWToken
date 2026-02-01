@@ -820,4 +820,123 @@ describe("ZWERC721 - E2E with Real ZK Proof", function () {
 
     console.log("\n🎉 Same Person Consecutive Remint Test PASSED!");
   });
+
+  it("Re-deposit same tokenId after redeem should succeed", async function () {
+    this.timeout(300000);
+
+    console.log("\n" + "=".repeat(70));
+    console.log("📝 ZWERC721 Re-deposit After Redeem Test");
+    console.log("   (Verifies ZW token is burned on redeem, allowing re-deposit)");
+    console.log("=".repeat(70));
+
+    // Mint a new NFT for this test
+    await underlying721.mint(alice.address); // tokenId = 5
+    const nftTokenId = 5n;
+    const SECRET_REDEPOSIT = 555555555n;
+
+    // ========== Phase 1: First deposit ==========
+    console.log("\n📌 Phase 1: Alice deposits NFT (tokenId=5)");
+
+    await underlying721
+      .connect(alice)
+      .approve(await zwerc721.getAddress(), nftTokenId);
+    await zwerc721.connect(alice).deposit(alice.address, nftTokenId, 1, "0x");
+    
+    expect(await zwerc721.ownerOf(nftTokenId)).to.equal(alice.address);
+    console.log("   ✅ First deposit successful");
+
+    // ========== Phase 2: Transfer to privacy address ==========
+    console.log("\n📌 Phase 2: Transfer to privacy address");
+
+    const { addr20, q, privacyAddress } = derivePrivacyAddress(
+      nftTokenId,
+      SECRET_REDEPOSIT
+    );
+
+    await zwerc721
+      .connect(alice)
+      .transferFrom(alice.address, privacyAddress, nftTokenId);
+    console.log(`   ✅ NFT transferred to privacy address: ${privacyAddress}`);
+
+    // ========== Phase 3: Remint with redeem=true ==========
+    console.log("\n📌 Phase 3: Remint with redeem=true (withdraw underlying NFT)");
+
+    // Rebuild Merkle tree
+    const leafCount = await zwerc721.getCommitLeafCount(0);
+    const [, recipients, amounts] = await zwerc721.getCommitLeaves(0, 0, leafCount);
+
+    const tree = new IncrementalMerkleTree(20);
+    for (let i = 0; i < recipients.length; i++) {
+      const commitment = poseidon([BigInt(recipients[i]), BigInt(amounts[i])]);
+      tree.insert(commitment);
+    }
+
+    const localRoot = "0x" + tree.root.toString(16).padStart(64, "0");
+
+    // Generate proof
+    const commitment = poseidon([addr20, 1n]);
+    const commitmentIndex = tree.leaves.findIndex(
+      (leaf) => BigInt(leaf) === commitment
+    );
+    expect(commitmentIndex).to.be.gte(0);
+
+    const merkleProof = tree.getProof(commitmentIndex);
+    const { nullifierHex } = calculateNullifier(addr20, SECRET_REDEPOSIT);
+
+    const circuitInput = {
+      root: tree.root,
+      nullifier: BigInt(nullifierHex),
+      to: BigInt(alice.address),
+      remintAmount: 1n,
+      id: nftTokenId,
+      redeem: 1n,
+      relayerFee: 0n,
+      secret: SECRET_REDEPOSIT,
+      addr20: addr20,
+      commitAmount: 1n,
+      q: q,
+      pathElements: merkleProof.pathElements.map((e) => BigInt(e)),
+      pathIndices: merkleProof.pathIndices,
+    };
+
+    console.log("   ⏳ Generating ZK proof...");
+    const { proofBytes } = await generateZKProof(circuitInput);
+    console.log("   ✅ ZK proof generated!");
+
+    await expect(
+      zwerc721.remint(alice.address, nftTokenId, 1, {
+        commitment: localRoot,
+        nullifiers: [nullifierHex],
+        proverData: "0x",
+        relayerData: "0x",
+        redeem: true,
+        proof: proofBytes,
+      })
+    ).to.emit(zwerc721, "Reminted");
+
+    // Verify Alice received the underlying NFT
+    expect(await underlying721.ownerOf(nftTokenId)).to.equal(alice.address);
+    console.log("   ✅ Alice redeemed underlying NFT");
+
+    // Verify ZW token is burned (ownerOf should revert)
+    await expect(zwerc721.ownerOf(nftTokenId)).to.be.reverted;
+    console.log("   ✅ ZW token is burned (ownerOf reverts)");
+
+    // ========== Phase 4: Re-deposit same tokenId ==========
+    console.log("\n📌 Phase 4: Re-deposit same tokenId (should succeed)");
+
+    await underlying721
+      .connect(alice)
+      .approve(await zwerc721.getAddress(), nftTokenId);
+    
+    // This should NOT revert - the ZW token was burned during redeem
+    await expect(
+      zwerc721.connect(alice).deposit(alice.address, nftTokenId, 1, "0x")
+    ).to.emit(zwerc721, "Deposited");
+
+    expect(await zwerc721.ownerOf(nftTokenId)).to.equal(alice.address);
+    console.log("   ✅ Re-deposit successful! Alice owns zwNFT #5 again");
+
+    console.log("\n🎉 Re-deposit After Redeem Test PASSED!");
+  });
 });

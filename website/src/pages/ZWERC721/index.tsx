@@ -263,16 +263,12 @@ const ZWERC721: React.FC = () => {
       const zwUserTokens: number[] = [];
       for (let i = 0; i < Number(maxTokenId); i++) {
         try {
-          const tokenExistsInZw = await zwContract.tokenExists(i);
-          if (tokenExistsInZw) {
-            const owner = await zwContract.ownerOf(i);
-            if (owner.toLowerCase() === account.toLowerCase()) {
-              zwUserTokens.push(i);
-            }
+          const owner = await zwContract.ownerOf(i);
+          if (owner.toLowerCase() === account.toLowerCase()) {
+            zwUserTokens.push(i);
           }
-        } catch (error) {
-          // Token doesn't exist in ZW contract
-          console.log(`ZW TokenId ${i} doesn't exist`);
+        } catch {
+          // Token doesn't exist in ZW contract (ownerOf reverts for non-existent tokens)
         }
       }
 

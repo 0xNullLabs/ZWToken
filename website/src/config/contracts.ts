@@ -136,7 +136,6 @@ export const CONTRACT_ABIS = {
     'function hasCommitment(uint256 id, bytes32 commitment) external view returns (bool)',
     'function hasTokenFirstReceiptRecorded(uint256 id, address account) external view returns (bool)',
     'function nullifierUsed(bytes32 nullifier) external view returns (bool)',
-    'function tokenExists(uint256 tokenId) external view returns (bool)',
     // Preview functions
     'function previewDeposit(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',
     'function previewWithdraw(address to, uint256 id, uint256 amount, bytes data) external view returns (uint256)',

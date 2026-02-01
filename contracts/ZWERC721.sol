@@ -40,9 +40,6 @@ contract ZWERC721 is ERC721, BaseZWToken {
     // Per-tokenId first receipt tracking: tokenId => address => bool
     mapping(uint256 => mapping(address => bool)) public hasTokenFirstReceiptRecorded;
     
-    // Track which tokenIds have been minted as ZW tokens
-    mapping(uint256 => bool) public tokenExists;
-    
     // ========== Constructor ==========
     
     /**
@@ -86,7 +83,6 @@ contract ZWERC721 is ERC721, BaseZWToken {
         
         // Mint ZWERC721 to recipient
         _mint(to, id);
-        tokenExists[id] = true;
         
         // Note: For NFTs, fees are not applicable (amount is always 1, can't deduct fraction)
         // Protocol can charge fees via other mechanisms if needed
@@ -118,7 +114,6 @@ contract ZWERC721 is ERC721, BaseZWToken {
         
         // Burn ZWERC721 from msg.sender
         _burn(id);
-        tokenExists[id] = false;
         
         // Transfer underlying NFT to recipient
         underlying.transferFrom(address(this), to, id);
@@ -166,19 +161,16 @@ contract ZWERC721 is ERC721, BaseZWToken {
         );
         
         // Execute remint
+        // For NFTs: ZW token must exist (if not, underlying NFT was already redeemed)
+        require(_ownerOf(id) != address(0), "Token does not exist");
+        
         if (data.redeem) {
-            // Transfer underlying NFT to recipient
+            // Burn ZWERC721 token and transfer underlying NFT to recipient
+            _update(address(0), id, address(0));
             underlying.transferFrom(address(this), to, id);
         } else {
-            // For NFTs: Check if token exists at privacy address
-            address currentOwner = _ownerOf(id);
-            if (currentOwner != address(0)) {
-                // Use internal _update to bypass approval checks (ZK proof is the authorization)
-                _update(to, id, address(0));
-            } else {
-                // Token was burned or doesn't exist - mint new one
-                _mint(to, id);
-            }
+            // Transfer ZW token to new address (ZK proof is the authorization)
+            _update(to, id, address(0));
             _recordTokenCommitmentIfNeeded(id, to);
         }
         
