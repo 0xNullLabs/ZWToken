@@ -781,37 +781,50 @@ const ZWERC721: React.FC = () => {
         }
       };
 
-      // Query NFT ownership for each Secret
+      // Step 1: Build owner -> tokenIds mapping (scan once for all)
+      const owner2nftids: Map<string, number[]> = new Map();
+      console.log(`Building owner2nftids mapping for tokenIds 0 to ${currentTokenId - 1}...`);
+      
+      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+        try {
+          const owner = await zwerc721Contract.ownerOf(tokenId);
+          const ownerLower = owner.toLowerCase();
+          if (!owner2nftids.has(ownerLower)) {
+            owner2nftids.set(ownerLower, []);
+          }
+          owner2nftids.get(ownerLower)!.push(tokenId);
+        } catch (ownerError) {
+          // Token doesn't exist in ZWERC721, skip
+        }
+      }
+      console.log(`owner2nftids mapping built with ${owner2nftids.size} unique owners`);
+
+      // Step 2: For each secret, generate privacy addresses and lookup in mapping
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
           const ownedTokenIds: number[] = [];
           let hasClaimedNullifier = false;
 
-          // For each tokenId, check if this secret owns it in ZWERC721
+          // For each tokenId, generate privacy address and check if it owns this tokenId
           for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
             try {
-              // Generate privacy address for this secret + tokenId combination
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
-
-              // Check if this privacy address owns this tokenId in ZWERC721
-              try {
-                const owner = await zwerc721Contract.ownerOf(tokenId);
-                if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
-                  ownedTokenIds.push(tokenId);
-
-                  // Check if nullifier for this tokenId is already used
-                  const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-                  const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
-                  if (isNullifierUsed) {
-                    hasClaimedNullifier = true;
-                  }
+              const privacyAddressLower = privacyAddress.toLowerCase();
+              
+              // Check if this privacy address owns this specific tokenId
+              const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
+              if (ownedByAddress.includes(tokenId)) {
+                ownedTokenIds.push(tokenId);
+                
+                // Check if nullifier for this tokenId is already used
+                const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+                const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+                if (isNullifierUsed) {
+                  hasClaimedNullifier = true;
                 }
-              } catch (ownerError) {
-                // Token might not exist in ZWERC721, skip
               }
             } catch (deriveError) {
-              // Skip this tokenId if derive fails
               console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
             }
           }
@@ -821,27 +834,12 @@ const ZWERC721: React.FC = () => {
             ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
             : '0 NFT';
 
-          // Address display: always generate an address using tokenId=0 as representative
-          // For ERC721, each secret+tokenId has a unique address, we show tokenId=0's address as reference
-          let displayAddress = '';
-          if (ownedTokenIds.length > 0) {
-            // Show the first owned NFT's address
-            const { privacyAddress } = await deriveFromSecret(secret, BigInt(ownedTokenIds[0]));
-            displayAddress = privacyAddress;
-          } else {
-            // Show tokenId=0's address as representative (marked in UI that actual address depends on tokenId)
-            const { privacyAddress } = await deriveFromSecret(secret, 0n);
-            displayAddress = privacyAddress;
-          }
-
-          // isClaimed is true only if nullifier is used (not based on whether NFTs exist)
-          // For deposit mode, isClaimed=false means available for deposit
           const isClaimed = hasClaimedNullifier;
 
           updateSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, address: displayAddress, amount: amountDisplay, loading: false, isClaimed }
+                ? { ...item, amount: amountDisplay, loading: false, isClaimed }
                 : item
             )
           );
@@ -850,7 +848,7 @@ const ZWERC721: React.FC = () => {
           updateSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, address: '', amount: '查询失败', loading: false, isClaimed: false }
+                ? { ...item, amount: '查询失败', loading: false, isClaimed: false }
                 : item
             )
           );
@@ -972,7 +970,25 @@ const ZWERC721: React.FC = () => {
         }
       }
 
-      // Query NFT ownership for each Secret
+      // Step 1: Build owner -> tokenIds mapping (scan once for all)
+      const owner2nftids: Map<string, number[]> = new Map();
+      console.log(`Building owner2nftids mapping for tokenIds 0 to ${currentTokenId - 1}...`);
+      
+      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+        try {
+          const owner = await zwerc721Contract.ownerOf(tokenId);
+          const ownerLower = owner.toLowerCase();
+          if (!owner2nftids.has(ownerLower)) {
+            owner2nftids.set(ownerLower, []);
+          }
+          owner2nftids.get(ownerLower)!.push(tokenId);
+        } catch (ownerError) {
+          // Token doesn't exist in ZWERC721, skip
+        }
+      }
+      console.log(`owner2nftids mapping built with ${owner2nftids.size} unique owners`);
+
+      // Step 2: For each secret, generate privacy addresses and lookup in mapping
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
@@ -982,18 +998,18 @@ const ZWERC721: React.FC = () => {
           for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
             try {
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
-              try {
-                const owner = await zwerc721Contract.ownerOf(tokenId);
-                if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
-                  ownedTokenIds.push(tokenId);
-                  const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-                  const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
-                  if (isNullifierUsed) {
-                    hasClaimedNullifier = true;
-                  }
+              const privacyAddressLower = privacyAddress.toLowerCase();
+              
+              // Check if this privacy address owns this specific tokenId
+              const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
+              if (ownedByAddress.includes(tokenId)) {
+                ownedTokenIds.push(tokenId);
+                
+                const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+                const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+                if (isNullifierUsed) {
+                  hasClaimedNullifier = true;
                 }
-              } catch (ownerError) {
-                // Token might not exist in ZWERC721
               }
             } catch (deriveError) {
               console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
@@ -1004,23 +1020,12 @@ const ZWERC721: React.FC = () => {
             ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
             : '0 NFT';
 
-          // Always generate an address using tokenId=0 as representative
-          let displayAddress = '';
-          if (ownedTokenIds.length > 0) {
-            const { privacyAddress } = await deriveFromSecret(secret, BigInt(ownedTokenIds[0]));
-            displayAddress = privacyAddress;
-          } else {
-            const { privacyAddress } = await deriveFromSecret(secret, 0n);
-            displayAddress = privacyAddress;
-          }
-
-          // For remint, isClaimed is true if nullifier is used
           const isClaimed = hasClaimedNullifier;
 
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, address: displayAddress, amount: amountDisplay, loading: false, isClaimed }
+                ? { ...item, amount: amountDisplay, loading: false, isClaimed }
                 : item
             )
           );
@@ -1029,7 +1034,7 @@ const ZWERC721: React.FC = () => {
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, address: '', amount: '查询失败', loading: false, isClaimed: false }
+                ? { ...item, amount: '查询失败', loading: false, isClaimed: false }
                 : item
             )
           );
@@ -1156,7 +1161,25 @@ const ZWERC721: React.FC = () => {
         }
       }
 
-      // Query NFT ownership for each Secret
+      // Step 1: Build owner -> tokenIds mapping (scan once for all)
+      const owner2nftids: Map<string, number[]> = new Map();
+      console.log(`Building owner2nftids mapping for tokenIds 0 to ${currentTokenId - 1}...`);
+      
+      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
+        try {
+          const owner = await zwerc721Contract.ownerOf(tokenId);
+          const ownerLower = owner.toLowerCase();
+          if (!owner2nftids.has(ownerLower)) {
+            owner2nftids.set(ownerLower, []);
+          }
+          owner2nftids.get(ownerLower)!.push(tokenId);
+        } catch (ownerError) {
+          // Token doesn't exist in ZWERC721, skip
+        }
+      }
+      console.log(`owner2nftids mapping built with ${owner2nftids.size} unique owners`);
+
+      // Step 2: For each secret, generate privacy addresses and lookup in mapping
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
@@ -1166,18 +1189,18 @@ const ZWERC721: React.FC = () => {
           for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
             try {
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
-              try {
-                const owner = await zwerc721Contract.ownerOf(tokenId);
-                if (owner.toLowerCase() === privacyAddress.toLowerCase()) {
-                  ownedTokenIds.push(tokenId);
-                  const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-                  const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
-                  if (isNullifierUsed) {
-                    hasClaimedNullifier = true;
-                  }
+              const privacyAddressLower = privacyAddress.toLowerCase();
+              
+              // Check if this privacy address owns this specific tokenId
+              const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
+              if (ownedByAddress.includes(tokenId)) {
+                ownedTokenIds.push(tokenId);
+                
+                const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
+                const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+                if (isNullifierUsed) {
+                  hasClaimedNullifier = true;
                 }
-              } catch (ownerError) {
-                // Token might not exist in ZWERC721
               }
             } catch (deriveError) {
               console.error(`Failed to derive for tokenId ${tokenId}:`, deriveError);
@@ -1188,23 +1211,12 @@ const ZWERC721: React.FC = () => {
             ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
             : '0 NFT';
 
-          // Always generate an address using tokenId=0 as representative
-          let displayAddress = '';
-          if (ownedTokenIds.length > 0) {
-            const { privacyAddress } = await deriveFromSecret(secret, BigInt(ownedTokenIds[0]));
-            displayAddress = privacyAddress;
-          } else {
-            const { privacyAddress } = await deriveFromSecret(secret, 0n);
-            displayAddress = privacyAddress;
-          }
-
-          // For remint, isClaimed is true if nullifier is used
           const isClaimed = hasClaimedNullifier;
 
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, address: displayAddress, amount: amountDisplay, loading: false, isClaimed }
+                ? { ...item, amount: amountDisplay, loading: false, isClaimed }
                 : item
             )
           );
@@ -1213,7 +1225,7 @@ const ZWERC721: React.FC = () => {
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, address: '', amount: '查询失败', loading: false, isClaimed: false }
+                ? { ...item, amount: '查询失败', loading: false, isClaimed: false }
                 : item
             )
           );
@@ -2802,9 +2814,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
         </div>
       </Modal>
 
-      {/* Simple Mode Deposit Secret Modal - 选择隐私地址 */}
+      {/* Simple Mode Deposit Secret Modal - 选择 Secret */}
       <Modal
-        title="选择隐私地址"
+        title="选择 Secret (存入)"
         open={depositSecretModalVisible}
         onCancel={() => {
           setDepositSecretModalVisible(false);
@@ -2817,7 +2829,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
       >
         {depositSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在生成隐私地址，请稍候...</p>
+            <p>正在扫描，请稍候...</p>
           </div>
         ) : (
           <div>
@@ -2864,43 +2876,10 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '隐私地址',
-                  dataIndex: 'address',
-                  key: 'address',
-                  width: 130,
-                  ellipsis: true,
-                  render: (text: string, record: any) => {
-                    if (record.loading || !text) {
-                      return <span style={{ color: '#999' }}>-</span>;
-                    }
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
-                        </span>
-                        <Button
-                          type="link"
-                          size="small"
-                          onClick={async () => {
-                            const success = await copyToClipboard(text);
-                            if (success) {
-                              message.success('地址已复制!');
-                            } else {
-                              message.error('复制失败');
-                            }
-                          }}
-                          style={{ padding: 0, height: 'auto' }}
-                          icon={<CopyOutlined />}
-                        />
-                      </div>
-                    );
-                  },
-                },
-                {
                   title: 'NFT 数量',
                   dataIndex: 'amount',
                   key: 'amount',
-                  width: 180,
+                  width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>查询中...</span>;
@@ -2955,15 +2934,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个隐私地址用于存入您的 NFT。已有 NFT 的地址不可选择。
+              提示: 选择一个 Secret 用于存入您的 NFT。已有 NFT 的 Secret 不可选择。
             </p>
           </div>
         )}
       </Modal>
 
-      {/* Advanced Mode Deposit Secret Modal - 选择隐私地址 */}
+      {/* Advanced Mode Deposit Secret Modal - 选择 Secret */}
       <Modal
-        title="选择隐私地址 (高级模式)"
+        title="选择 Secret (高级存入)"
         open={advancedDepositSecretModalVisible}
         onCancel={() => {
           setAdvancedDepositSecretModalVisible(false);
@@ -2976,7 +2955,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
       >
         {advancedDepositSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在生成隐私地址，请稍候...</p>
+            <p>正在扫描，请稍候...</p>
           </div>
         ) : (
           <div>
@@ -3023,43 +3002,10 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '隐私地址',
-                  dataIndex: 'address',
-                  key: 'address',
-                  width: 130,
-                  ellipsis: true,
-                  render: (text: string, record: any) => {
-                    if (record.loading || !text) {
-                      return <span style={{ color: '#999' }}>-</span>;
-                    }
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
-                        </span>
-                        <Button
-                          type="link"
-                          size="small"
-                          onClick={async () => {
-                            const success = await copyToClipboard(text);
-                            if (success) {
-                              message.success('地址已复制!');
-                            } else {
-                              message.error('复制失败');
-                            }
-                          }}
-                          style={{ padding: 0, height: 'auto' }}
-                          icon={<CopyOutlined />}
-                        />
-                      </div>
-                    );
-                  },
-                },
-                {
                   title: 'NFT 数量',
                   dataIndex: 'amount',
                   key: 'amount',
-                  width: 180,
+                  width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>查询中...</span>;
@@ -3112,15 +3058,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个隐私地址用于存入您的 NFT。已有 NFT 的地址不可选择。
+              提示: 选择一个 Secret 用于存入您的 NFT。已有 NFT 的 Secret 不可选择。
             </p>
           </div>
         )}
       </Modal>
 
-      {/* Transfer Secret Modal - 选择隐私地址 */}
+      {/* Transfer Secret Modal - 选择 Secret */}
       <Modal
-        title="选择隐私地址 (转账)"
+        title="选择 Secret (转账)"
         open={secretModalVisible}
         onCancel={() => {
           setSecretModalVisible(false);
@@ -3133,7 +3079,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
       >
         {secretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在生成隐私地址，请稍候...</p>
+            <p>正在扫描，请稍候...</p>
           </div>
         ) : (
           <div>
@@ -3180,43 +3126,10 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '隐私地址',
-                  dataIndex: 'address',
-                  key: 'address',
-                  width: 130,
-                  ellipsis: true,
-                  render: (text: string, record: any) => {
-                    if (record.loading || !text) {
-                      return <span style={{ color: '#999' }}>-</span>;
-                    }
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
-                        </span>
-                        <Button
-                          type="link"
-                          size="small"
-                          onClick={async () => {
-                            const success = await copyToClipboard(text);
-                            if (success) {
-                              message.success('地址已复制!');
-                            } else {
-                              message.error('复制失败');
-                            }
-                          }}
-                          style={{ padding: 0, height: 'auto' }}
-                          icon={<CopyOutlined />}
-                        />
-                      </div>
-                    );
-                  },
-                },
-                {
                   title: 'NFT 数量',
                   dataIndex: 'amount',
                   key: 'amount',
-                  width: 180,
+                  width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>查询中...</span>;
@@ -3268,15 +3181,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个隐私地址作为转账目标地址。
+              提示: 选择一个 Secret 生成转账目标地址。
             </p>
           </div>
         )}
       </Modal>
 
-      {/* Simple Mode Remint Secret Modal - 选择隐私地址 */}
+      {/* Simple Mode Remint Secret Modal - 选择 Secret */}
       <Modal
-        title="选择隐私地址 (提取)"
+        title="选择 Secret (提取)"
         open={remintSeedModalVisible}
         onCancel={() => {
           setRemintSeedModalVisible(false);
@@ -3291,7 +3204,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
       >
         {remintSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在生成隐私地址，请稍候...</p>
+            <p>正在扫描，请稍候...</p>
           </div>
         ) : (
           <div>
@@ -3338,43 +3251,10 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '隐私地址',
-                  dataIndex: 'address',
-                  key: 'address',
-                  width: 130,
-                  ellipsis: true,
-                  render: (text: string, record: any) => {
-                    if (record.loading || !text) {
-                      return <span style={{ color: '#999' }}>-</span>;
-                    }
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
-                        </span>
-                        <Button
-                          type="link"
-                          size="small"
-                          onClick={async () => {
-                            const success = await copyToClipboard(text);
-                            if (success) {
-                              message.success('地址已复制!');
-                            } else {
-                              message.error('复制失败');
-                            }
-                          }}
-                          style={{ padding: 0, height: 'auto' }}
-                          icon={<CopyOutlined />}
-                        />
-                      </div>
-                    );
-                  },
-                },
-                {
                   title: 'NFT 数量',
                   dataIndex: 'amount',
                   key: 'amount',
-                  width: 180,
+                  width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>查询中...</span>;
@@ -3421,7 +3301,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         disabled={record.loading || !hasNfts || isAlreadyClaimed}
                         title={
                           isAlreadyClaimed ? '已提取' : 
-                          !hasNfts ? '没有可提取的 NFT' : '选择此地址'
+                          !hasNfts ? '没有可提取的 NFT' : '选择此 Secret'
                         }
                       >
                         选择
@@ -3432,15 +3312,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个有 NFT 且未提取的隐私地址来提取您的 NFT。
+              提示: 选择一个有 NFT 且未提取的 Secret 来提取您的 NFT。
             </p>
           </div>
         )}
       </Modal>
 
-      {/* Advanced Mode Remint Secret Modal - 选择隐私地址 */}
+      {/* Advanced Mode Remint Secret Modal - 选择 Secret */}
       <Modal
-        title="选择隐私地址 (高级提取)"
+        title="选择 Secret (高级提取)"
         open={advancedRemintSeedModalVisible}
         onCancel={() => {
           setAdvancedRemintSeedModalVisible(false);
@@ -3455,7 +3335,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
       >
         {advancedRemintSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在生成隐私地址，请稍候...</p>
+            <p>正在扫描，请稍候...</p>
           </div>
         ) : (
           <div>
@@ -3502,43 +3382,10 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: '隐私地址',
-                  dataIndex: 'address',
-                  key: 'address',
-                  width: 130,
-                  ellipsis: true,
-                  render: (text: string, record: any) => {
-                    if (record.loading || !text) {
-                      return <span style={{ color: '#999' }}>-</span>;
-                    }
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '12px', flex: 1 }}>
-                          {text.substring(0, 6)}...{text.substring(text.length - 4)}
-                        </span>
-                        <Button
-                          type="link"
-                          size="small"
-                          onClick={async () => {
-                            const success = await copyToClipboard(text);
-                            if (success) {
-                              message.success('地址已复制!');
-                            } else {
-                              message.error('复制失败');
-                            }
-                          }}
-                          style={{ padding: 0, height: 'auto' }}
-                          icon={<CopyOutlined />}
-                        />
-                      </div>
-                    );
-                  },
-                },
-                {
                   title: 'NFT 数量',
                   dataIndex: 'amount',
                   key: 'amount',
-                  width: 180,
+                  width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>查询中...</span>;
@@ -3584,7 +3431,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         disabled={record.loading || !hasNfts || isAlreadyClaimed}
                         title={
                           isAlreadyClaimed ? '已提取' : 
-                          !hasNfts ? '没有可提取的 NFT' : '选择此地址'
+                          !hasNfts ? '没有可提取的 NFT' : '选择此 Secret'
                         }
                       >
                         选择
@@ -3595,7 +3442,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个有 NFT 且未提取的隐私地址来提取您的 NFT。
+              提示: 选择一个有 NFT 且未提取的 Secret 来提取您的 NFT。
             </p>
           </div>
         )}
