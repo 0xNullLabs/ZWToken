@@ -2472,6 +2472,10 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                           placeholder="输入要销毁的 NFT Token ID"
                           precision={0}
                           min={0}
+                          onChange={() => {
+                            // 当 tokenId 变化时，重置 targetAddress，避免使用错误的销毁地址
+                            simpleDepositForm.setFieldsValue({ targetAddress: undefined });
+                          }}
                         />
                       </Form.Item>
 
