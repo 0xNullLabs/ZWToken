@@ -742,7 +742,7 @@ Made with ❤️ using Circom, Solidity, and ethers.js
 
 **ZWERC721 Token:**
 
-- ZWERC721: [`0xb3687A20f67618af09D1c9ff73CaA266d04067DC`](https://sepolia.etherscan.io/address/0xb3687A20f67618af09D1c9ff73CaA266d04067DC)
+- ZWERC721: [`0x12E93b79773B38c0f2bE019D41B23175EDb0254b`](https://sepolia.etherscan.io/address/0x12E93b79773B38c0f2bE019D41B23175EDb0254b)
 - Verifier: [`0x8C559486527EE8Ed6EA492a1fB061ead7187Db74`](https://sepolia.etherscan.io/address/0x8C559486527EE8Ed6EA492a1fB061ead7187Db74)
 - Underlying Token: [`0xBF85386b4489b51672e23E9cBf9312A13D3D5093`](https://sepolia.etherscan.io/address/0xBF85386b4489b51672e23E9cBf9312A13D3D5093)
 - Name: ZK Wrapper Test ERC721 Faucet
