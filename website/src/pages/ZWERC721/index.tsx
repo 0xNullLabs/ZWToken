@@ -213,15 +213,26 @@ const ZWERC721: React.FC = () => {
         return;
       }
 
-      // Query underlying NFT contract
+      // Query underlying NFT contract (use ERC721Faucet ABI since it's the same contract)
       const underlyingContract = new ethers.Contract(
         CONTRACT_ADDRESSES.UnderlyingNFT,
-        CONTRACT_ABIS.ERC721,
+        CONTRACT_ABIS.ERC721Faucet,
         provider,
       );
       
-      // Get current max tokenId
-      const maxTokenId = await underlyingContract.getCurrentTokenId();
+      // Get current max tokenId using tokenIdCounter
+      let maxTokenId;
+      try {
+        maxTokenId = await underlyingContract.tokenIdCounter();
+      } catch (e) {
+        console.log('tokenIdCounter failed, trying getCurrentTokenId...');
+        try {
+          maxTokenId = await underlyingContract.getCurrentTokenId();
+        } catch (e2) {
+          console.log('getCurrentTokenId also failed, using fallback value 100');
+          maxTokenId = 100n; // Fallback to scan first 100 tokenIds
+        }
+      }
       console.log('Max tokenId:', maxTokenId.toString());
 
       // Scan all tokenIds from 0 to maxTokenId-1
