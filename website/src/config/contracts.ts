@@ -108,13 +108,15 @@ export const CONTRACT_ABIS = {
     'function getCurrentTokenId() external view returns (uint256)',
   ],
 
-  // ERC721 Faucet functions
+  // ERC721 Faucet functions (superset of ERC721, use this for UnderlyingNFT in all cases)
   ERC721Faucet: [
     'function faucetMint(address to) external returns (uint256)',
     'function tokenIdCounter() external view returns (uint256)',
     'function getCurrentTokenId() external view returns (uint256)',
     'function ownerOf(uint256 tokenId) external view returns (address)',
     'function balanceOf(address owner) external view returns (uint256)',
+    'function approve(address to, uint256 tokenId) external',
+    'function getApproved(uint256 tokenId) external view returns (address)',
   ],
 
   // ZWERC721 contract (same structure as ZWERC20 but for NFTs)

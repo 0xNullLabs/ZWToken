@@ -131,6 +131,17 @@ const ZWERC721: React.FC = () => {
   const [faucetModalVisible, setFaucetModalVisible] = useState(false);
   const [faucetLoading, setFaucetLoading] = useState(false);
 
+  // ZWERC721 ownership cache: address (lowercase) -> owned tokenIds
+  // Uses refs to avoid stale closure issues in async handlers
+  const zwNftOwnerCacheRef = React.useRef<Map<string, number[]>>(new Map());
+  const nullifierCacheRef = React.useRef<Map<string, boolean>>(new Map());
+  const [cacheBuilding, setCacheBuilding] = useState(false);
+  const [cacheProgress, setCacheProgress] = useState<{ current: number; total: number }>({
+    current: 0,
+    total: 0,
+  });
+  const [cacheTokenCount, setCacheTokenCount] = useState<number>(0);
+
   // Get current account
   const account = wallet?.accounts?.[0]?.address;
 
@@ -180,7 +191,8 @@ const ZWERC721: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Function to refresh balances by scanning token ownership
+  // Refresh underlying NFT balances by scanning token ownership.
+  // ZWERC721 balance is maintained by buildZwNftCache (called on mount and after transactions).
   const refreshBalances = React.useCallback(async () => {
     if (!wallet || !account) {
       setNftBalance(0);
@@ -190,7 +202,6 @@ const ZWERC721: React.FC = () => {
       return;
     }
 
-    // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) {
       console.log('ZWERC721 contracts not configured yet');
       setNftBalance(0);
@@ -213,72 +224,118 @@ const ZWERC721: React.FC = () => {
         return;
       }
 
-      // Query underlying NFT contract (use ERC721Faucet ABI since it's the same contract)
-      const underlyingContract = new ethers.Contract(
+      const nftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.UnderlyingNFT,
         CONTRACT_ABIS.ERC721Faucet,
         provider,
       );
-      
-      // Get current max tokenId using tokenIdCounter
+
       let maxTokenId;
       try {
-        maxTokenId = await underlyingContract.tokenIdCounter();
+        maxTokenId = await nftContract.tokenIdCounter();
       } catch (e) {
-        console.log('tokenIdCounter failed, trying getCurrentTokenId...');
         try {
-          maxTokenId = await underlyingContract.getCurrentTokenId();
+          maxTokenId = await nftContract.getCurrentTokenId();
         } catch (e2) {
-          console.log('getCurrentTokenId also failed, using fallback value 100');
-          maxTokenId = 100n; // Fallback to scan first 100 tokenIds
+          maxTokenId = 100n;
         }
       }
-      console.log('Max tokenId:', maxTokenId.toString());
 
-      // Scan all tokenIds from 0 to maxTokenId-1
       const userTokens: number[] = [];
       for (let i = 0; i < Number(maxTokenId); i++) {
         try {
-          const owner = await underlyingContract.ownerOf(i);
+          const owner = await nftContract.ownerOf(i);
           if (owner.toLowerCase() === account.toLowerCase()) {
             userTokens.push(i);
           }
-        } catch (error) {
-          // Token doesn't exist or is burned
-          console.log(`TokenId ${i} doesn't exist`);
+        } catch {
+          // Token doesn't exist
         }
       }
 
       setNftBalance(userTokens.length);
       setUserTokenIds(userTokens);
 
-      // Query ZWERC721 balance
-      const zwContract = new ethers.Contract(
+      // ZWERC721 balance is read from the ownership cache (built by buildZwNftCache)
+      const cachedZwTokens = zwNftOwnerCacheRef.current.get(account.toLowerCase()) || [];
+      setZwNftBalance(cachedZwTokens.length);
+      setZwUserTokenIds([...cachedZwTokens]);
+
+      console.log('User NFTs:', userTokens);
+      console.log('User ZWERC721 (from cache):', cachedZwTokens);
+    } catch (error) {
+      console.error('Failed to fetch balances:', error);
+    }
+  }, [wallet, account]);
+
+  // Build ZWERC721 ownership cache by scanning all tokenIds once.
+  // Called on mount and after any transaction that changes ZWERC721 ownership.
+  // Also invalidates the nullifier cache since on-chain state has changed.
+  const buildZwNftCache = React.useCallback(async () => {
+    if (!wallet || !account) return;
+    if (!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) return;
+
+    try {
+      const provider = new ethers.BrowserProvider(wallet.provider);
+      const network = await provider.getNetwork();
+      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) return;
+
+      const nftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
+        CONTRACT_ABIS.ERC721Faucet,
+        provider,
+      );
+      const zwNftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC721,
         CONTRACT_ABIS.ZWERC721,
         provider,
       );
 
-      // Scan ZWERC721 ownership
-      const zwUserTokens: number[] = [];
-      for (let i = 0; i < Number(maxTokenId); i++) {
+      let maxTokenId: number;
+      try {
+        maxTokenId = Number(await nftContract.tokenIdCounter());
+      } catch {
         try {
-          const owner = await zwContract.ownerOf(i);
-          if (owner.toLowerCase() === account.toLowerCase()) {
-            zwUserTokens.push(i);
-          }
+          maxTokenId = Number(await nftContract.getCurrentTokenId());
         } catch {
-          // Token doesn't exist in ZW contract (ownerOf reverts for non-existent tokens)
+          maxTokenId = 100;
         }
       }
 
-      setZwNftBalance(zwUserTokens.length);
-      setZwUserTokenIds(zwUserTokens);
+      setCacheBuilding(true);
+      setCacheProgress({ current: 0, total: maxTokenId });
+      setCacheTokenCount(maxTokenId);
 
-      console.log('User NFTs:', userTokens);
-      console.log('User ZWERC721:', zwUserTokens);
+      // Invalidate nullifier cache since on-chain state may have changed
+      nullifierCacheRef.current = new Map();
+
+      const newCache = new Map<string, number[]>();
+      for (let i = 0; i < maxTokenId; i++) {
+        try {
+          const owner = await zwNftContract.ownerOf(i);
+          const ownerLower = owner.toLowerCase();
+          if (!newCache.has(ownerLower)) {
+            newCache.set(ownerLower, []);
+          }
+          newCache.get(ownerLower)!.push(i);
+        } catch {
+          // Token not minted in ZWERC721
+        }
+        setCacheProgress({ current: i + 1, total: maxTokenId });
+      }
+
+      zwNftOwnerCacheRef.current = newCache;
+
+      // Update ZWERC721 balance display from freshly built cache
+      const userZwTokens = newCache.get(account.toLowerCase()) || [];
+      setZwNftBalance(userZwTokens.length);
+      setZwUserTokenIds([...userZwTokens]);
+
+      console.log(`ZW NFT cache built: ${newCache.size} owners, ${maxTokenId} tokens scanned`);
     } catch (error) {
-      console.error('Failed to fetch balances:', error);
+      console.error('Failed to build ZW NFT cache:', error);
+    } finally {
+      setCacheBuilding(false);
     }
   }, [wallet, account]);
 
@@ -384,15 +441,15 @@ const ZWERC721: React.FC = () => {
     }
   }, [wallet, refreshBalances]);
 
-  // Get balances
+  // Refresh underlying NFT balances on a 10-second timer.
+  // ZWERC721 cache is built once on mount and after transactions (not on every tick).
   React.useEffect(() => {
     refreshBalances();
+    buildZwNftCache();
 
-    // Refresh balances every 10 seconds
     const interval = setInterval(refreshBalances, 10000);
-
     return () => clearInterval(interval);
-  }, [refreshBalances]);
+  }, [refreshBalances, buildZwNftCache]);
 
   // Delay preloading circuits files to avoid blocking main page elements loading
   React.useEffect(() => {
@@ -724,37 +781,32 @@ const ZWERC721: React.FC = () => {
       }
       message.success('Seed 已生成，正在查询 NFT...');
 
-      // Get underlying NFT contract to get current token counter
-      // Use ERC721Faucet ABI which has tokenIdCounter
-      const underlyingNftContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.UnderlyingNFT,
-        CONTRACT_ABIS.ERC721Faucet,
-        provider,
-      );
-
-      // ZWERC721 contract for checking owner and nullifier
-      const zwerc721Contract = new ethers.Contract(
+      // ZWERC721 contract for nullifier checks
+      const zwNftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC721,
         CONTRACT_ABIS.ZWERC721,
         provider,
       );
 
-      // Get current token counter to know how many NFTs to scan
-      // Try tokenIdCounter first, then getCurrentTokenId as fallback
-      let currentTokenId: number;
-      try {
-        currentTokenId = Number(await underlyingNftContract.tokenIdCounter());
-        console.log(`Got tokenIdCounter: ${currentTokenId}`);
-      } catch (e) {
+      // Use cached token count if available; fall back to fetching from contract
+      let currentTokenId: number = cacheTokenCount;
+      if (currentTokenId === 0) {
+        const nftContract = new ethers.Contract(
+          CONTRACT_ADDRESSES.UnderlyingNFT,
+          CONTRACT_ABIS.ERC721Faucet,
+          provider,
+        );
         try {
-          currentTokenId = Number(await underlyingNftContract.getCurrentTokenId());
-          console.log(`Got getCurrentTokenId: ${currentTokenId}`);
-        } catch (e2) {
-          console.error('Failed to get token counter, defaulting to 100:', e2);
-          currentTokenId = 100; // Default fallback
+          currentTokenId = Number(await nftContract.tokenIdCounter());
+        } catch {
+          try {
+            currentTokenId = Number(await nftContract.getCurrentTokenId());
+          } catch {
+            currentTokenId = 100;
+          }
         }
       }
-      console.log(`Scanning NFTs from tokenId 0 to ${currentTokenId - 1} for burn addresses`);
+      console.log(`Using cached ownership map (${zwNftOwnerCacheRef.current.size} owners), scanning nullifiers for tokenIds 0-${currentTokenId - 1}`);
 
       // Helper function to update state based on target mode
       const updateSecretList = (
@@ -777,46 +829,34 @@ const ZWERC721: React.FC = () => {
         }
       };
 
-      // Step 1: Build owner -> tokenIds mapping (scan once for all)
-      const owner2nftids: Map<string, number[]> = new Map();
-      console.log(`Building owner2nftids mapping for tokenIds 0 to ${currentTokenId - 1}...`);
-      
-      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
-        try {
-          const owner = await zwerc721Contract.ownerOf(tokenId);
-          const ownerLower = owner.toLowerCase();
-          if (!owner2nftids.has(ownerLower)) {
-            owner2nftids.set(ownerLower, []);
-          }
-          owner2nftids.get(ownerLower)!.push(tokenId);
-        } catch (ownerError) {
-          // Token doesn't exist in ZWERC721, skip
-        }
-      }
-      console.log(`owner2nftids mapping built with ${owner2nftids.size} unique owners`);
-
-      // Step 2: For each secret, generate privacy addresses and lookup in mapping
+      // For each secret, derive privacy addresses and look up ownership in cache
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
           const ownedTokenIds: number[] = [];
           let hasClaimedNullifier = false;
 
-          // For each tokenId, generate privacy address and check if it owns this tokenId
           for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
             try {
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
               const privacyAddressLower = privacyAddress.toLowerCase();
-              
-              // Check if nullifier for this tokenId is already used (regardless of ownership)
+
+              // Check nullifier via cache first, then RPC (nullifiers only go unused -> used)
               const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-              const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+              let isNullifierUsed: boolean;
+              const cachedNullifier = nullifierCacheRef.current.get(nullifierHex);
+              if (cachedNullifier !== undefined) {
+                isNullifierUsed = cachedNullifier;
+              } else {
+                isNullifierUsed = await zwNftContract.nullifierUsed(nullifierHex);
+                nullifierCacheRef.current.set(nullifierHex, isNullifierUsed);
+              }
               if (isNullifierUsed) {
                 hasClaimedNullifier = true;
               }
-              
-              // Check if this privacy address owns this specific tokenId
-              const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
+
+              // Use ownership cache instead of ownerOf RPC calls
+              const ownedByAddress = zwNftOwnerCacheRef.current.get(privacyAddressLower) || [];
               if (ownedByAddress.includes(tokenId)) {
                 ownedTokenIds.push(tokenId);
               }
@@ -940,51 +980,33 @@ const ZWERC721: React.FC = () => {
       setRemintSecretList(secrets);
       message.success('Seed 已生成，正在查询 NFT...');
 
-      // Get underlying NFT contract to get current token counter
-      const underlyingNftContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.UnderlyingNFT,
-        CONTRACT_ABIS.ERC721Faucet,
-        provider,
-      );
-
-      // ZWERC721 contract for checking owner and nullifier
-      const zwerc721Contract = new ethers.Contract(
+      // ZWERC721 contract for nullifier checks
+      const zwNftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC721,
         CONTRACT_ABIS.ZWERC721,
         provider,
       );
 
-      // Get current token counter
-      let currentTokenId: number;
-      try {
-        currentTokenId = Number(await underlyingNftContract.tokenIdCounter());
-      } catch (e) {
+      // Use cached token count if available
+      let currentTokenId: number = cacheTokenCount;
+      if (currentTokenId === 0) {
+        const nftContract = new ethers.Contract(
+          CONTRACT_ADDRESSES.UnderlyingNFT,
+          CONTRACT_ABIS.ERC721Faucet,
+          provider,
+        );
         try {
-          currentTokenId = Number(await underlyingNftContract.getCurrentTokenId());
-        } catch (e2) {
-          currentTokenId = 100;
-        }
-      }
-
-      // Step 1: Build owner -> tokenIds mapping (scan once for all)
-      const owner2nftids: Map<string, number[]> = new Map();
-      console.log(`Building owner2nftids mapping for tokenIds 0 to ${currentTokenId - 1}...`);
-      
-      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
-        try {
-          const owner = await zwerc721Contract.ownerOf(tokenId);
-          const ownerLower = owner.toLowerCase();
-          if (!owner2nftids.has(ownerLower)) {
-            owner2nftids.set(ownerLower, []);
+          currentTokenId = Number(await nftContract.tokenIdCounter());
+        } catch {
+          try {
+            currentTokenId = Number(await nftContract.getCurrentTokenId());
+          } catch {
+            currentTokenId = 100;
           }
-          owner2nftids.get(ownerLower)!.push(tokenId);
-        } catch (ownerError) {
-          // Token doesn't exist in ZWERC721, skip
         }
       }
-      console.log(`owner2nftids mapping built with ${owner2nftids.size} unique owners`);
 
-      // Step 2: For each secret, generate privacy addresses and lookup in mapping
+      // For each secret, derive privacy addresses and look up ownership in cache
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
@@ -995,16 +1017,21 @@ const ZWERC721: React.FC = () => {
             try {
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
               const privacyAddressLower = privacyAddress.toLowerCase();
-              
-              // Check if nullifier for this tokenId is already used (regardless of ownership)
+
               const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-              const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+              let isNullifierUsed: boolean;
+              const cachedNullifier = nullifierCacheRef.current.get(nullifierHex);
+              if (cachedNullifier !== undefined) {
+                isNullifierUsed = cachedNullifier;
+              } else {
+                isNullifierUsed = await zwNftContract.nullifierUsed(nullifierHex);
+                nullifierCacheRef.current.set(nullifierHex, isNullifierUsed);
+              }
               if (isNullifierUsed) {
                 hasClaimedNullifier = true;
               }
-              
-              // Check if this privacy address owns this specific tokenId
-              const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
+
+              const ownedByAddress = zwNftOwnerCacheRef.current.get(privacyAddressLower) || [];
               if (ownedByAddress.includes(tokenId)) {
                 ownedTokenIds.push(tokenId);
               }
@@ -1017,12 +1044,10 @@ const ZWERC721: React.FC = () => {
             ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
             : '0 NFT';
 
-          const isClaimed = hasClaimedNullifier;
-
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: amountDisplay, loading: false, isClaimed }
+                ? { ...item, amount: amountDisplay, loading: false, isClaimed: hasClaimedNullifier }
                 : item
             )
           );
@@ -1042,7 +1067,6 @@ const ZWERC721: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to generate Seed:', error);
       message.error(`生成 Seed 失败: ${error.message}`);
-      // If failed, close modal
       setRemintSeedModalVisible(false);
     } finally {
       setLoading(false);
@@ -1132,51 +1156,33 @@ const ZWERC721: React.FC = () => {
       setAdvancedRemintSecretList(secrets);
       message.success('Seed 已生成，正在查询 NFT...');
 
-      // Get underlying NFT contract to get current token counter
-      const underlyingNftContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.UnderlyingNFT,
-        CONTRACT_ABIS.ERC721Faucet,
-        provider,
-      );
-
-      // ZWERC721 contract for checking owner and nullifier
-      const zwerc721Contract = new ethers.Contract(
+      // ZWERC721 contract for nullifier checks
+      const zwNftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC721,
         CONTRACT_ABIS.ZWERC721,
         provider,
       );
 
-      // Get current token counter
-      let currentTokenId: number;
-      try {
-        currentTokenId = Number(await underlyingNftContract.tokenIdCounter());
-      } catch (e) {
+      // Use cached token count if available
+      let currentTokenId: number = cacheTokenCount;
+      if (currentTokenId === 0) {
+        const nftContract = new ethers.Contract(
+          CONTRACT_ADDRESSES.UnderlyingNFT,
+          CONTRACT_ABIS.ERC721Faucet,
+          provider,
+        );
         try {
-          currentTokenId = Number(await underlyingNftContract.getCurrentTokenId());
-        } catch (e2) {
-          currentTokenId = 100;
-        }
-      }
-
-      // Step 1: Build owner -> tokenIds mapping (scan once for all)
-      const owner2nftids: Map<string, number[]> = new Map();
-      console.log(`Building owner2nftids mapping for tokenIds 0 to ${currentTokenId - 1}...`);
-      
-      for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
-        try {
-          const owner = await zwerc721Contract.ownerOf(tokenId);
-          const ownerLower = owner.toLowerCase();
-          if (!owner2nftids.has(ownerLower)) {
-            owner2nftids.set(ownerLower, []);
+          currentTokenId = Number(await nftContract.tokenIdCounter());
+        } catch {
+          try {
+            currentTokenId = Number(await nftContract.getCurrentTokenId());
+          } catch {
+            currentTokenId = 100;
           }
-          owner2nftids.get(ownerLower)!.push(tokenId);
-        } catch (ownerError) {
-          // Token doesn't exist in ZWERC721, skip
         }
       }
-      console.log(`owner2nftids mapping built with ${owner2nftids.size} unique owners`);
 
-      // Step 2: For each secret, generate privacy addresses and lookup in mapping
+      // For each secret, derive privacy addresses and look up ownership in cache
       for (let i = 0; i < secrets.length; i++) {
         try {
           const secret = secrets[i].secret;
@@ -1187,16 +1193,21 @@ const ZWERC721: React.FC = () => {
             try {
               const { privacyAddress, nullifier } = await deriveFromSecret(secret, BigInt(tokenId));
               const privacyAddressLower = privacyAddress.toLowerCase();
-              
-              // Check if nullifier for this tokenId is already used (regardless of ownership)
+
               const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-              const isNullifierUsed = await zwerc721Contract.nullifierUsed(nullifierHex);
+              let isNullifierUsed: boolean;
+              const cachedNullifier = nullifierCacheRef.current.get(nullifierHex);
+              if (cachedNullifier !== undefined) {
+                isNullifierUsed = cachedNullifier;
+              } else {
+                isNullifierUsed = await zwNftContract.nullifierUsed(nullifierHex);
+                nullifierCacheRef.current.set(nullifierHex, isNullifierUsed);
+              }
               if (isNullifierUsed) {
                 hasClaimedNullifier = true;
               }
-              
-              // Check if this privacy address owns this specific tokenId
-              const ownedByAddress = owner2nftids.get(privacyAddressLower) || [];
+
+              const ownedByAddress = zwNftOwnerCacheRef.current.get(privacyAddressLower) || [];
               if (ownedByAddress.includes(tokenId)) {
                 ownedTokenIds.push(tokenId);
               }
@@ -1209,12 +1220,10 @@ const ZWERC721: React.FC = () => {
             ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
             : '0 NFT';
 
-          const isClaimed = hasClaimedNullifier;
-
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: amountDisplay, loading: false, isClaimed }
+                ? { ...item, amount: amountDisplay, loading: false, isClaimed: hasClaimedNullifier }
                 : item
             )
           );
@@ -1234,7 +1243,6 @@ const ZWERC721: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to generate Seed:', error);
       message.error(`生成 Seed 失败: ${error.message}`);
-      // If failed, close modal
       setAdvancedRemintSeedModalVisible(false);
     } finally {
       setLoading(false);
@@ -1325,19 +1333,22 @@ const ZWERC721: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      const underlyingContract = new ethers.Contract(
+      const nftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.UnderlyingNFT,
-        CONTRACT_ABIS.ERC721,
+        CONTRACT_ABIS.ERC721Faucet,
+        signer,
+      );
+      const zwNftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
         signer,
       );
 
-      // Check if NFT is approved
-      const approvedAddress = await underlyingContract.getApproved(values.tokenId);
-      
+      const approvedAddress = await nftContract.getApproved(values.tokenId);
       if (approvedAddress.toLowerCase() !== CONTRACT_ADDRESSES.ZWERC721.toLowerCase()) {
         console.log('[Simple] Starting approval...');
         message.loading('正在授权...', 0);
-        const approveTx = await underlyingContract.approve(CONTRACT_ADDRESSES.ZWERC721, values.tokenId);
+        const approveTx = await nftContract.approve(CONTRACT_ADDRESSES.ZWERC721, values.tokenId);
         await approveTx.wait();
         message.destroy();
         message.success('授权成功');
@@ -1347,14 +1358,7 @@ const ZWERC721: React.FC = () => {
 
       console.log('[Simple] Approval sufficient, proceeding to burn...');
 
-      // Execute deposit with targetAddress (Burn)
-      const zwTokenContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWERC721,
-        CONTRACT_ABIS.ZWERC721,
-        signer,
-      );
-
-      const tx = await zwTokenContract.deposit(values.targetAddress, values.tokenId, 1, '0x');
+      const tx = await zwNftContract.deposit(values.targetAddress, values.tokenId, 1, '0x');
 
       message.loading('正在提交交易...', 0);
       const receipt = await tx.wait();
@@ -1378,6 +1382,7 @@ const ZWERC721: React.FC = () => {
       
       simpleDepositForm.resetFields();
       refreshBalances();
+      buildZwNftCache();
     } catch (error: any) {
       console.error('❌ [Simple] Deposit/Approve error:', error);
       message.destroy();
@@ -1436,19 +1441,22 @@ const ZWERC721: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      const underlyingContract = new ethers.Contract(
+      const nftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.UnderlyingNFT,
-        CONTRACT_ABIS.ERC721,
+        CONTRACT_ABIS.ERC721Faucet,
+        signer,
+      );
+      const zwNftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.ZWERC721,
+        CONTRACT_ABIS.ZWERC721,
         signer,
       );
 
-      // Check if NFT is approved
-      const approvedAddress = await underlyingContract.getApproved(values.tokenId);
-      
+      const approvedAddress = await nftContract.getApproved(values.tokenId);
       if (approvedAddress.toLowerCase() !== CONTRACT_ADDRESSES.ZWERC721.toLowerCase()) {
         console.log('[Advanced] Starting approval...');
         message.loading('正在授权...', 0);
-        const approveTx = await underlyingContract.approve(CONTRACT_ADDRESSES.ZWERC721, values.tokenId);
+        const approveTx = await nftContract.approve(CONTRACT_ADDRESSES.ZWERC721, values.tokenId);
         await approveTx.wait();
         message.destroy();
         message.success('授权成功');
@@ -1458,16 +1466,8 @@ const ZWERC721: React.FC = () => {
 
       console.log('[Advanced] Approval sufficient, proceeding to wrap...');
 
-      // Execute deposit
-      const zwTokenContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ZWERC721,
-        CONTRACT_ABIS.ZWERC721,
-        signer,
-      );
-
-      // Determine to address: use targetAddress if provided (burn mode), otherwise use account
       const toAddress = values.targetAddress || account;
-      const tx = await zwTokenContract.deposit(toAddress, values.tokenId, 1, '0x');
+      const tx = await zwNftContract.deposit(toAddress, values.tokenId, 1, '0x');
 
       message.loading('正在提交交易...', 0);
       const receipt = await tx.wait();
@@ -1495,6 +1495,7 @@ const ZWERC721: React.FC = () => {
       advancedDepositForm.resetFields();
       setDirectBurn(false);
       refreshBalances();
+      buildZwNftCache();
     } catch (error: any) {
       console.error('❌ [Advanced] Deposit/Approve error:', error);
       message.destroy();
@@ -1542,8 +1543,7 @@ const ZWERC721: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      // Use contract address from config file
-      const contract = new ethers.Contract(
+      const zwNftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC721,
         CONTRACT_ABIS.ZWERC721,
         signer,
@@ -1551,9 +1551,8 @@ const ZWERC721: React.FC = () => {
 
       console.log(`Withdraw tokenId: ${values.tokenId}`);
 
-      // withdraw(address to, uint256 id, uint256 amount, bytes data)
       const signerAddress = await signer.getAddress();
-      const tx = await contract.withdraw(signerAddress, values.tokenId, 1, '0x');
+      const tx = await zwNftContract.withdraw(signerAddress, values.tokenId, 1, '0x');
 
       message.loading('正在提交交易...', 0);
       const receipt = await tx.wait();
@@ -1564,8 +1563,8 @@ const ZWERC721: React.FC = () => {
       setAdvancedWithdrawTxHash(receipt.hash);
       
       withdrawForm.resetFields();
-      // Refresh balances
       refreshBalances();
+      buildZwNftCache();
     } catch (error: any) {
       message.destroy();
       message.error(`解包失败: ${error.message}`);
@@ -1605,8 +1604,7 @@ const ZWERC721: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      // Use contract address from config file
-      const contract = new ethers.Contract(
+      const zwNftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC721,
         CONTRACT_ABIS.ZWERC721,
         signer,
@@ -1614,7 +1612,7 @@ const ZWERC721: React.FC = () => {
 
       console.log(`Transfer tokenId: ${values.tokenId} to ${values.targetAddress}`);
 
-      const tx = await contract.transferFrom(account, values.targetAddress, values.tokenId);
+      const tx = await zwNftContract.transferFrom(account, values.targetAddress, values.tokenId);
 
       message.loading('正在提交交易...', 0);
       const receipt = await tx.wait();
@@ -1640,9 +1638,9 @@ const ZWERC721: React.FC = () => {
       }
       
       transferForm.resetFields();
-      setTransferBurnAddress(null); // Clear the saved burn address
-      // Refresh balances
+      setTransferBurnAddress(null);
       refreshBalances();
+      buildZwNftCache();
     } catch (error: any) {
       message.destroy();
       message.error(`转账失败: ${error.message}`);
@@ -1674,15 +1672,15 @@ const ZWERC721: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      const faucetContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.ERC721Faucet,
+      const nftContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.UnderlyingNFT,
         CONTRACT_ABIS.ERC721Faucet,
         signer,
       );
 
       console.log('Calling faucetMint for:', account);
 
-      const tx = await faucetContract.faucetMint(account);
+      const tx = await nftContract.faucetMint(account);
 
       message.loading('正在铸造 NFT...', 0);
       const receipt = await tx.wait();
@@ -1691,7 +1689,7 @@ const ZWERC721: React.FC = () => {
       // Parse the Transfer event to get the tokenId
       const transferEvent = receipt.logs.find((log: any) => {
         try {
-          const parsed = faucetContract.interface.parseLog(log);
+          const parsed = nftContract.interface.parseLog(log);
           return parsed?.name === 'Transfer';
         } catch {
           return false;
@@ -1700,7 +1698,7 @@ const ZWERC721: React.FC = () => {
 
       let tokenId = 'N/A';
       if (transferEvent) {
-        const parsed = faucetContract.interface.parseLog(transferEvent);
+        const parsed = nftContract.interface.parseLog(transferEvent);
         tokenId = parsed?.args?.tokenId?.toString() || 'N/A';
       }
 
@@ -1708,7 +1706,6 @@ const ZWERC721: React.FC = () => {
       console.log(`✅ Minted NFT #${tokenId}, tx: ${receipt.hash}`);
 
       setFaucetModalVisible(false);
-      // Refresh balances
       refreshBalances();
     } catch (error: any) {
       message.destroy();
@@ -1757,8 +1754,7 @@ const ZWERC721: React.FC = () => {
 
       const signer = await provider.getSigner();
 
-      // Use contract address from config file
-      const contract = new ethers.Contract(
+      const zwNftContract = new ethers.Contract(
         CONTRACT_ADDRESSES.ZWERC721,
         CONTRACT_ABIS.ZWERC721,
         signer,
@@ -1770,23 +1766,21 @@ const ZWERC721: React.FC = () => {
       console.log('Step 1: Deriving from secret...');
       const { privacyAddress, addr20, q, nullifier, secret } = await deriveFromSecret(
         values.secret,
-        tokenId,  // Pass tokenId for ERC721
+        tokenId,
       );
       console.log(`Privacy address: ${privacyAddress}`);
       console.log(`Nullifier: 0x${nullifier.toString(16)}`);
 
-      // Check if nullifier is already used
       const nullifierHex = '0x' + nullifier.toString(16).padStart(64, '0');
-      const isNullifierUsed = await contract.nullifierUsed(nullifierHex);
+      const isNullifierUsed = await zwNftContract.nullifierUsed(nullifierHex);
       if (isNullifierUsed) {
         hideLoading();
         message.error('该 nullifier 已被使用');
         return;
       }
 
-      // Check if privacy address owns this token
       try {
-        const currentOwner = await contract.ownerOf(tokenId);
+        const currentOwner = await zwNftContract.ownerOf(tokenId);
         if (currentOwner.toLowerCase() !== privacyAddress.toLowerCase()) {
           hideLoading();
           message.error(`隐私地址不拥有 Token ID ${tokenId}`);
@@ -1804,9 +1798,9 @@ const ZWERC721: React.FC = () => {
       console.log('Step 2: Rebuilding Merkle tree from chain...');
 
       const poseidon = await buildPoseidon();
-      const tree = await rebuildMerkleTree(contract, poseidon);
+      const tree = await rebuildMerkleTree(zwNftContract, poseidon);
 
-      const onchainRoot = await contract.root();
+      const onchainRoot = await zwNftContract.root();
       const localRoot = '0x' + tree.root.toString(16).padStart(64, '0');
       console.log(`On-chain root: ${onchainRoot}`);
       console.log(`Local root:    ${localRoot}`);
@@ -1822,7 +1816,7 @@ const ZWERC721: React.FC = () => {
       message.loading('正在查找 commitment...', 0);
       console.log('Step 3: Finding user commitment...');
 
-      const userCommitment = await findUserCommitment(contract, privacyAddress, poseidon, tokenId);
+      const userCommitment = await findUserCommitment(zwNftContract, privacyAddress, poseidon, tokenId);
       if (!userCommitment) {
         message.destroy();
         message.error('未找到 commitment');
@@ -1907,7 +1901,7 @@ const ZWERC721: React.FC = () => {
         // Encode relayerData (always empty for NFTs)
         const relayerData = '0x';
 
-        const tx = await contract.remint(
+        const tx = await zwNftContract.remint(
           values.recipient, // to
           tokenId, // id (actual tokenId for NFTs)
           remintAmount, // amount (always 1 for NFTs)
@@ -1938,8 +1932,8 @@ const ZWERC721: React.FC = () => {
 
         remintForm.resetFields();
         setSelectedRemintTokenId(null);
-        // Refresh balances
         refreshBalances();
+        buildZwNftCache();
       } catch (proofError: any) {
         message.destroy();
         console.error('ZK proof generation or remint error:', proofError);
@@ -1955,6 +1949,53 @@ const ZWERC721: React.FC = () => {
   };
 
   return (
+    <>
+      {/* Floating cache progress indicator (top-right corner) */}
+      {cacheBuilding && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 72,
+            right: 20,
+            zIndex: 9999,
+            padding: '12px 16px',
+            background: 'rgba(20, 20, 30, 0.88)',
+            backdropFilter: 'blur(6px)',
+            borderRadius: 10,
+            color: '#fff',
+            fontSize: 13,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+            minWidth: 220,
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 15 }}>🔄</span>
+            <span style={{ fontWeight: 600 }}>正在更新 NFT 数据缓存</span>
+          </div>
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              borderRadius: 4,
+              height: 6,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                background: 'linear-gradient(90deg, #1890ff, #52c41a)',
+                height: '100%',
+                width: `${cacheProgress.total > 0 ? Math.round((cacheProgress.current / cacheProgress.total) * 100) : 0}%`,
+                transition: 'width 0.15s ease',
+              }}
+            />
+          </div>
+          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7, textAlign: 'right' }}>
+            {cacheProgress.current} / {cacheProgress.total} tokens
+          </div>
+        </div>
+      )}
+
     <PageContainer
       header={{
         title: (
@@ -3450,6 +3491,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
         )}
       </Modal>
     </PageContainer>
+    </>
   );
 };
 
