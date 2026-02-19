@@ -3254,15 +3254,16 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   width: 80,
                   align: 'center',
                   render: (_: any, record: any) => {
-                    // For deposit, we want addresses with 0 NFT (available for deposit)
-                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
+                    const currentTokenId = simpleDepositForm.getFieldValue('tokenId');
+                    const tokenIdClaimed = currentTokenId !== undefined && currentTokenId !== null &&
+                      record.claimedTokenIds && record.claimedTokenIds.includes(Number(currentTokenId));
                     return (
                       <Button
-                        type={hasNfts ? 'default' : 'primary'}
+                        type={tokenIdClaimed ? 'default' : 'primary'}
                         size="small"
                         onClick={() => handleSelectDepositSecret(record.secret)}
-                        disabled={record.loading || hasNfts}
-                        title={hasNfts ? '该地址已有 NFT' : '选择此地址'}
+                        disabled={record.loading || tokenIdClaimed}
+                        title={tokenIdClaimed ? `Token ID ${currentTokenId} 已在此 Secret 上提取过` : '选择此地址'}
                       >
                         选择
                       </Button>
@@ -3272,7 +3273,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个 Secret 用于存入您的 NFT。已有 NFT 的 Secret 不可选择。
+              提示: 选择一个 Secret 用于存入您的 NFT。当前 Token ID 已在该 Secret 上提取过则不可选择。
             </p>
           </div>
         )}
@@ -3379,14 +3380,16 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   width: 80,
                   align: 'center',
                   render: (_: any, record: any) => {
-                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
+                    const currentTokenId = advancedDepositForm.getFieldValue('tokenId');
+                    const tokenIdClaimed = currentTokenId !== undefined && currentTokenId !== null &&
+                      record.claimedTokenIds && record.claimedTokenIds.includes(Number(currentTokenId));
                     return (
                       <Button
-                        type={hasNfts ? 'default' : 'primary'}
+                        type={tokenIdClaimed ? 'default' : 'primary'}
                         size="small"
                         onClick={() => handleSelectAdvancedDepositSecret(record.secret)}
-                        disabled={record.loading || hasNfts}
-                        title={hasNfts ? '该地址已有 NFT' : '选择此地址'}
+                        disabled={record.loading || tokenIdClaimed}
+                        title={tokenIdClaimed ? `Token ID ${currentTokenId} 已在此 Secret 上提取过` : '选择此地址'}
                       >
                         选择
                       </Button>
@@ -3396,7 +3399,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个 Secret 用于存入您的 NFT。已有 NFT 的 Secret 不可选择。
+              提示: 选择一个 Secret 用于存入您的 NFT。当前 Token ID 已在该 Secret 上提取过则不可选择。
             </p>
           </div>
         )}
@@ -3503,13 +3506,16 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   width: 80,
                   align: 'center',
                   render: (_: any, record: any) => {
-                    // For transfer, allow selecting any address (even with NFTs)
+                    const currentTokenId = transferForm.getFieldValue('tokenId');
+                    const tokenIdClaimed = currentTokenId !== undefined && currentTokenId !== null &&
+                      record.claimedTokenIds && record.claimedTokenIds.includes(Number(currentTokenId));
                     return (
                       <Button
-                        type="primary"
+                        type={tokenIdClaimed ? 'default' : 'primary'}
                         size="small"
                         onClick={() => handleSelectSecret(record.secret)}
-                        disabled={record.loading}
+                        disabled={record.loading || tokenIdClaimed}
+                        title={tokenIdClaimed ? `Token ID ${currentTokenId} 已在此 Secret 上提取过` : '选择此地址'}
                       >
                         选择
                       </Button>
@@ -3519,7 +3525,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个 Secret 生成转账目标地址。
+              提示: 选择一个 Secret 生成转账目标地址。当前 Token ID 已在该 Secret 上提取过则不可选择。
             </p>
           </div>
         )}
