@@ -58,17 +58,17 @@ const ZWERC721: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [seed, setSeed] = useState<string>('');
   const [secretList, setSecretList] = useState<
-    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; claimedTokenIds: number[] }>
   >([]);
   const [remintSeedModalVisible, setRemintSeedModalVisible] = useState(false);
   const [remintSecretList, setRemintSecretList] = useState<
-    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; claimedTokenIds: number[] }>
   >([]);
 
   // Advanced Mode Remint states
   const [advancedRemintSeedModalVisible, setAdvancedRemintSeedModalVisible] = useState(false);
   const [advancedRemintSecretList, setAdvancedRemintSecretList] = useState<
-    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; claimedTokenIds: number[] }>
   >([]);
 
   // Store selected tokenId for remint
@@ -108,14 +108,14 @@ const ZWERC721: React.FC = () => {
   const [depositSecretModalVisible, setDepositSecretModalVisible] = useState(false);
   const [depositSecretForm] = Form.useForm();
   const [depositSecretList, setDepositSecretList] = useState<
-    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; claimedTokenIds: number[] }>
   >([]);
 
   // Advanced Mode Deposit states
   const [advancedDepositSecretModalVisible, setAdvancedDepositSecretModalVisible] = useState(false);
   const [advancedDepositSecretForm] = Form.useForm();
   const [advancedDepositSecretList, setAdvancedDepositSecretList] = useState<
-    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; isClaimed: boolean }>
+    Array<{ index: number; secret: string; address: string; amount: string; loading: boolean; claimedTokenIds: number[] }>
   >([]);
   const [advancedDepositSecretMode, setAdvancedDepositSecretMode] = useState<
     'manual' | 'seed' | undefined
@@ -749,7 +749,7 @@ const ZWERC721: React.FC = () => {
         address: string;
         amount: string;
         loading: boolean;
-        isClaimed: boolean;
+        claimedTokenIds: number[];
       }> = [];
       for (let i = 1; i <= 10; i++) {
         // Seed + index, hash
@@ -762,7 +762,7 @@ const ZWERC721: React.FC = () => {
           address: '',
           amount: '-',
           loading: true,
-          isClaimed: false,
+          claimedTokenIds: [],
         });
       }
 
@@ -838,7 +838,7 @@ const ZWERC721: React.FC = () => {
         try {
           const secret = secrets[i].secret;
           const ownedTokenIds: number[] = [];
-          let hasClaimedNullifier = false;
+          const claimedTokenIds: number[] = [];
 
           for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
             try {
@@ -856,7 +856,7 @@ const ZWERC721: React.FC = () => {
                 nullifierCacheRef.current.set(nullifierHex, isNullifierUsed);
               }
               if (isNullifierUsed) {
-                hasClaimedNullifier = true;
+                claimedTokenIds.push(tokenId);
               }
 
               // Use ownership cache instead of ownerOf RPC calls
@@ -874,12 +874,10 @@ const ZWERC721: React.FC = () => {
             ? `${ownedTokenIds.length} NFT (ID: ${ownedTokenIds.join(', ')})`
             : '0 NFT';
 
-          const isClaimed = hasClaimedNullifier;
-
           updateSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: amountDisplay, loading: false, isClaimed }
+                ? { ...item, amount: amountDisplay, loading: false, claimedTokenIds }
                 : item
             )
           );
@@ -888,7 +886,7 @@ const ZWERC721: React.FC = () => {
           updateSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: '查询失败', loading: false, isClaimed: false }
+                ? { ...item, amount: '查询失败', loading: false, claimedTokenIds: [] }
                 : item
             )
           );
@@ -964,7 +962,7 @@ const ZWERC721: React.FC = () => {
         address: string;
         amount: string;
         loading: boolean;
-        isClaimed: boolean;
+        claimedTokenIds: number[];
       }> = [];
       for (let i = 1; i <= 10; i++) {
         // Seed + index, hash
@@ -977,7 +975,7 @@ const ZWERC721: React.FC = () => {
           address: '',
           amount: '-',
           loading: true,
-          isClaimed: false,
+          claimedTokenIds: [],
         });
       }
 
@@ -1015,7 +1013,7 @@ const ZWERC721: React.FC = () => {
         try {
           const secret = secrets[i].secret;
           const ownedTokenIds: number[] = [];
-          let hasClaimedNullifier = false;
+          const claimedTokenIds: number[] = [];
 
           for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
             try {
@@ -1032,7 +1030,7 @@ const ZWERC721: React.FC = () => {
                 nullifierCacheRef.current.set(nullifierHex, isNullifierUsed);
               }
               if (isNullifierUsed) {
-                hasClaimedNullifier = true;
+                claimedTokenIds.push(tokenId);
               }
 
               const ownedByAddress = zwNftOwnerCacheRef.current.get(privacyAddressLower) || [];
@@ -1051,7 +1049,7 @@ const ZWERC721: React.FC = () => {
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: amountDisplay, loading: false, isClaimed: hasClaimedNullifier }
+                ? { ...item, amount: amountDisplay, loading: false, claimedTokenIds }
                 : item
             )
           );
@@ -1060,7 +1058,7 @@ const ZWERC721: React.FC = () => {
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: '查询失败', loading: false, isClaimed: false }
+                ? { ...item, amount: '查询失败', loading: false, claimedTokenIds: [] }
                 : item
             )
           );
@@ -1140,7 +1138,7 @@ const ZWERC721: React.FC = () => {
         address: string;
         amount: string;
         loading: boolean;
-        isClaimed: boolean;
+        claimedTokenIds: number[];
       }> = [];
       for (let i = 1; i <= 10; i++) {
         // Seed + index, hash
@@ -1153,7 +1151,7 @@ const ZWERC721: React.FC = () => {
           address: '',
           amount: '-',
           loading: true,
-          isClaimed: false,
+          claimedTokenIds: [],
         });
       }
 
@@ -1191,7 +1189,7 @@ const ZWERC721: React.FC = () => {
         try {
           const secret = secrets[i].secret;
           const ownedTokenIds: number[] = [];
-          let hasClaimedNullifier = false;
+          const claimedTokenIds: number[] = [];
 
           for (let tokenId = 0; tokenId < currentTokenId; tokenId++) {
             try {
@@ -1208,7 +1206,7 @@ const ZWERC721: React.FC = () => {
                 nullifierCacheRef.current.set(nullifierHex, isNullifierUsed);
               }
               if (isNullifierUsed) {
-                hasClaimedNullifier = true;
+                claimedTokenIds.push(tokenId);
               }
 
               const ownedByAddress = zwNftOwnerCacheRef.current.get(privacyAddressLower) || [];
@@ -1227,7 +1225,7 @@ const ZWERC721: React.FC = () => {
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: amountDisplay, loading: false, isClaimed: hasClaimedNullifier }
+                ? { ...item, amount: amountDisplay, loading: false, claimedTokenIds }
                 : item
             )
           );
@@ -1236,7 +1234,7 @@ const ZWERC721: React.FC = () => {
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: '查询失败', loading: false, isClaimed: false }
+                ? { ...item, amount: '查询失败', loading: false, claimedTokenIds: [] }
                 : item
             )
           );
@@ -3236,18 +3234,18 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 },
                 {
                   title: '是否已提取',
-                  dataIndex: 'isClaimed',
-                  key: 'isClaimed',
+                  dataIndex: 'claimedTokenIds',
+                  key: 'claimedTokenIds',
                   width: 100,
                   align: 'center',
-                  render: (isClaimed: boolean, record: any) => {
+                  render: (claimedTokenIds: number[], record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
-                    if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
+                    if (!claimedTokenIds || claimedTokenIds.length === 0) {
+                      return <span style={{ color: '#52c41a' }}>可用</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
                   },
                 },
                 {
@@ -3361,18 +3359,18 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 },
                 {
                   title: '是否已提取',
-                  dataIndex: 'isClaimed',
-                  key: 'isClaimed',
+                  dataIndex: 'claimedTokenIds',
+                  key: 'claimedTokenIds',
                   width: 100,
                   align: 'center',
-                  render: (isClaimed: boolean, record: any) => {
+                  render: (claimedTokenIds: number[], record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
-                    if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
+                    if (!claimedTokenIds || claimedTokenIds.length === 0) {
+                      return <span style={{ color: '#52c41a' }}>可用</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
                   },
                 },
                 {
@@ -3485,18 +3483,18 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 },
                 {
                   title: '是否已提取',
-                  dataIndex: 'isClaimed',
-                  key: 'isClaimed',
+                  dataIndex: 'claimedTokenIds',
+                  key: 'claimedTokenIds',
                   width: 100,
                   align: 'center',
-                  render: (isClaimed: boolean, record: any) => {
+                  render: (claimedTokenIds: number[], record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
-                    if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
+                    if (!claimedTokenIds || claimedTokenIds.length === 0) {
+                      return <span style={{ color: '#52c41a' }}>可用</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
                   },
                 },
                 {
@@ -3610,18 +3608,18 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 },
                 {
                   title: '是否已提取',
-                  dataIndex: 'isClaimed',
-                  key: 'isClaimed',
+                  dataIndex: 'claimedTokenIds',
+                  key: 'claimedTokenIds',
                   width: 100,
                   align: 'center',
-                  render: (isClaimed: boolean, record: any) => {
+                  render: (claimedTokenIds: number[], record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
-                    if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
+                    if (!claimedTokenIds || claimedTokenIds.length === 0) {
+                      return <span style={{ color: '#52c41a' }}>可用</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
                   },
                 },
                 {
@@ -3632,17 +3630,13 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   render: (_: any, record: any) => {
                     // For remint, only allow selecting addresses with NFTs
                     const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
-                    const isAlreadyClaimed = record.isClaimed;
                     return (
                       <Button
-                        type={hasNfts && !isAlreadyClaimed ? 'primary' : 'default'}
+                        type={hasNfts ? 'primary' : 'default'}
                         size="small"
                         onClick={() => handleSelectRemintSecret(record.secret)}
-                        disabled={record.loading || !hasNfts || isAlreadyClaimed}
-                        title={
-                          isAlreadyClaimed ? '已提取' : 
-                          !hasNfts ? '没有可提取的 NFT' : '选择此 Secret'
-                        }
+                        disabled={record.loading || !hasNfts}
+                        title={!hasNfts ? '没有可提取的 NFT' : '选择此 Secret'}
                       >
                         选择
                       </Button>
@@ -3741,18 +3735,18 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 },
                 {
                   title: '是否已提取',
-                  dataIndex: 'isClaimed',
-                  key: 'isClaimed',
+                  dataIndex: 'claimedTokenIds',
+                  key: 'claimedTokenIds',
                   width: 100,
                   align: 'center',
-                  render: (isClaimed: boolean, record: any) => {
+                  render: (claimedTokenIds: number[], record: any) => {
                     if (record.loading) {
                       return <span style={{ color: '#999' }}>-</span>;
                     }
-                    if (isClaimed) {
-                      return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取</span>;
+                    if (!claimedTokenIds || claimedTokenIds.length === 0) {
+                      return <span style={{ color: '#52c41a' }}>可用</span>;
                     }
-                    return <span style={{ color: '#52c41a' }}>可用</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
                   },
                 },
                 {
@@ -3762,17 +3756,13 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   align: 'center',
                   render: (_: any, record: any) => {
                     const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
-                    const isAlreadyClaimed = record.isClaimed;
                     return (
                       <Button
-                        type={hasNfts && !isAlreadyClaimed ? 'primary' : 'default'}
+                        type={hasNfts ? 'primary' : 'default'}
                         size="small"
                         onClick={() => handleSelectAdvancedRemintSecret(record.secret)}
-                        disabled={record.loading || !hasNfts || isAlreadyClaimed}
-                        title={
-                          isAlreadyClaimed ? '已提取' : 
-                          !hasNfts ? '没有可提取的 NFT' : '选择此 Secret'
-                        }
+                        disabled={record.loading || !hasNfts}
+                        title={!hasNfts ? '没有可提取的 NFT' : '选择此 Secret'}
                       >
                         选择
                       </Button>
