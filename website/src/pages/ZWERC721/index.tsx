@@ -47,6 +47,7 @@ const ZWERC721: React.FC = () => {
   const [withdrawForm] = Form.useForm();
   const [transferForm] = Form.useForm();
   const [remintForm] = Form.useForm();
+  const [advancedRemintForm] = Form.useForm();
   const [secretForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [secretModalVisible, setSecretModalVisible] = useState(false);
@@ -495,16 +496,19 @@ const ZWERC721: React.FC = () => {
     }
   }, []); // Empty dependency array, only execute once when component mounts
 
-  // When wallet address changes, update Simple Mode Remint form's recipient field
+  // When wallet address changes, update Remint forms' recipient field
   React.useEffect(() => {
     if (account) {
       const currentRecipient = remintForm.getFieldValue('recipient');
-      // Only auto-fill when recipient is empty
       if (!currentRecipient) {
         remintForm.setFieldsValue({ recipient: account });
       }
+      const currentAdvancedRecipient = advancedRemintForm.getFieldValue('recipient');
+      if (!currentAdvancedRecipient) {
+        advancedRemintForm.setFieldsValue({ recipient: account });
+      }
     }
-  }, [account, remintForm]);
+  }, [account, remintForm, advancedRemintForm]);
 
   // Get provider and signer, and check network
   const getProvider = async () => {
@@ -1089,11 +1093,11 @@ const ZWERC721: React.FC = () => {
 
   // Select SecretBySeed for Advanced Remint page
   const handleSelectAdvancedRemintSecret = (secret: string, tokenIdFromList?: number) => {
-    withdrawForm.setFieldsValue({ secret });
+    advancedRemintForm.setFieldsValue({ secret });
 
     // If tokenId is provided, set it
     if (tokenIdFromList !== undefined && tokenIdFromList !== null) {
-      withdrawForm.setFieldsValue({ tokenId: tokenIdFromList });
+      advancedRemintForm.setFieldsValue({ tokenId: tokenIdFromList });
     }
 
     setAdvancedRemintSeedModalVisible(false);
@@ -1247,20 +1251,6 @@ const ZWERC721: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Advanced Mode Remint - Select SecretBySeed
-  const handleAdvancedRemintSelectSecret = (secret: string, tokenIdFromList?: number) => {
-    remintForm.setFieldsValue({ secret });
-
-    // If tokenId is provided, set it
-    if (tokenIdFromList !== undefined && tokenIdFromList !== null) {
-      remintForm.setFieldsValue({ tokenId: tokenIdFromList });
-      setSelectedRemintTokenId(tokenIdFromList);
-    }
-
-    setAdvancedRemintSeedModalVisible(false);
-    message.success('Secret 已选择');
   };
 
   // Handle Secret confirmation - Generate Burn Address
@@ -1930,7 +1920,11 @@ const ZWERC721: React.FC = () => {
           setAdvancedRemintTxHash(receipt.hash);
         }
 
-        remintForm.resetFields();
+        if (activeMainTab === 'simple') {
+          remintForm.resetFields();
+        } else {
+          advancedRemintForm.resetFields();
+        }
         setSelectedRemintTokenId(null);
         refreshBalances();
         buildZwNftCache();
@@ -2740,25 +2734,328 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               >
                 <TabPane tab="💰 包装" key="deposit">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-                    <p style={{ color: '#666', marginBottom: 16 }}>高级模式包装功能待实现...</p>
+                    <Form form={advancedDepositForm} layout="vertical" onFinish={handleAdvancedDeposit}>
+                      <Form.Item
+                        label="Token ID"
+                        name="tokenId"
+                        rules={[
+                          { required: true, message: '请输入 Token ID' },
+                          { type: 'number', min: 0, message: 'Token ID 必须大于等于 0' },
+                        ]}
+                      >
+                        <InputNumber
+                          style={{ width: '100%' }}
+                          placeholder="输入要包装的 NFT Token ID"
+                          precision={0}
+                          min={0}
+                          onChange={() => {
+                            if (directBurn) {
+                              advancedDepositForm.setFieldsValue({ targetAddress: undefined });
+                            }
+                          }}
+                        />
+                      </Form.Item>
+
+                      <Form.Item style={{ marginBottom: 8 }}>
+                        <Checkbox
+                          checked={directBurn}
+                          onChange={(e) => {
+                            setDirectBurn(e.target.checked);
+                            if (!e.target.checked) {
+                              advancedDepositForm.setFieldsValue({ targetAddress: undefined });
+                            }
+                          }}
+                        >
+                          直接销毁（包装后立即转入隐私地址）
+                        </Checkbox>
+                      </Form.Item>
+
+                      {directBurn && (
+                        <Form.Item
+                          label="隐私地址"
+                          name="targetAddress"
+                          rules={[
+                            { required: true, message: '隐私地址为必填项' },
+                            { pattern: /^0x[a-fA-F0-9]{40}$/, message: '请输入有效的以太坊地址' },
+                          ]}
+                        >
+                          <Input
+                            placeholder="输入或生成隐私地址"
+                            maxLength={42}
+                            addonBefore={
+                              <Button
+                                type="link"
+                                onClick={handleAdvancedDepositGenerateClick}
+                                style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
+                              >
+                                生成
+                              </Button>
+                            }
+                          />
+                        </Form.Item>
+                      )}
+
+                      <Form.Item>
+                        <Button type="primary" htmlType="submit" loading={loading} block>
+                          {directBurn ? '销毁' : '包装'}
+                        </Button>
+                      </Form.Item>
+
+                      {advancedDepositTxHash && (
+                        <div style={{ marginTop: 12, textAlign: 'center' }}>
+                          <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                            交易已提交:{' '}
+                            <a
+                              href={`https://sepolia.etherscan.io/tx/${advancedDepositTxHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#1890ff', textDecoration: 'underline' }}
+                            >
+                              {advancedDepositTxHash.substring(0, 10)}...{advancedDepositTxHash.substring(advancedDepositTxHash.length - 8)}
+                            </a>
+                          </span>
+                        </div>
+                      )}
+                    </Form>
+
+                    <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+                      <h4>💡 使用技巧</h4>
+                      <p><strong>普通包装：</strong>将您的 NFT 包装为 ZWERC721（ZW NFT），ZWERC721 归您所有，可随时解包或转账。</p>
+                      <p><strong>直接销毁：</strong>勾选后，包装同时将 ZWERC721 转入您指定的隐私地址（黑洞地址）。使用对应 Secret 可匿名重铸。</p>
+                      <p>操作分两步：第一次点击会先完成授权，第二次点击才会完成包装。</p>
+                    </div>
                   </div>
                 </TabPane>
 
                 <TabPane tab="💳 解包" key="withdraw">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-                    <p style={{ color: '#666', marginBottom: 16 }}>高级模式解包功能待实现...</p>
+                    <Form form={withdrawForm} layout="vertical" onFinish={handleWithdraw}>
+                      <Form.Item
+                        label="Token ID"
+                        name="tokenId"
+                        rules={[
+                          { required: true, message: '请输入 Token ID' },
+                          { type: 'number', min: 0, message: 'Token ID 必须大于等于 0' },
+                        ]}
+                      >
+                        <InputNumber
+                          style={{ width: '100%' }}
+                          placeholder="输入要解包的 ZWERC721 Token ID"
+                          precision={0}
+                          min={0}
+                        />
+                      </Form.Item>
+
+                      <Form.Item>
+                        <Button type="primary" htmlType="submit" loading={loading} block>
+                          解包
+                        </Button>
+                      </Form.Item>
+
+                      {advancedWithdrawTxHash && (
+                        <div style={{ marginTop: 12, textAlign: 'center' }}>
+                          <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                            交易已提交:{' '}
+                            <a
+                              href={`https://sepolia.etherscan.io/tx/${advancedWithdrawTxHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#1890ff', textDecoration: 'underline' }}
+                            >
+                              {advancedWithdrawTxHash.substring(0, 10)}...{advancedWithdrawTxHash.substring(advancedWithdrawTxHash.length - 8)}
+                            </a>
+                          </span>
+                        </div>
+                      )}
+                    </Form>
+
+                    <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+                      <h4>💡 使用技巧</h4>
+                      <p><strong>什么是解包？</strong>将您持有的 ZWERC721 解包，取回对应的底层原始 NFT。</p>
+                      <p>您必须拥有该 ZWERC721 Token 才能解包。解包后，ZWERC721 Token 将被销毁，底层 NFT 返回到您的钱包。</p>
+                    </div>
                   </div>
                 </TabPane>
 
                 <TabPane tab="🔄 转账" key="transfer">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-                    <p style={{ color: '#666', marginBottom: 16 }}>高级模式转账功能待实现...</p>
+                    <Form form={transferForm} layout="vertical" onFinish={handleTransfer}>
+                      <Form.Item
+                        label="Token ID"
+                        name="tokenId"
+                        rules={[
+                          { required: true, message: '请输入 Token ID' },
+                          { type: 'number', min: 0, message: 'Token ID 必须大于等于 0' },
+                        ]}
+                      >
+                        <InputNumber
+                          style={{ width: '100%' }}
+                          placeholder="输入要转账的 ZWERC721 Token ID"
+                          precision={0}
+                          min={0}
+                          onChange={() => {
+                            transferForm.setFieldsValue({ targetAddress: undefined });
+                            setTransferBurnAddress(null);
+                          }}
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="目标地址"
+                        name="targetAddress"
+                        rules={[
+                          { required: true, message: '目标地址为必填项' },
+                          { pattern: /^0x[a-fA-F0-9]{40}$/, message: '请输入有效的以太坊地址' },
+                        ]}
+                      >
+                        <Input
+                          placeholder="输入目标地址或生成隐私地址"
+                          maxLength={42}
+                          addonBefore={
+                            <Button
+                              type="link"
+                              onClick={handleBurnClick}
+                              style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
+                            >
+                              生成隐私地址
+                            </Button>
+                          }
+                        />
+                      </Form.Item>
+
+                      <Form.Item>
+                        <Button type="primary" htmlType="submit" loading={loading} block>
+                          转账
+                        </Button>
+                      </Form.Item>
+
+                      {advancedTransferTxHash && (
+                        <div style={{ marginTop: 12, textAlign: 'center' }}>
+                          <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                            交易已提交:{' '}
+                            <a
+                              href={`https://sepolia.etherscan.io/tx/${advancedTransferTxHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#1890ff', textDecoration: 'underline' }}
+                            >
+                              {advancedTransferTxHash.substring(0, 10)}...{advancedTransferTxHash.substring(advancedTransferTxHash.length - 8)}
+                            </a>
+                          </span>
+                        </div>
+                      )}
+                    </Form>
+
+                    <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+                      <h4>💡 使用技巧</h4>
+                      <p><strong>普通转账：</strong>将 ZWERC721 转给任意以太坊地址。</p>
+                      <p><strong>隐私转账：</strong>点击"生成隐私地址"，使用 Secret 生成一个隐私地址，将 NFT 转入该地址后，持有 Secret 的人可以匿名重铸，实现隐私所有权转移。</p>
+                      <p>转账完成后，若目标地址是隐私地址，可切换到"重铸"标签页使用 Secret 取回 NFT。</p>
+                    </div>
                   </div>
                 </TabPane>
 
                 <TabPane tab="🎁 重铸" key="remint">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
-                    <p style={{ color: '#666', marginBottom: 16 }}>高级模式重铸功能待实现...</p>
+                    <Form
+                      form={advancedRemintForm}
+                      layout="vertical"
+                      onFinish={handleRemint}
+                      initialValues={{
+                        recipient: account || undefined,
+                        redeem: false,
+                      }}
+                    >
+                      <Form.Item
+                        label="Token ID"
+                        name="tokenId"
+                        rules={[
+                          { required: true, message: '请输入 Token ID' },
+                          { type: 'number', min: 0, message: 'Token ID 必须大于等于 0' },
+                        ]}
+                      >
+                        <InputNumber
+                          style={{ width: '100%' }}
+                          placeholder="输入要重铸的 NFT Token ID"
+                          precision={0}
+                          min={0}
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="Secret"
+                        name="secret"
+                        rules={[{ required: true, message: 'Secret 为必填项' }]}
+                      >
+                        <Input.Password
+                          placeholder="输入持有的 Secret"
+                          addonBefore={
+                            <Button
+                              type="link"
+                              onClick={handleAdvancedRemintGenerateBySeedClick}
+                              style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
+                            >
+                              {isMobile ? '选择' : '从 Seed 选择'}
+                            </Button>
+                          }
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="接收地址"
+                        name="recipient"
+                        rules={[
+                          { required: true, message: '接收地址为必填项' },
+                          { pattern: /^0x[a-fA-F0-9]{40}$/, message: '请输入有效的以太坊地址' },
+                        ]}
+                      >
+                        <Input
+                          placeholder={account || '输入接收地址'}
+                          maxLength={42}
+                        />
+                      </Form.Item>
+
+                      <Form.Item name="redeem" valuePropName="checked">
+                        <Checkbox>
+                          <span>直接赎回底层 NFT</span>
+                          <Tooltip title="勾选后，接收方直接获得原始 NFT；不勾选则获得 ZWERC721，可继续进行隐私转账">
+                            <InfoCircleOutlined style={{ marginLeft: 6, color: '#1890ff', cursor: 'pointer' }} />
+                          </Tooltip>
+                        </Checkbox>
+                      </Form.Item>
+
+                      <Form.Item>
+                        <Button type="primary" htmlType="submit" loading={loading} block>
+                          重铸
+                        </Button>
+                      </Form.Item>
+
+                      {advancedRemintTxHash && (
+                        <div style={{ marginTop: 12, textAlign: 'center' }}>
+                          <span style={{ color: '#52c41a', fontSize: '14px' }}>
+                            交易已提交:{' '}
+                            <a
+                              href={`https://sepolia.etherscan.io/tx/${advancedRemintTxHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#1890ff', textDecoration: 'underline' }}
+                            >
+                              {advancedRemintTxHash.substring(0, 10)}...{advancedRemintTxHash.substring(advancedRemintTxHash.length - 8)}
+                            </a>
+                          </span>
+                        </div>
+                      )}
+                    </Form>
+
+                    <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+                      <h4>💡 使用技巧</h4>
+                      <p><strong>什么是高级模式重铸？</strong></p>
+                      <p>使用 Secret 证明对 NFT 的所有权，并将其重铸到指定地址，全程无需暴露原始持有者身份。</p>
+                      <p><strong>redeem 选项：</strong></p>
+                      <p>• <strong>不勾选：</strong>接收方获得 ZWERC721，可继续进行隐私转账（对应测试中的 <code>redeem=false</code>）</p>
+                      <p>• <strong>勾选：</strong>接收方直接获得底层原始 NFT，完成完整隐私转账流程（对应 <code>redeem=true</code>）</p>
+                      <p>重铸需要生成零知识证明（ZK Proof），大约需要 10-30 秒。</p>
+                    </div>
                   </div>
                 </TabPane>
               </Tabs>
