@@ -173,10 +173,10 @@ const ZWERC721: React.FC = () => {
       setLastBurnAddress(null);
       setLastBurnTxHash(null);
       setLastBurnMode(null);
-      message.success('Last burn information cleared');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.cleared' }));
     } catch (error) {
       console.error('Failed to clear last burn info:', error);
-      message.error('Failed to clear information');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.clearFailed' }));
     }
   };
 
@@ -354,9 +354,9 @@ const ZWERC721: React.FC = () => {
 
         if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
           message.error(
-            `错误：当前连接到 Chain ID ${Number(
+            `Error: Currently connected to Chain ID ${Number(
               network.chainId,
-            )} 网络，请切换到 Sepolia 测试网（Chain ID: 11155111）`,
+            )} network, please switch to Sepolia testnet (Chain ID: 11155111)`,
             10,
           );
 
@@ -366,7 +366,7 @@ const ZWERC721: React.FC = () => {
               method: 'wallet_switchEthereumChain',
               params: [{ chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}` }],
             });
-            message.success('成功切换到 Sepolia 测试网');
+            message.success(intl.formatMessage({ id: 'pages.zwerc721.network.switchSuccess' }));
           } catch (switchError: any) {
             console.error('Failed to switch network:', switchError);
             // If network doesn't exist, try to add network
@@ -388,13 +388,13 @@ const ZWERC721: React.FC = () => {
                     },
                   ],
                 });
-                message.success('已添加并切换到 Sepolia 测试网');
+                message.success(intl.formatMessage({ id: 'pages.zwerc721.network.addSuccess' }));
               } catch (addError) {
                 console.error('Failed to add network:', addError);
-                message.error('无法添加 Sepolia 网络，请在钱包中手动添加');
+                message.error(intl.formatMessage({ id: 'pages.zwerc721.network.addFailed' }));
               }
             } else {
-              message.error('网络切换失败，请手动切换到 Sepolia 测试网');
+              message.error(intl.formatMessage({ id: 'pages.zwerc721.network.switchFailed' }));
             }
           }
         } else {
@@ -415,7 +415,7 @@ const ZWERC721: React.FC = () => {
 
         if (decimalChainId !== SEPOLIA_CHAIN_ID) {
           message.warning(
-            `网络已切换到 Chain ID ${decimalChainId}，请切回 Sepolia 测试网（Chain ID: 11155111）`,
+            `Network has switched to Chain ID ${decimalChainId}, please switch back to Sepolia testnet (Chain ID: 11155111)`,
           );
           // Clear balance display
           setNftBalance(0);
@@ -423,7 +423,7 @@ const ZWERC721: React.FC = () => {
           setUserTokenIds([]);
           setZwUserTokenIds([]);
         } else {
-          message.success('✅ 已连接到 Sepolia 测试网，正在刷新数据...');
+          message.success(intl.formatMessage({ id: 'pages.zwerc721.network.refreshing' }));
           // Refresh data instead of refreshing page
           setTimeout(() => {
             refreshBalances();
@@ -513,7 +513,7 @@ const ZWERC721: React.FC = () => {
   // Get provider and signer, and check network
   const getProvider = async () => {
     if (!wallet) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return null;
     }
 
@@ -522,9 +522,9 @@ const ZWERC721: React.FC = () => {
 
     if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
       message.error(
-        `当前连接到 Chain ID ${Number(
+        `Currently connected to Chain ID ${Number(
           network.chainId,
-        )} 网络，请切换到 Sepolia 测试网（Chain ID: 11155111）`,
+        )} network, please switch to Sepolia testnet (Chain ID: 11155111)`,
         5,
       );
       return null;
@@ -616,7 +616,7 @@ const ZWERC721: React.FC = () => {
       const tokenId = simpleDepositForm.getFieldValue('tokenId');
       
       if (tokenId === undefined || tokenId === null) {
-        message.error('请先输入 Token ID');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.error.enterTokenId' }));
         return;
       }
 
@@ -625,7 +625,7 @@ const ZWERC721: React.FC = () => {
       // Set to Simple Deposit form targetAddress field
       simpleDepositForm.setFieldsValue({ targetAddress: privacyAddress });
 
-      message.success('隐私地址已生成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.privacyAddressGenerated' }));
       setDepositSecretModalVisible(false);
       depositSecretForm.resetFields();
       setDepositSecretList([]);
@@ -634,7 +634,7 @@ const ZWERC721: React.FC = () => {
         // Form validation error, do nothing
         return;
       }
-      message.error(`生成失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.message.generateFailed' })}: ${error.message}`);
     }
   };
 
@@ -644,19 +644,19 @@ const ZWERC721: React.FC = () => {
       const tokenId = simpleDepositForm.getFieldValue('tokenId');
       
       if (tokenId === undefined || tokenId === null) {
-        message.error('请先输入 Token ID');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.error.enterTokenId' }));
         return;
       }
 
       const privacyAddress = await generatePrivacyAddress(secret, tokenId);
       // Set to Simple Deposit form targetAddress field
       simpleDepositForm.setFieldsValue({ targetAddress: privacyAddress });
-      message.success('隐私地址已生成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.privacyAddressGenerated' }));
       setDepositSecretModalVisible(false);
       depositSecretForm.resetFields();
       setDepositSecretList([]);
     } catch (error: any) {
-      message.error(`生成失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.message.generateFailed' })}: ${error.message}`);
     }
   };
 
@@ -666,19 +666,19 @@ const ZWERC721: React.FC = () => {
       const tokenId = advancedDepositForm.getFieldValue('tokenId');
       
       if (tokenId === undefined || tokenId === null) {
-        message.error('请先输入 Token ID');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.error.enterTokenId' }));
         return;
       }
 
       const privacyAddress = await generatePrivacyAddress(secret, tokenId);
       // Set to Advanced Deposit form targetAddress field
       advancedDepositForm.setFieldsValue({ targetAddress: privacyAddress });
-      message.success('隐私地址已生成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.privacyAddressGenerated' }));
       setAdvancedDepositSecretModalVisible(false);
       advancedDepositSecretForm.resetFields();
       setAdvancedDepositSecretList([]);
     } catch (error: any) {
-      message.error(`生成失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.message.generateFailed' })}: ${error.message}`);
     }
   };
 
@@ -689,7 +689,7 @@ const ZWERC721: React.FC = () => {
       const tokenId = advancedDepositForm.getFieldValue('tokenId');
       
       if (tokenId === undefined || tokenId === null) {
-        message.error('请先输入 Token ID');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.error.enterTokenId' }));
         return;
       }
 
@@ -698,7 +698,7 @@ const ZWERC721: React.FC = () => {
       // Set to Advanced Deposit form targetAddress field
       advancedDepositForm.setFieldsValue({ targetAddress: privacyAddress });
 
-      message.success('隐私地址已生成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.privacyAddressGenerated' }));
       setAdvancedDepositSecretModalVisible(false);
       advancedDepositSecretForm.resetFields();
       setAdvancedDepositSecretList([]);
@@ -707,20 +707,20 @@ const ZWERC721: React.FC = () => {
         // Form validation error, do nothing
         return;
       }
-      message.error(`生成失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.message.generateFailed' })}: ${error.message}`);
     }
   };
 
   // Generate Seed through wallet signature
   const handleGenerateBySeed = async (targetMode?: 'deposit' | 'transfer' | 'advancedDeposit') => {
     if (!wallet || !account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721) {
-      message.error('ZWERC721 合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.zwContractNotConfigured' }));
       return;
     }
 
@@ -780,7 +780,7 @@ const ZWERC721: React.FC = () => {
           setSecretList(secrets);
         }
       }
-      message.success('Seed 已生成，正在查询 NFT...');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.seedGeneratedQuerying' }));
 
       // ZWERC721 contract for nullifier checks
       const zwNftContract = new ethers.Contract(
@@ -883,17 +883,17 @@ const ZWERC721: React.FC = () => {
           updateSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: '查询失败', loading: false, claimedTokenIds: [] }
+                ? { ...item, amount: intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' }), loading: false, claimedTokenIds: [] }
                 : item
             )
           );
         }
       }
 
-      message.success('查询完成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.queryCompleted' }));
     } catch (error: any) {
       console.error('Failed to generate Seed:', error);
-      message.error(`生成 Seed 失败: ${error.message}`);
+      message.error(`Generate Seed failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -905,7 +905,7 @@ const ZWERC721: React.FC = () => {
       const tokenId = transferForm.getFieldValue('tokenId');
       
       if (tokenId === undefined || tokenId === null) {
-        message.error('请先输入 Token ID');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.error.enterTokenId' }));
         return;
       }
 
@@ -914,25 +914,25 @@ const ZWERC721: React.FC = () => {
       transferForm.setFieldsValue({ targetAddress: privacyAddress });
       // Save the generated burn address for later detection
       setTransferBurnAddress(privacyAddress);
-      message.success('隐私地址已生成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.privacyAddressGenerated' }));
       setSecretModalVisible(false);
       secretForm.resetFields();
       setSecretList([]);
     } catch (error: any) {
-      message.error(`生成失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.message.generateFailed' })}: ${error.message}`);
     }
   };
 
   // Click button to open modal and generate Seed immediately
   const handleRemintGenerateBySeedClick = async () => {
     if (!wallet || !account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721) {
-      message.error('ZWERC721 合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.zwContractNotConfigured' }));
       return;
     }
 
@@ -977,7 +977,7 @@ const ZWERC721: React.FC = () => {
       }
 
       setRemintSecretList(secrets);
-      message.success('Seed 已生成，正在查询 NFT...');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.seedGeneratedQuerying' }));
 
       // ZWERC721 contract for nullifier checks
       const zwNftContract = new ethers.Contract(
@@ -1055,17 +1055,17 @@ const ZWERC721: React.FC = () => {
           setRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: '查询失败', loading: false, claimedTokenIds: [] }
+                ? { ...item, amount: intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' }), loading: false, claimedTokenIds: [] }
                 : item
             )
           );
         }
       }
 
-      message.success('查询完成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.queryCompleted' }));
     } catch (error: any) {
       console.error('Failed to generate Seed:', error);
-      message.error(`生成 Seed 失败: ${error.message}`);
+      message.error(`Generate Seed failed: ${error.message}`);
       setRemintSeedModalVisible(false);
     } finally {
       setLoading(false);
@@ -1083,7 +1083,7 @@ const ZWERC721: React.FC = () => {
     }
 
     setRemintSeedModalVisible(false);
-    message.success('Secret 已选择');
+    message.success(intl.formatMessage({ id: 'pages.zwerc721.message.secretSelected' }));
   };
 
   // Select SecretBySeed for Advanced Remint page
@@ -1096,19 +1096,19 @@ const ZWERC721: React.FC = () => {
     }
 
     setAdvancedRemintSeedModalVisible(false);
-    message.success('Secret 已选择');
+    message.success(intl.formatMessage({ id: 'pages.zwerc721.message.secretSelected' }));
   };
 
   // Advanced Mode Remint - Click button to open modal and generate Seed
   const handleAdvancedRemintGenerateBySeedClick = async () => {
     if (!wallet || !account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721) {
-      message.error('ZWERC721 合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.zwContractNotConfigured' }));
       return;
     }
 
@@ -1153,7 +1153,7 @@ const ZWERC721: React.FC = () => {
       }
 
       setAdvancedRemintSecretList(secrets);
-      message.success('Seed 已生成，正在查询 NFT...');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.seedGeneratedQuerying' }));
 
       // ZWERC721 contract for nullifier checks
       const zwNftContract = new ethers.Contract(
@@ -1231,17 +1231,17 @@ const ZWERC721: React.FC = () => {
           setAdvancedRemintSecretList((prev) =>
             prev.map((item, idx) =>
               idx === i
-                ? { ...item, amount: '查询失败', loading: false, claimedTokenIds: [] }
+                ? { ...item, amount: intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' }), loading: false, claimedTokenIds: [] }
                 : item
             )
           );
         }
       }
 
-      message.success('查询完成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.queryCompleted' }));
     } catch (error: any) {
       console.error('Failed to generate Seed:', error);
-      message.error(`生成 Seed 失败: ${error.message}`);
+      message.error(`Generate Seed failed: ${error.message}`);
       setAdvancedRemintSeedModalVisible(false);
     } finally {
       setLoading(false);
@@ -1255,7 +1255,7 @@ const ZWERC721: React.FC = () => {
       const tokenId = transferForm.getFieldValue('tokenId');
       
       if (tokenId === undefined || tokenId === null) {
-        message.error('请先输入 Token ID');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.error.enterTokenId' }));
         return;
       }
 
@@ -1267,7 +1267,7 @@ const ZWERC721: React.FC = () => {
       // Save the generated burn address for later detection
       setTransferBurnAddress(privacyAddress);
 
-      message.success('隐私地址已生成');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.message.privacyAddressGenerated' }));
       setSecretModalVisible(false);
       secretForm.resetFields();
       setSecretList([]);
@@ -1276,7 +1276,7 @@ const ZWERC721: React.FC = () => {
         // Form validation error, do nothing
         return;
       }
-      message.error(`生成失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.message.generateFailed' })}: ${error.message}`);
     }
   };
 
@@ -1285,24 +1285,24 @@ const ZWERC721: React.FC = () => {
     console.log('🔵 [Simple Mode] handleSimpleDeposit called with:', values);
 
     if (!account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) {
-      message.error('合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.contractNotConfigured' }));
       return;
     }
 
     if (!values.targetAddress) {
-      message.error('目标地址为必填项');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.targetAddressRequired' }));
       return;
     }
 
     // Check if user owns this NFT
     if (!userTokenIds.includes(values.tokenId)) {
-      message.error(`您不拥有 Token ID ${values.tokenId}`);
+      message.error(`You do not own Token ID ${values.tokenId}`);
       return;
     }
 
@@ -1332,11 +1332,11 @@ const ZWERC721: React.FC = () => {
       const approvedAddress = await nftContract.getApproved(values.tokenId);
       if (approvedAddress.toLowerCase() !== CONTRACT_ADDRESSES.ZWERC721.toLowerCase()) {
         console.log('[Simple] Starting approval...');
-        message.loading('正在授权...', 0);
+        message.loading(intl.formatMessage({ id: 'pages.zwerc721.burn.approving' }), 0);
         const approveTx = await nftContract.approve(CONTRACT_ADDRESSES.ZWERC721, values.tokenId);
         await approveTx.wait();
         message.destroy();
-        message.success('授权成功');
+        message.success(intl.formatMessage({ id: 'pages.zwerc721.burn.approveSuccess' }));
         setLoading(false);
         return;
       }
@@ -1345,10 +1345,10 @@ const ZWERC721: React.FC = () => {
 
       const tx = await zwNftContract.deposit(values.targetAddress, values.tokenId, 1, '0x');
 
-      message.loading('正在提交交易...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.burn.submitting' }), 0);
       const receipt = await tx.wait();
       message.destroy();
-      message.success('销毁成功');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.burn.success' }));
       
       // 保存交易哈希以显示
       setSimpleBurnTxHash(receipt.hash);
@@ -1374,10 +1374,10 @@ const ZWERC721: React.FC = () => {
 
       let errorMessage = error.message || 'Unknown error';
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-        errorMessage = '用户拒绝了交易';
+        errorMessage = intl.formatMessage({ id: 'pages.zwerc721.error.userRejected' });
       }
 
-      message.error(`操作失败: ${errorMessage}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.burn.failed' })}: ${errorMessage}`);
     } finally {
       console.log('🏁 [Simple] handleSimpleDeposit finished');
       setLoading(false);
@@ -1392,25 +1392,25 @@ const ZWERC721: React.FC = () => {
     });
 
     if (!account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) {
-      message.error('合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.contractNotConfigured' }));
       return;
     }
 
     // Check if user owns this NFT
     if (!userTokenIds.includes(values.tokenId)) {
-      message.error(`您不拥有 Token ID ${values.tokenId}`);
+      message.error(`You do not own Token ID ${values.tokenId}`);
       return;
     }
 
     // If directBurn is enabled, targetAddress is required
     if (directBurn && !values.targetAddress) {
-      message.error('目标地址为必填项');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.targetAddressRequired' }));
       return;
     }
 
@@ -1440,11 +1440,11 @@ const ZWERC721: React.FC = () => {
       const approvedAddress = await nftContract.getApproved(values.tokenId);
       if (approvedAddress.toLowerCase() !== CONTRACT_ADDRESSES.ZWERC721.toLowerCase()) {
         console.log('[Advanced] Starting approval...');
-        message.loading('正在授权...', 0);
+        message.loading(intl.formatMessage({ id: 'pages.zwerc721.wrap.approving' }), 0);
         const approveTx = await nftContract.approve(CONTRACT_ADDRESSES.ZWERC721, values.tokenId);
         await approveTx.wait();
         message.destroy();
-        message.success('授权成功');
+        message.success(intl.formatMessage({ id: 'pages.zwerc721.wrap.approveSuccess' }));
         setLoading(false);
         return;
       }
@@ -1454,10 +1454,10 @@ const ZWERC721: React.FC = () => {
       const toAddress = values.targetAddress || account;
       const tx = await zwNftContract.deposit(toAddress, values.tokenId, 1, '0x');
 
-      message.loading('正在提交交易...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.wrap.submitting' }), 0);
       const receipt = await tx.wait();
       message.destroy();
-      message.success('包装成功');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.wrap.success' }));
       
       // 保存交易哈希以显示
       setAdvancedDepositTxHash(receipt.hash);
@@ -1487,10 +1487,10 @@ const ZWERC721: React.FC = () => {
 
       let errorMessage = error.message || 'Unknown error';
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-        errorMessage = '用户拒绝了交易';
+        errorMessage = intl.formatMessage({ id: 'pages.zwerc721.error.userRejected' });
       }
 
-      message.error(`操作失败: ${errorMessage}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.wrap.failed' })}: ${errorMessage}`);
     } finally {
       console.log('🏁 [Advanced] handleAdvancedDeposit finished');
       setLoading(false);
@@ -1500,19 +1500,19 @@ const ZWERC721: React.FC = () => {
   // Withdraw operation
   const handleWithdraw = async (values: { tokenId: number }) => {
     if (!account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721) {
-      message.error('合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.contractNotConfigured' }));
       return;
     }
 
     // Check if user owns this ZWERC721 token
     if (!zwUserTokenIds.includes(values.tokenId)) {
-      message.error(`您不拥有 ZWERC721 Token ID ${values.tokenId}`);
+      message.error(`You do not own ZWERC721 Token ID ${values.tokenId}`);
       return;
     }
 
@@ -1539,10 +1539,10 @@ const ZWERC721: React.FC = () => {
       const signerAddress = await signer.getAddress();
       const tx = await zwNftContract.withdraw(signerAddress, values.tokenId, 1, '0x');
 
-      message.loading('正在提交交易...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.unwrap.submitting' }), 0);
       const receipt = await tx.wait();
       message.destroy();
-      message.success('解包成功');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.unwrap.success' }));
       
       // 保存交易哈希以显示
       setAdvancedWithdrawTxHash(receipt.hash);
@@ -1552,7 +1552,7 @@ const ZWERC721: React.FC = () => {
       buildZwNftCache();
     } catch (error: any) {
       message.destroy();
-      message.error(`解包失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.unwrap.failed' })}: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -1561,19 +1561,19 @@ const ZWERC721: React.FC = () => {
   // Transfer operation
   const handleTransfer = async (values: { targetAddress: string; tokenId: number }) => {
     if (!account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721) {
-      message.error('合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.contractNotConfigured' }));
       return;
     }
 
     // Check if user owns this ZWERC721 token
     if (!zwUserTokenIds.includes(values.tokenId)) {
-      message.error(`您不拥有 ZWERC721 Token ID ${values.tokenId}`);
+      message.error(`You do not own ZWERC721 Token ID ${values.tokenId}`);
       return;
     }
 
@@ -1599,10 +1599,10 @@ const ZWERC721: React.FC = () => {
 
       const tx = await zwNftContract.transferFrom(account, values.targetAddress, values.tokenId);
 
-      message.loading('正在提交交易...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.transfer.submitting' }), 0);
       const receipt = await tx.wait();
       message.destroy();
-      message.success('转账成功');
+      message.success(intl.formatMessage({ id: 'pages.zwerc721.transfer.success' }));
       
       // 保存交易哈希以显示
       setAdvancedTransferTxHash(receipt.hash);
@@ -1628,7 +1628,7 @@ const ZWERC721: React.FC = () => {
       buildZwNftCache();
     } catch (error: any) {
       message.destroy();
-      message.error(`转账失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.transfer.failed' })}: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -1637,13 +1637,13 @@ const ZWERC721: React.FC = () => {
   // Faucet mint operation
   const handleFaucetMint = async () => {
     if (!account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ERC721Faucet) {
-      message.error('水龙头合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.contractNotConfigured' }));
       return;
     }
 
@@ -1667,7 +1667,7 @@ const ZWERC721: React.FC = () => {
 
       const tx = await nftContract.faucetMint(account);
 
-      message.loading('正在铸造 NFT...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.faucet.minting' }), 0);
       const receipt = await tx.wait();
       message.destroy();
 
@@ -1687,7 +1687,7 @@ const ZWERC721: React.FC = () => {
         tokenId = parsed?.args?.tokenId?.toString() || 'N/A';
       }
 
-      message.success(`成功铸造 NFT #${tokenId}！`);
+      message.success(`${intl.formatMessage({ id: 'pages.zwerc721.faucet.mintSuccess' })} #${tokenId}!`);
       console.log(`✅ Minted NFT #${tokenId}, tx: ${receipt.hash}`);
 
       setFaucetModalVisible(false);
@@ -1698,10 +1698,10 @@ const ZWERC721: React.FC = () => {
 
       let errorMessage = error.message || 'Unknown error';
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-        errorMessage = '用户拒绝了交易';
+        errorMessage = intl.formatMessage({ id: 'pages.zwerc721.error.userRejected' });
       }
 
-      message.error(`铸造失败: ${errorMessage}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.faucet.mintFailed' })}: ${errorMessage}`);
     } finally {
       setFaucetLoading(false);
     }
@@ -1710,13 +1710,13 @@ const ZWERC721: React.FC = () => {
   // Remint operation
   const handleRemint = async (values: any) => {
     if (!account) {
-      message.error('请先连接钱包');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
       return;
     }
 
     // Check if contract addresses are configured
     if (!CONTRACT_ADDRESSES.ZWERC721) {
-      message.error('合约地址未配置');
+      message.error(intl.formatMessage({ id: 'pages.zwerc721.error.contractNotConfigured' }));
       return;
     }
 
@@ -1727,7 +1727,7 @@ const ZWERC721: React.FC = () => {
       setAdvancedRemintTxHash(null);
     }
     setLoading(true);
-    const hideLoading = message.loading('正在准备 ZK 证明...', 0);
+    const hideLoading = message.loading(intl.formatMessage({ id: 'pages.zwerc721.remint.preparingZK' }), 0);
 
     try {
       const provider = await getProvider();
@@ -1760,7 +1760,7 @@ const ZWERC721: React.FC = () => {
       const isNullifierUsed = await zwNftContract.nullifierUsed(nullifierHex);
       if (isNullifierUsed) {
         hideLoading();
-        message.error('该 nullifier 已被使用');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.remint.nullifierUsed' }));
         return;
       }
 
@@ -1768,18 +1768,18 @@ const ZWERC721: React.FC = () => {
         const currentOwner = await zwNftContract.ownerOf(tokenId);
         if (currentOwner.toLowerCase() !== privacyAddress.toLowerCase()) {
           hideLoading();
-          message.error(`隐私地址不拥有 Token ID ${tokenId}`);
+          message.error(`Privacy address does not own Token ID ${tokenId}`);
           return;
         }
       } catch (error) {
         hideLoading();
-        message.error(`Token ID ${tokenId} 不存在或已被销毁`);
+        message.error(`Token ID ${tokenId} does not exist or has been burned`);
         return;
       }
 
       // === Step 2: Rebuild Merkle tree from chain ===
       hideLoading();
-      message.loading('正在重建 Merkle 树...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.remint.rebuildingTree' }), 0);
       console.log('Step 2: Rebuilding Merkle tree from chain...');
 
       const poseidon = await buildPoseidon();
@@ -1792,19 +1792,19 @@ const ZWERC721: React.FC = () => {
 
       if (localRoot !== onchainRoot) {
         message.destroy();
-        message.error('Merkle 根不匹配');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.remint.rootMismatch' }));
         return;
       }
 
       // === Step 3: Find user's commitment ===
       message.destroy();
-      message.loading('正在查找 commitment...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.remint.findingCommitment' }), 0);
       console.log('Step 3: Finding user commitment...');
 
       const userCommitment = await findUserCommitment(zwNftContract, privacyAddress, poseidon, tokenId);
       if (!userCommitment) {
         message.destroy();
-        message.error('未找到 commitment');
+        message.error(intl.formatMessage({ id: 'pages.zwerc721.remint.commitmentNotFound' }));
         return;
       }
 
@@ -1816,7 +1816,7 @@ const ZWERC721: React.FC = () => {
 
       // === Step 4: Generate Merkle proof ===
       message.destroy();
-      message.loading('正在生成 Merkle 证明...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.remint.generatingMerkle' }), 0);
       console.log('Step 4: Generating Merkle proof...');
 
       const merkleProof = tree.getProof(userCommitment.index);
@@ -1845,7 +1845,7 @@ const ZWERC721: React.FC = () => {
 
       // === Step 6: Generate ZK proof ===
       message.destroy();
-      message.loading('正在生成零知识证明（这可能需要 10-30 秒）...', 0);
+      message.loading(intl.formatMessage({ id: 'pages.zwerc721.remint.generatingZK' }), 0);
       console.log('Step 6: Generating ZK proof (this may take 10-30 seconds)...');
 
       try {
@@ -1880,7 +1880,7 @@ const ZWERC721: React.FC = () => {
 
         // === Step 7: Submit remint transaction ===
         message.destroy();
-        message.loading('正在提交 remint 交易...', 0);
+        message.loading(intl.formatMessage({ id: 'pages.zwerc721.remint.submitting' }), 0);
         console.log('Step 7: Submitting remint transaction...');
 
         // Encode relayerData (always empty for NFTs)
@@ -1905,7 +1905,7 @@ const ZWERC721: React.FC = () => {
         const receipt = await tx.wait();
 
         message.destroy();
-        message.success('Remint 成功！');
+        message.success(intl.formatMessage({ id: 'pages.zwerc721.remint.success' }));
         console.log(`✅ Remint succeeded! Gas used: ${receipt.gasUsed}`);
 
         // 保存交易哈希以显示（根据当前模式）
@@ -1926,12 +1926,12 @@ const ZWERC721: React.FC = () => {
       } catch (proofError: any) {
         message.destroy();
         console.error('ZK proof generation or remint error:', proofError);
-        message.error(`Remint 失败: ${proofError.message}`);
+        message.error(`${intl.formatMessage({ id: 'pages.zwerc721.remint.failed' })}: ${proofError.message}`);
       }
     } catch (error: any) {
       message.destroy();
       console.error('Remint error:', error);
-      message.error(`Remint 失败: ${error.message}`);
+      message.error(`${intl.formatMessage({ id: 'pages.zwerc721.remint.failed' })}: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -1960,7 +1960,7 @@ const ZWERC721: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <span style={{ fontSize: 15 }}>🔄</span>
-            <span style={{ fontWeight: 600 }}>正在更新 NFT 数据缓存</span>
+            <span style={{ fontWeight: 600 }}>{intl.formatMessage({ id: 'pages.zwerc721.cache.building' })}</span>
           </div>
           <div
             style={{
@@ -2058,14 +2058,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             }}
           >
             <span style={{ color: '#fff', fontSize: 14 }}>
-              💡 需要测试 NFT？
+              {intl.formatMessage({ id: 'pages.zwerc721.faucet.tip' })}
             </span>
             <Button
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
                 if (!account) {
-                  message.warning('请先连接钱包');
+                  message.warning(intl.formatMessage({ id: 'pages.zwerc721.error.connectWallet' }));
                   connect();
                 } else {
                   setFaucetModalVisible(true);
@@ -2078,7 +2078,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 fontWeight: 'bold',
               }}
             >
-              NFT 水龙头
+              {intl.formatMessage({ id: 'pages.zwerc721.faucet.button' })}
             </Button>
           </div>
 
@@ -2101,7 +2101,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   marginBottom: 8,
                 }}
               >
-                NFT 余额
+                {intl.formatMessage({ id: 'pages.zwerc721.balance.nft' })}
               </div>
               <div
                 style={{
@@ -2133,7 +2133,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     )}
                   </>
                 ) : (
-                  <span style={{ fontSize: 16, opacity: 0.9 }}>连接钱包</span>
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>{intl.formatMessage({ id: 'pages.zwerc721.balance.connectWallet' })}</span>
                 )}
               </div>
               {account && userTokenIds.length > 0 && (
@@ -2165,7 +2165,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   marginBottom: 8,
                 }}
               >
-                ZWNFT 余额
+                {intl.formatMessage({ id: 'pages.zwerc721.balance.zwnft' })}
               </div>
               <div
                 style={{
@@ -2197,7 +2197,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     )}
                   </>
                 ) : (
-                  <span style={{ fontSize: 16, opacity: 0.9 }}>连接钱包</span>
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>{intl.formatMessage({ id: 'pages.zwerc721.balance.connectWallet' })}</span>
                 )}
               </div>
               {account && zwUserTokenIds.length > 0 && (
@@ -2234,7 +2234,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   marginBottom: 8,
                 }}
               >
-                可重铸余额
+                {intl.formatMessage({ id: 'pages.zwerc721.balance.remintable' })}
               </div>
               <div
                 style={{
@@ -2286,11 +2286,11 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         color: '#fff',
                       }}
                     >
-                      Scan
+                      {intl.formatMessage({ id: 'pages.zwerc721.balance.scan' })}
                     </Button>
                   </>
                 ) : (
-                  <span style={{ fontSize: 16, opacity: 0.9 }}>连接钱包</span>
+                  <span style={{ fontSize: 16, opacity: 0.9 }}>{intl.formatMessage({ id: 'pages.zwerc721.balance.connectWallet' })}</span>
                 )}
               </div>
             </div>
@@ -2323,19 +2323,19 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               height: 'auto',
               minWidth: 'auto',
             }}
-            title="清除销毁信息"
+            title={intl.formatMessage({ id: 'pages.zwerc721.lastBurn.clearTitle' })}
           />
           <div style={{ color: '#fff' }}>
             <h3 style={{ color: '#fff', marginBottom: 16, fontSize: 18, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8 }}>
-              🔥 上次销毁信息
-              <Tooltip title="这是您上次销毁操作的记录，包含了销毁的 Token ID 和生成的隐私地址。使用对应的 Secret 可以重铸该 NFT。">
+              {intl.formatMessage({ id: 'pages.zwerc721.lastBurn.title' })}
+              <Tooltip title={intl.formatMessage({ id: 'pages.zwerc721.lastBurn.tooltip' })}>
                 <InfoCircleOutlined style={{ fontSize: 16, cursor: 'pointer', opacity: 0.7 }} />
               </Tooltip>
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Token ID */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>Token ID:</span>
+                <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>{intl.formatMessage({ id: 'pages.zwerc721.lastBurn.tokenId' })}</span>
                 <span style={{ fontSize: 16, fontWeight: 'bold' }}>
                   #{lastBurnTokenId}
                 </span>
@@ -2343,7 +2343,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
               {/* Address */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>地址:</span>
+                <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>{intl.formatMessage({ id: 'pages.zwerc721.lastBurn.address' })}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                   <span
                     style={{
@@ -2362,9 +2362,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     onClick={async () => {
                       const success = await copyToClipboard(lastBurnAddress);
                       if (success) {
-                        message.success('地址已复制！');
+                        message.success(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.addressCopied' }));
                       } else {
-                        message.error('复制失败');
+                        message.error(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.copyFailed' }));
                       }
                     }}
                     style={{ color: '#fff', padding: 0, height: 'auto' }}
@@ -2375,7 +2375,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               {/* Transaction Hash */}
               {lastBurnTxHash && (
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>交易哈希:</span>
+                  <span style={{ fontSize: 14, opacity: 0.9, minWidth: 80 }}>{intl.formatMessage({ id: 'pages.zwerc721.lastBurn.txHash' })}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                     <a
                       href={`https://sepolia.etherscan.io/tx/${lastBurnTxHash}`}
@@ -2399,9 +2399,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       onClick={async () => {
                         const success = await copyToClipboard(lastBurnTxHash);
                         if (success) {
-                          message.success('交易哈希已复制！');
+                          message.success(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.txHashCopied' }));
                         } else {
-                          message.error('复制失败');
+                          message.error(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.copyFailed' }));
                         }
                       }}
                       style={{ color: '#fff', padding: 0, height: 'auto' }}
@@ -2425,7 +2425,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   flexWrap: 'wrap',
                 }}
               >
-                <span>💡 使用对应的 Secret 可以在重铸页面重铸该 NFT</span>
+                <span>{intl.formatMessage({ id: 'pages.zwerc721.lastBurn.tip' })}</span>
                 <Button
                   type="primary"
                   size="small"
@@ -2450,7 +2450,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     color: '#fff',
                   }}
                 >
-                  前往重铸
+                  {intl.formatMessage({ id: 'pages.zwerc721.lastBurn.goToRemint' })}
                 </Button>
               </div>
             </div>
@@ -2467,62 +2467,61 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           onChange={(key) => setActiveMainTab(key)}
         >
           {/* Simple Mode - Only includes Burn and Remint */}
-          <TabPane tab="Simple Mode" key="simple">
+          <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.simpleMode' })} key="simple">
             <Tabs 
               activeKey={activeSimpleTab}
               onChange={(key) => setActiveSimpleTab(key)}
               type="line" 
               style={{ marginTop: 16 }}
             >
-              <TabPane tab="🔥 销毁" key="burn">
+              <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.burn' })} key="burn">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                   {!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT ? (
-                    <Empty description="合约地址未配置，请先部署合约" />
+                    <Empty description={intl.formatMessage({ id: 'pages.zwerc721.error.contractNotDeployed' })} />
                   ) : (
                     <Form form={simpleDepositForm} layout="vertical" onFinish={handleSimpleDeposit}>
                       <Form.Item
-                        label="Token ID"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.burn.tokenId.label' })}
                         name="tokenId"
                         rules={[
                           {
                             required: true,
-                            message: '请输入 Token ID',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.burn.tokenId.required' }),
                           },
                           {
                             type: 'number',
                             min: 0,
-                            message: 'Token ID 必须大于等于 0',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.burn.tokenId.min' }),
                           },
                         ]}
                       >
                         <InputNumber
                           style={{ width: '100%' }}
-                          placeholder="输入要销毁的 NFT Token ID"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.burn.tokenId.placeholder' })}
                           precision={0}
                           min={0}
                           onChange={() => {
-                            // 当 tokenId 变化时，重置 targetAddress，避免使用错误的销毁地址
                             simpleDepositForm.setFieldsValue({ targetAddress: undefined });
                           }}
                         />
                       </Form.Item>
 
                       <Form.Item
-                        label="隐私地址"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.burn.privacyAddress.label' })}
                         name="targetAddress"
                         rules={[
                           {
                             required: true,
-                            message: '隐私地址为必填项',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.burn.privacyAddress.required' }),
                           },
                           {
                             pattern: /^0x[a-fA-F0-9]{40}$/,
-                            message: '请输入有效的以太坊地址',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.burn.privacyAddress.invalid' }),
                           },
                         ]}
                       >
                         <Input
-                          placeholder="输入或生成隐私地址"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.burn.privacyAddress.placeholder' })}
                           maxLength={42}
                           addonBefore={
                             <Button
@@ -2530,7 +2529,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                               onClick={handleDepositBurnClick}
                               style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                             >
-                              生成
+                              {intl.formatMessage({ id: 'pages.zwerc721.burn.generate' })}
                             </Button>
                           }
                         />
@@ -2538,7 +2537,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
                       <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} block>
-                          销毁
+                          {intl.formatMessage({ id: 'pages.zwerc721.burn.button' })}
                         </Button>
                       </Form.Item>
 
@@ -2546,7 +2545,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       {simpleBurnTxHash && (
                         <div style={{ marginTop: 12, textAlign: 'center' }}>
                           <span style={{ color: '#52c41a', fontSize: '14px' }}>
-                            交易已提交:{' '}
+                            {intl.formatMessage({ id: 'pages.zwerc721.burn.txSubmitted' })}{' '}
                             <a
                               href={`https://sepolia.etherscan.io/tx/${simpleBurnTxHash}`}
                               target="_blank"
@@ -2564,26 +2563,26 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   <div
                     style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
                   >
-                    <h4>💡 使用技巧</h4>
+                    <h4>{intl.formatMessage({ id: 'pages.zwerc721.burn.tip.title' })}</h4>
                     <p>
-                      <strong>什么是简易模式销毁？</strong>
+                      <strong>{intl.formatMessage({ id: 'pages.zwerc721.burn.tip.what' })}</strong>
                     </p>
-                    <p>简易模式销毁会封装您的 NFT 并自动将封装后的 ZW NFT 销毁到销毁地址（黑洞地址）。这提供了最大的隐私保护。</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.burn.tip.whatDesc' })}</p>
                     <p>
-                      <strong>如何使用：</strong>
+                      <strong>{intl.formatMessage({ id: 'pages.zwerc721.burn.tip.how' })}</strong>
                     </p>
-                    <p>1. 输入您要销毁的 NFT Token ID</p>
-                    <p>2. 使用您的 secret 生成销毁地址（或手动创建）。请妥善保管您的 secret - 稍后重铸时需要用到。</p>
-                    <p>3. 销毁的 NFT 只能使用生成销毁地址时使用的正确 secret 来重铸。</p>
-                    <p>4. 您的 NFT 现在处于隐私保护状态，可以随时匿名重铸。</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.burn.tip.step1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.burn.tip.step2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.burn.tip.step3' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.burn.tip.step4' })}</p>
                   </div>
                 </div>
               </TabPane>
 
-              <TabPane tab="重铸" key="remint">
+              <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.remint' })} key="remint">
                 <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                   {!CONTRACT_ADDRESSES.ZWERC721 ? (
-                    <Empty description="合约地址未配置，请先部署合约" />
+                    <Empty description={intl.formatMessage({ id: 'pages.zwerc721.error.contractNotDeployed' })} />
                   ) : (
                     <Form
                       form={remintForm}
@@ -2595,79 +2594,79 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       }}
                     >
                       <Form.Item
-                        label="Token ID"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.remint.tokenId.label' })}
                         name="tokenId"
                         rules={[
                           {
                             required: true,
-                            message: '请输入 Token ID',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.remint.tokenId.required' }),
                           },
                           {
                             type: 'number',
                             min: 0,
-                            message: 'Token ID 必须大于等于 0',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.remint.tokenId.min' }),
                           },
                         ]}
                       >
                         <InputNumber
                           style={{ width: '100%' }}
-                          placeholder="输入要重铸的 NFT Token ID"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.remint.tokenId.placeholder' })}
                           precision={0}
                           min={0}
                         />
                       </Form.Item>
 
                       <Form.Item
-                        label="Secret"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.remint.secret.label' })}
                         name="secret"
                         rules={[
                           {
                             required: true,
-                            message: 'Secret 为必填项',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.remint.secret.required' }),
                           },
                         ]}
                       >
                         <Input.Password
-                          placeholder="输入销毁时使用的 Secret"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.remint.secret.placeholder' })}
                           addonBefore={
                             <Button
                               type="link"
                               onClick={handleRemintGenerateBySeedClick}
                               style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                             >
-                              {isMobile ? '选择' : '从 Seed 选择'}
+                              {isMobile ? intl.formatMessage({ id: 'pages.zwerc721.remint.selectMobile' }) : intl.formatMessage({ id: 'pages.zwerc721.remint.selectBySeed' })}
                             </Button>
                           }
                         />
                       </Form.Item>
 
                       <Form.Item
-                        label="接收地址"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.remint.recipient.label' })}
                         name="recipient"
                         rules={[
                           {
                             required: true,
-                            message: '接收地址为必填项',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.remint.recipient.required' }),
                           },
                           {
                             pattern: /^0x[a-fA-F0-9]{40}$/,
-                            message: '请输入有效的以太坊地址',
+                            message: intl.formatMessage({ id: 'pages.zwerc721.remint.recipient.invalid' }),
                           },
                         ]}
                       >
                         <Input
-                          placeholder={account || '输入接收地址'}
+                          placeholder={account || intl.formatMessage({ id: 'pages.zwerc721.remint.recipient.label' })}
                           maxLength={42}
                         />
                       </Form.Item>
 
                       <Form.Item name="redeem" valuePropName="checked" initialValue={true} hidden>
-                        <Checkbox>直接赎回底层 NFT</Checkbox>
+                        <Checkbox>{intl.formatMessage({ id: 'pages.zwerc721.remint.redeem' })}</Checkbox>
                       </Form.Item>
 
                       <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} block>
-                          重铸
+                          {intl.formatMessage({ id: 'pages.zwerc721.remint.button' })}
                         </Button>
                       </Form.Item>
 
@@ -2675,7 +2674,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       {simpleRemintTxHash && (
                         <div style={{ marginTop: 12, textAlign: 'center' }}>
                           <span style={{ color: '#52c41a', fontSize: '14px' }}>
-                            交易已提交:{' '}
+                            {intl.formatMessage({ id: 'pages.zwerc721.remint.txSubmitted' })}{' '}
                             <a
                               href={`https://sepolia.etherscan.io/tx/${simpleRemintTxHash}`}
                               target="_blank"
@@ -2693,20 +2692,20 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   <div
                     style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}
                   >
-                    <h4>💡 使用技巧</h4>
+                    <h4>{intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.title' })}</h4>
                     <p>
-                      <strong>什么是简易模式重铸？</strong>
+                      <strong>{intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.what' })}</strong>
                     </p>
-                    <p>简易模式重铸会使用您的 secret 重铸您的 ZW NFT，并自动将它解封装为底层 NFT。接收者将直接收到原始 NFT。</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.whatDesc' })}</p>
                     <p>
-                      <strong>如何使用：</strong>
+                      <strong>{intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.how' })}</strong>
                     </p>
-                    <p>1. 输入您销毁 NFT 时使用的 Token ID 和 secret。这可以在不透露您身份的情况下证明所有权。</p>
-                    <p>2. 接收者地址（默认：您当前的钱包）将直接收到解封装后的底层 NFT。</p>
-                    <p>3. 重铸需要生成 ZK 证明，大约需要 10-30 秒。</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.step1' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.step2' })}</p>
+                    <p>{intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.step3' })}</p>
                     <p style={{ color: '#1890ff', marginTop: 12 }}>
-                      <strong>注意：</strong>
-                      在简易模式下，"解封装底层 NFT"选项自动启用，因此您将直接收到原始 NFT 而不是 ZWNFT。这提供了无缝体验。
+                      <strong>{intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.note' })}</strong>
+                      {intl.formatMessage({ id: 'pages.zwerc721.remint.simpleMode.tip.noteDesc' })}
                     </p>
                   </div>
                 </div>
@@ -2715,10 +2714,10 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           </TabPane>
 
           {/* Advanced Mode - Includes all four Tabs */}
-          <TabPane tab="Advanced Mode" key="advanced">
+          <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.advancedMode' })} key="advanced">
             {!CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT ? (
               <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                <Empty description="合约地址未配置，请先部署 ZWERC721 合约" />
+                <Empty description={intl.formatMessage({ id: 'pages.zwerc721.error.contractZWERC721NotDeployed' })} />
               </div>
             ) : (
               <Tabs 
@@ -2727,20 +2726,20 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 type="line" 
                 style={{ marginTop: 16 }}
               >
-                <TabPane tab="💰 包装" key="deposit">
+                <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.wrap' })} key="deposit">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                     <Form form={advancedDepositForm} layout="vertical" onFinish={handleAdvancedDeposit}>
                       <Form.Item
-                        label="Token ID"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.wrap.tokenId.label' })}
                         name="tokenId"
                         rules={[
-                          { required: true, message: '请输入 Token ID' },
-                          { type: 'number', min: 0, message: 'Token ID 必须大于等于 0' },
+                          { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.wrap.tokenId.required' }) },
+                          { type: 'number', min: 0, message: intl.formatMessage({ id: 'pages.zwerc721.wrap.tokenId.min' }) },
                         ]}
                       >
                         <InputNumber
                           style={{ width: '100%' }}
-                          placeholder="输入要包装的 NFT Token ID"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.wrap.tokenId.placeholder' })}
                           precision={0}
                           min={0}
                           onChange={() => {
@@ -2761,21 +2760,21 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                             }
                           }}
                         >
-                          直接销毁（包装后立即转入隐私地址）
+                          {intl.formatMessage({ id: 'pages.zwerc721.wrap.directBurn' })}
                         </Checkbox>
                       </Form.Item>
 
                       {directBurn && (
                         <Form.Item
-                          label="隐私地址"
+                          label={intl.formatMessage({ id: 'pages.zwerc721.wrap.privacyAddress.label' })}
                           name="targetAddress"
                           rules={[
-                            { required: true, message: '隐私地址为必填项' },
-                            { pattern: /^0x[a-fA-F0-9]{40}$/, message: '请输入有效的以太坊地址' },
+                            { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.wrap.privacyAddress.required' }) },
+                            { pattern: /^0x[a-fA-F0-9]{40}$/, message: intl.formatMessage({ id: 'pages.zwerc721.wrap.privacyAddress.invalid' }) },
                           ]}
                         >
                           <Input
-                            placeholder="输入或生成隐私地址"
+                            placeholder={intl.formatMessage({ id: 'pages.zwerc721.wrap.privacyAddress.placeholder' })}
                             maxLength={42}
                             addonBefore={
                               <Button
@@ -2783,7 +2782,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                                 onClick={handleAdvancedDepositGenerateClick}
                                 style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                               >
-                                生成
+                                {intl.formatMessage({ id: 'pages.zwerc721.wrap.generate' })}
                               </Button>
                             }
                           />
@@ -2792,14 +2791,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
                       <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} block>
-                          {directBurn ? '销毁' : '包装'}
+                          {directBurn ? intl.formatMessage({ id: 'pages.zwerc721.wrap.burnButton' }) : intl.formatMessage({ id: 'pages.zwerc721.wrap.button' })}
                         </Button>
                       </Form.Item>
 
                       {advancedDepositTxHash && (
                         <div style={{ marginTop: 12, textAlign: 'center' }}>
                           <span style={{ color: '#52c41a', fontSize: '14px' }}>
-                            交易已提交:{' '}
+                            {intl.formatMessage({ id: 'pages.zwerc721.wrap.txSubmitted' })}{' '}
                             <a
                               href={`https://sepolia.etherscan.io/tx/${advancedDepositTxHash}`}
                               target="_blank"
@@ -2814,28 +2813,28 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     </Form>
 
                     <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                      <h4>💡 使用技巧</h4>
-                      <p><strong>普通包装：</strong>将您的 NFT 包装为 ZWERC721（ZW NFT），ZWERC721 归您所有，可随时解包或转账。</p>
-                      <p><strong>直接销毁：</strong>勾选后，包装同时将 ZWERC721 转入您指定的隐私地址（黑洞地址）。使用对应 Secret 可匿名重铸。</p>
-                      <p>操作分两步：第一次点击会先完成授权，第二次点击才会完成包装。</p>
+                      <h4>{intl.formatMessage({ id: 'pages.zwerc721.wrap.tip.title' })}</h4>
+                      <p><strong>{intl.formatMessage({ id: 'pages.zwerc721.tab.wrap' }).replace('💰 ', '')}:</strong> {intl.formatMessage({ id: 'pages.zwerc721.wrap.tip.normal' })}</p>
+                      <p><strong>{intl.formatMessage({ id: 'pages.zwerc721.wrap.burnButton' })}:</strong> {intl.formatMessage({ id: 'pages.zwerc721.wrap.tip.directBurn' })}</p>
+                      <p>{intl.formatMessage({ id: 'pages.zwerc721.wrap.tip.twoSteps' })}</p>
                     </div>
                   </div>
                 </TabPane>
 
-                <TabPane tab="💳 解包" key="withdraw">
+                <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.unwrap' })} key="withdraw">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                     <Form form={withdrawForm} layout="vertical" onFinish={handleWithdraw}>
                       <Form.Item
-                        label="Token ID"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.unwrap.tokenId.label' })}
                         name="tokenId"
                         rules={[
-                          { required: true, message: '请输入 Token ID' },
-                          { type: 'number', min: 0, message: 'Token ID 必须大于等于 0' },
+                          { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.unwrap.tokenId.required' }) },
+                          { type: 'number', min: 0, message: intl.formatMessage({ id: 'pages.zwerc721.unwrap.tokenId.min' }) },
                         ]}
                       >
                         <InputNumber
                           style={{ width: '100%' }}
-                          placeholder="输入要解包的 ZWERC721 Token ID"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.unwrap.tokenId.placeholder' })}
                           precision={0}
                           min={0}
                         />
@@ -2843,14 +2842,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
                       <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} block>
-                          解包
+                          {intl.formatMessage({ id: 'pages.zwerc721.unwrap.button' })}
                         </Button>
                       </Form.Item>
 
                       {advancedWithdrawTxHash && (
                         <div style={{ marginTop: 12, textAlign: 'center' }}>
                           <span style={{ color: '#52c41a', fontSize: '14px' }}>
-                            交易已提交:{' '}
+                            {intl.formatMessage({ id: 'pages.zwerc721.unwrap.txSubmitted' })}{' '}
                             <a
                               href={`https://sepolia.etherscan.io/tx/${advancedWithdrawTxHash}`}
                               target="_blank"
@@ -2865,27 +2864,27 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     </Form>
 
                     <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                      <h4>💡 使用技巧</h4>
-                      <p><strong>什么是解包？</strong>将您持有的 ZWERC721 解包，取回对应的底层原始 NFT。</p>
-                      <p>您必须拥有该 ZWERC721 Token 才能解包。解包后，ZWERC721 Token 将被销毁，底层 NFT 返回到您的钱包。</p>
+                      <h4>{intl.formatMessage({ id: 'pages.zwerc721.unwrap.tip.title' })}</h4>
+                      <p><strong>{intl.formatMessage({ id: 'pages.zwerc721.unwrap.tip.what' })}</strong>{intl.formatMessage({ id: 'pages.zwerc721.unwrap.tip.desc1' })}</p>
+                      <p>{intl.formatMessage({ id: 'pages.zwerc721.unwrap.tip.desc2' })}</p>
                     </div>
                   </div>
                 </TabPane>
 
-                <TabPane tab="🔄 转账" key="transfer">
+                <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.transfer' })} key="transfer">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                     <Form form={transferForm} layout="vertical" onFinish={handleTransfer}>
                       <Form.Item
-                        label="Token ID"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.transfer.tokenId.label' })}
                         name="tokenId"
                         rules={[
-                          { required: true, message: '请输入 Token ID' },
-                          { type: 'number', min: 0, message: 'Token ID 必须大于等于 0' },
+                          { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.transfer.tokenId.required' }) },
+                          { type: 'number', min: 0, message: intl.formatMessage({ id: 'pages.zwerc721.transfer.tokenId.min' }) },
                         ]}
                       >
                         <InputNumber
                           style={{ width: '100%' }}
-                          placeholder="输入要转账的 ZWERC721 Token ID"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.transfer.tokenId.placeholder' })}
                           precision={0}
                           min={0}
                           onChange={() => {
@@ -2896,15 +2895,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       </Form.Item>
 
                       <Form.Item
-                        label="目标地址"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.transfer.targetAddress.label' })}
                         name="targetAddress"
                         rules={[
-                          { required: true, message: '目标地址为必填项' },
-                          { pattern: /^0x[a-fA-F0-9]{40}$/, message: '请输入有效的以太坊地址' },
+                          { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.transfer.targetAddress.required' }) },
+                          { pattern: /^0x[a-fA-F0-9]{40}$/, message: intl.formatMessage({ id: 'pages.zwerc721.transfer.targetAddress.invalid' }) },
                         ]}
                       >
                         <Input
-                          placeholder="输入目标地址或生成隐私地址"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.transfer.targetAddress.placeholder' })}
                           maxLength={42}
                           addonBefore={
                             <Button
@@ -2912,7 +2911,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                               onClick={handleBurnClick}
                               style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                             >
-                              生成隐私地址
+                              {intl.formatMessage({ id: 'pages.zwerc721.transfer.generatePrivacy' })}
                             </Button>
                           }
                         />
@@ -2920,14 +2919,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
                       <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} block>
-                          转账
+                          {intl.formatMessage({ id: 'pages.zwerc721.transfer.button' })}
                         </Button>
                       </Form.Item>
 
                       {advancedTransferTxHash && (
                         <div style={{ marginTop: 12, textAlign: 'center' }}>
                           <span style={{ color: '#52c41a', fontSize: '14px' }}>
-                            交易已提交:{' '}
+                            {intl.formatMessage({ id: 'pages.zwerc721.transfer.txSubmitted' })}{' '}
                             <a
                               href={`https://sepolia.etherscan.io/tx/${advancedTransferTxHash}`}
                               target="_blank"
@@ -2942,15 +2941,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     </Form>
 
                     <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                      <h4>💡 使用技巧</h4>
-                      <p><strong>普通转账：</strong>将 ZWERC721 转给任意以太坊地址。</p>
-                      <p><strong>隐私转账：</strong>点击"生成隐私地址"，使用 Secret 生成一个隐私地址，将 NFT 转入该地址后，持有 Secret 的人可以匿名重铸，实现隐私所有权转移。</p>
-                      <p>转账完成后，若目标地址是隐私地址，可切换到"重铸"标签页使用 Secret 取回 NFT。</p>
+                      <h4>{intl.formatMessage({ id: 'pages.zwerc721.transfer.tip.title' })}</h4>
+                      <p>{intl.formatMessage({ id: 'pages.zwerc721.transfer.tip.normal' })}</p>
+                      <p>{intl.formatMessage({ id: 'pages.zwerc721.transfer.tip.privacy' })}</p>
+                      <p>{intl.formatMessage({ id: 'pages.zwerc721.transfer.tip.afterTransfer' })}</p>
                     </div>
                   </div>
                 </TabPane>
 
-                <TabPane tab="🎁 重铸" key="remint">
+                <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.advancedRemint' })} key="remint">
                   <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 0' }}>
                     <Form
                       form={advancedRemintForm}
@@ -2962,58 +2961,58 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       }}
                     >
                       <Form.Item
-                        label="Token ID"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.remint.tokenId.label' })}
                         name="tokenId"
                         rules={[
-                          { required: true, message: '请输入 Token ID' },
-                          { type: 'number', min: 0, message: 'Token ID 必须大于等于 0' },
+                          { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.remint.tokenId.required' }) },
+                          { type: 'number', min: 0, message: intl.formatMessage({ id: 'pages.zwerc721.remint.tokenId.min' }) },
                         ]}
                       >
                         <InputNumber
                           style={{ width: '100%' }}
-                          placeholder="输入要重铸的 NFT Token ID"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.remint.tokenId.placeholder' })}
                           precision={0}
                           min={0}
                         />
                       </Form.Item>
 
                       <Form.Item
-                        label="Secret"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.remint.secret.label' })}
                         name="secret"
-                        rules={[{ required: true, message: 'Secret 为必填项' }]}
+                        rules={[{ required: true, message: intl.formatMessage({ id: 'pages.zwerc721.remint.secret.required' }) }]}
                       >
                         <Input.Password
-                          placeholder="输入持有的 Secret"
+                          placeholder={intl.formatMessage({ id: 'pages.zwerc721.advancedRemint.secret.placeholder' })}
                           addonBefore={
                             <Button
                               type="link"
                               onClick={handleAdvancedRemintGenerateBySeedClick}
                               style={{ padding: 0, height: 'auto', whiteSpace: 'nowrap' }}
                             >
-                              {isMobile ? '选择' : '从 Seed 选择'}
+                              {isMobile ? intl.formatMessage({ id: 'pages.zwerc721.remint.selectMobile' }) : intl.formatMessage({ id: 'pages.zwerc721.remint.selectBySeed' })}
                             </Button>
                           }
                         />
                       </Form.Item>
 
                       <Form.Item
-                        label="接收地址"
+                        label={intl.formatMessage({ id: 'pages.zwerc721.remint.recipient.label' })}
                         name="recipient"
                         rules={[
-                          { required: true, message: '接收地址为必填项' },
-                          { pattern: /^0x[a-fA-F0-9]{40}$/, message: '请输入有效的以太坊地址' },
+                          { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.remint.recipient.required' }) },
+                          { pattern: /^0x[a-fA-F0-9]{40}$/, message: intl.formatMessage({ id: 'pages.zwerc721.remint.recipient.invalid' }) },
                         ]}
                       >
                         <Input
-                          placeholder={account || '输入接收地址'}
+                          placeholder={account || intl.formatMessage({ id: 'pages.zwerc721.remint.recipient.label' })}
                           maxLength={42}
                         />
                       </Form.Item>
 
                       <Form.Item name="redeem" valuePropName="checked">
                         <Checkbox>
-                          <span>直接赎回底层 NFT</span>
-                          <Tooltip title="勾选后，接收方直接获得原始 NFT；不勾选则获得 ZWERC721，可继续进行隐私转账">
+                          <span>{intl.formatMessage({ id: 'pages.zwerc721.remint.redeem' })}</span>
+                          <Tooltip title={intl.formatMessage({ id: 'pages.zwerc721.remint.redeemTooltip' })}>
                             <InfoCircleOutlined style={{ marginLeft: 6, color: '#1890ff', cursor: 'pointer' }} />
                           </Tooltip>
                         </Checkbox>
@@ -3021,14 +3020,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
                       <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} block>
-                          重铸
+                          {intl.formatMessage({ id: 'pages.zwerc721.remint.button' })}
                         </Button>
                       </Form.Item>
 
                       {advancedRemintTxHash && (
                         <div style={{ marginTop: 12, textAlign: 'center' }}>
                           <span style={{ color: '#52c41a', fontSize: '14px' }}>
-                            交易已提交:{' '}
+                            {intl.formatMessage({ id: 'pages.zwerc721.remint.txSubmitted' })}{' '}
                             <a
                               href={`https://sepolia.etherscan.io/tx/${advancedRemintTxHash}`}
                               target="_blank"
@@ -3043,13 +3042,13 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                     </Form>
 
                     <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                      <h4>💡 使用技巧</h4>
-                      <p><strong>什么是高级模式重铸？</strong></p>
-                      <p>使用 Secret 证明对 NFT 的所有权，并将其重铸到指定地址，全程无需暴露原始持有者身份。</p>
-                      <p><strong>redeem 选项：</strong></p>
-                      <p>• <strong>不勾选：</strong>接收方获得 ZWERC721，可继续进行隐私转账（对应测试中的 <code>redeem=false</code>）</p>
-                      <p>• <strong>勾选：</strong>接收方直接获得底层原始 NFT，完成完整隐私转账流程（对应 <code>redeem=true</code>）</p>
-                      <p>重铸需要生成零知识证明（ZK Proof），大约需要 10-30 秒。</p>
+                      <h4>{intl.formatMessage({ id: 'pages.zwerc721.advancedRemint.tip.title' })}</h4>
+                      <p><strong>{intl.formatMessage({ id: 'pages.zwerc721.advancedRemint.tip.what' })}</strong></p>
+                      <p>{intl.formatMessage({ id: 'pages.zwerc721.advancedRemint.tip.whatDesc' })}</p>
+                      <p><strong>{intl.formatMessage({ id: 'pages.zwerc721.advancedRemint.tip.redeem' })}</strong></p>
+                      <p>• {intl.formatMessage({ id: 'pages.zwerc721.advancedRemint.tip.redeemOff' })}</p>
+                      <p>• {intl.formatMessage({ id: 'pages.zwerc721.advancedRemint.tip.redeemOn' })}</p>
+                      <p>{intl.formatMessage({ id: 'pages.zwerc721.advancedRemint.tip.time' })}</p>
                     </div>
                   </div>
                 </TabPane>
@@ -3058,9 +3057,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           </TabPane>
 
           {/* Tutorial Tab */}
-          <TabPane tab="Tutorial" key="tutorial">
+          <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.tutorial' })} key="tutorial">
             <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 0' }}>
-              <Empty description="教程视频待添加" />
+              <Empty description={intl.formatMessage({ id: 'pages.zwerc721.tutorial.empty' })} />
             </div>
           </TabPane>
         </Tabs>
@@ -3068,12 +3067,12 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
       {/* Faucet Modal */}
       <Modal
-        title="🚰 NFT 水龙头"
+        title={intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.title' })}
         open={faucetModalVisible}
         onCancel={() => setFaucetModalVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setFaucetModalVisible(false)}>
-            取消
+            {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.cancel' })}
           </Button>,
           <Button
             key="mint"
@@ -3081,7 +3080,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             loading={faucetLoading}
             onClick={handleFaucetMint}
           >
-            铸造 NFT
+            {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.mint' })}
           </Button>,
         ]}
       >
@@ -3089,7 +3088,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           <div style={{ marginBottom: 20, textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🎁</div>
             <p style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
-              从水龙头免费铸造一个测试 NFT
+              {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.subtitle' })}
             </p>
             {account && (
               <div
@@ -3102,7 +3101,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 }}
               >
                 <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>
-                  接收地址:
+                  {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.recipientAddress' })}
                 </div>
                 <div style={{ fontSize: 14, fontFamily: 'monospace', color: '#1890ff' }}>
                   {account}
@@ -3116,19 +3115,19 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               <InfoCircleOutlined style={{ color: '#1890ff', marginTop: 2 }} />
               <div style={{ fontSize: 12, color: '#666' }}>
                 <p style={{ margin: '0 0 8px 0' }}>
-                  <strong>水龙头说明：</strong>
+                  <strong>{intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.infoTitle' })}</strong>
                 </p>
                 <p style={{ margin: '0 0 4px 0' }}>
-                  • 每次调用会铸造一个新的 NFT
+                  • {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.info1' })}
                 </p>
                 <p style={{ margin: '0 0 4px 0' }}>
-                  • Token ID 会自动递增
+                  • {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.info2' })}
                 </p>
                 <p style={{ margin: '0 0 4px 0' }}>
-                  • 铸造完成后会自动刷新您的余额
+                  • {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.info3' })}
                 </p>
                 <p style={{ margin: 0 }}>
-                  • 仅用于测试，请勿在主网使用
+                  • {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.info4' })}
                 </p>
               </div>
             </div>
@@ -3142,16 +3141,16 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                 rel="noopener noreferrer"
                 style={{ fontSize: 12, color: '#1890ff' }}
               >
-                查看水龙头合约 ↗
+                {intl.formatMessage({ id: 'pages.zwerc721.faucet.modal.viewContract' })}
               </a>
             </div>
           )}
         </div>
       </Modal>
 
-      {/* Simple Mode Deposit Secret Modal - 选择 Secret */}
+      {/* Simple Mode Deposit Secret Modal */}
       <Modal
-        title="选择 Secret (存入)"
+        title={intl.formatMessage({ id: 'pages.zwerc721.secretModal.deposit.title' })}
         open={depositSecretModalVisible}
         onCancel={() => {
           setDepositSecretModalVisible(false);
@@ -3164,7 +3163,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
       >
         {depositSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在扫描，请稍候...</p>
+            <p>{intl.formatMessage({ id: 'pages.zwerc721.secretModal.scanning' })}</p>
           </div>
         ) : (
           <div>
@@ -3176,14 +3175,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               scroll={{ y: 300, x: 'max-content' }}
               columns={[
                 {
-                  title: '序号',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.index' }),
                   dataIndex: 'index',
                   key: 'index',
                   width: 60,
                   align: 'center',
                 },
                 {
-                  title: 'Secret',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
                   width: 120,
@@ -3199,9 +3198,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         onClick={async () => {
                           const success = await copyToClipboard(text);
                           if (success) {
-                            message.success('Secret 已复制!');
+                            message.success(intl.formatMessage({ id: 'pages.zwerc721.message.secretCopied' }));
                           } else {
-                            message.error('复制失败');
+                            message.error(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.copyFailed' }));
                           }
                         }}
                         style={{ padding: 0, height: 'auto' }}
@@ -3211,18 +3210,17 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: 'NFT 数量',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.nftCount' }),
                   dataIndex: 'amount',
                   key: 'amount',
                   width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
-                      return <span style={{ color: '#999' }}>查询中...</span>;
+                      return <span style={{ color: '#999' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.checking' })}</span>;
                     }
-                    if (amount === '查询失败') {
-                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    if (amount === intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })) {
+                      return <span style={{ color: '#ff4d4f' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })}</span>;
                     }
-                    // Check if has NFTs
                     if (amount.startsWith('0 NFT')) {
                       return <span style={{ color: '#52c41a' }}>{amount}</span>;
                     }
@@ -3230,7 +3228,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   },
                 },
                 {
-                  title: '是否已提取',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.claimed' }),
                   dataIndex: 'claimedTokenIds',
                   key: 'claimedTokenIds',
                   width: 100,
@@ -3240,13 +3238,13 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (!claimedTokenIds || claimedTokenIds.length === 0) {
-                      return <span style={{ color: '#52c41a' }}>可用</span>;
+                      return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.available' })}</span>;
                     }
-                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.claimedWithIds' }, { ids: claimedTokenIds.join(', ') })}</span>;
                   },
                 },
                 {
-                  title: '操作',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.action' }),
                   key: 'action',
                   width: 80,
                   align: 'center',
@@ -3260,9 +3258,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         size="small"
                         onClick={() => handleSelectDepositSecret(record.secret)}
                         disabled={record.loading || tokenIdClaimed}
-                        title={tokenIdClaimed ? `Token ID ${currentTokenId} 已在此 Secret 上提取过` : '选择此地址'}
+                        title={tokenIdClaimed ? `Token ID ${currentTokenId}` : intl.formatMessage({ id: 'pages.zwerc721.table.selectAddress' })}
                       >
-                        选择
+                        {intl.formatMessage({ id: 'pages.zwerc721.table.select' })}
                       </Button>
                     );
                   },
@@ -3270,15 +3268,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个 Secret 用于存入您的 NFT。当前 Token ID 已在该 Secret 上提取过则不可选择。
+              {intl.formatMessage({ id: 'pages.zwerc721.table.depositTip' })}
             </p>
           </div>
         )}
       </Modal>
 
-      {/* Advanced Mode Deposit Secret Modal - 选择 Secret */}
+      {/* Advanced Mode Deposit Secret Modal */}
       <Modal
-        title="选择 Secret (高级存入)"
+        title={intl.formatMessage({ id: 'pages.zwerc721.secretModal.advancedDeposit.title' })}
         open={advancedDepositSecretModalVisible}
         onCancel={() => {
           setAdvancedDepositSecretModalVisible(false);
@@ -3303,7 +3301,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             size="large"
             style={{ flex: 1 }}
           >
-            使用 Seed 生成
+            {intl.formatMessage({ id: 'pages.zwerc721.secretModal.useSeed' })}
           </Button>
           <Button
             type={advancedDepositSecretMode === 'manual' ? 'primary' : 'default'}
@@ -3314,7 +3312,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             size="large"
             style={{ flex: 1 }}
           >
-            手动输入
+            {intl.formatMessage({ id: 'pages.zwerc721.secretModal.manual' })}
           </Button>
         </div>
 
@@ -3323,21 +3321,21 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           <div>
             <Form form={advancedDepositSecretForm} layout="vertical">
               <Form.Item
-                label="Secret"
+                label={intl.formatMessage({ id: 'pages.zwerc721.secretModal.secret.label' })}
                 name="secret"
                 rules={[
-                  { required: true, message: '请输入 Secret' },
-                  { pattern: /^\d+$/, message: 'Secret 必须为纯数字' },
+                  { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.secretModal.secret.required' }) },
+                  { pattern: /^\d+$/, message: intl.formatMessage({ id: 'pages.zwerc721.secretModal.secret.invalid' }) },
                 ]}
               >
-                <Input placeholder="请输入 Secret (纯数字)" />
+                <Input placeholder={intl.formatMessage({ id: 'pages.zwerc721.secretModal.secret.placeholder' })} />
               </Form.Item>
               <Button type="primary" onClick={handleAdvancedDepositSecretConfirm} block size="large">
-                确认
+                {intl.formatMessage({ id: 'pages.zwerc721.secretModal.confirm' })}
               </Button>
             </Form>
             <p style={{ color: '#666', fontSize: '12px', marginTop: 12 }}>
-              提示: 请妥善保管您的 Secret，丢失后无法找回。
+              {intl.formatMessage({ id: 'pages.zwerc721.secretModal.keepSafe' })}
             </p>
           </div>
         )}
@@ -3345,7 +3343,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
         {/* Seed Mode - Loading */}
         {advancedDepositSecretMode === 'seed' && advancedDepositSecretList.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在扫描，请稍候...</p>
+            <p>{intl.formatMessage({ id: 'pages.zwerc721.secretModal.scanning' })}</p>
           </div>
         )}
 
@@ -3360,14 +3358,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               scroll={{ y: 300, x: 'max-content' }}
               columns={[
                 {
-                  title: '序号',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.index' }),
                   dataIndex: 'index',
                   key: 'index',
                   width: 60,
                   align: 'center',
                 },
                 {
-                  title: 'Secret',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
                   width: 120,
@@ -3383,9 +3381,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         onClick={async () => {
                           const success = await copyToClipboard(text);
                           if (success) {
-                            message.success('Secret 已复制!');
+                            message.success(intl.formatMessage({ id: 'pages.zwerc721.message.secretCopied' }));
                           } else {
-                            message.error('复制失败');
+                            message.error(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.copyFailed' }));
                           }
                         }}
                         style={{ padding: 0, height: 'auto' }}
@@ -3395,16 +3393,16 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: 'NFT 数量',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.nftCount' }),
                   dataIndex: 'amount',
                   key: 'amount',
                   width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
-                      return <span style={{ color: '#999' }}>查询中...</span>;
+                      return <span style={{ color: '#999' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.checking' })}</span>;
                     }
-                    if (amount === '查询失败') {
-                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    if (amount === intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })) {
+                      return <span style={{ color: '#ff4d4f' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })}</span>;
                     }
                     if (amount.startsWith('0 NFT')) {
                       return <span style={{ color: '#52c41a' }}>{amount}</span>;
@@ -3413,7 +3411,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   },
                 },
                 {
-                  title: '是否已提取',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.claimed' }),
                   dataIndex: 'claimedTokenIds',
                   key: 'claimedTokenIds',
                   width: 100,
@@ -3423,13 +3421,13 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (!claimedTokenIds || claimedTokenIds.length === 0) {
-                      return <span style={{ color: '#52c41a' }}>可用</span>;
+                      return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.available' })}</span>;
                     }
-                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.claimedWithIds' }, { ids: claimedTokenIds.join(', ') })}</span>;
                   },
                 },
                 {
-                  title: '操作',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.action' }),
                   key: 'action',
                   width: 80,
                   align: 'center',
@@ -3443,9 +3441,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         size="small"
                         onClick={() => handleSelectAdvancedDepositSecret(record.secret)}
                         disabled={record.loading || tokenIdClaimed}
-                        title={tokenIdClaimed ? `Token ID ${currentTokenId} 已在此 Secret 上提取过` : '选择此地址'}
+                        title={tokenIdClaimed ? `Token ID ${currentTokenId}` : intl.formatMessage({ id: 'pages.zwerc721.table.selectAddress' })}
                       >
-                        选择
+                        {intl.formatMessage({ id: 'pages.zwerc721.table.select' })}
                       </Button>
                     );
                   },
@@ -3453,15 +3451,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个 Secret 用于存入您的 NFT。当前 Token ID 已在该 Secret 上提取过则不可选择。
+              {intl.formatMessage({ id: 'pages.zwerc721.table.depositTip' })}
             </p>
           </div>
         )}
       </Modal>
 
-      {/* Transfer Secret Modal - 选择 Secret */}
+      {/* Transfer Secret Modal */}
       <Modal
-        title="选择 Secret (转账)"
+        title={intl.formatMessage({ id: 'pages.zwerc721.secretModal.transfer.title' })}
         open={secretModalVisible}
         onCancel={() => {
           setSecretModalVisible(false);
@@ -3486,7 +3484,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             size="large"
             style={{ flex: 1 }}
           >
-            使用 Seed 生成
+            {intl.formatMessage({ id: 'pages.zwerc721.secretModal.useSeed' })}
           </Button>
           <Button
             type={transferSecretMode === 'manual' ? 'primary' : 'default'}
@@ -3497,7 +3495,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
             size="large"
             style={{ flex: 1 }}
           >
-            手动输入
+            {intl.formatMessage({ id: 'pages.zwerc721.secretModal.manual' })}
           </Button>
         </div>
 
@@ -3506,21 +3504,21 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           <div>
             <Form form={secretForm} layout="vertical">
               <Form.Item
-                label="Secret"
+                label={intl.formatMessage({ id: 'pages.zwerc721.secretModal.secret.label' })}
                 name="secret"
                 rules={[
-                  { required: true, message: '请输入 Secret' },
-                  { pattern: /^\d+$/, message: 'Secret 必须为纯数字' },
+                  { required: true, message: intl.formatMessage({ id: 'pages.zwerc721.secretModal.secret.required' }) },
+                  { pattern: /^\d+$/, message: intl.formatMessage({ id: 'pages.zwerc721.secretModal.secret.invalid' }) },
                 ]}
               >
-                <Input placeholder="请输入 Secret (纯数字)" />
+                <Input placeholder={intl.formatMessage({ id: 'pages.zwerc721.secretModal.secret.placeholder' })} />
               </Form.Item>
               <Button type="primary" onClick={handleSecretConfirm} block size="large">
-                确认
+                {intl.formatMessage({ id: 'pages.zwerc721.secretModal.confirm' })}
               </Button>
             </Form>
             <p style={{ color: '#666', fontSize: '12px', marginTop: 12 }}>
-              提示: 请妥善保管您的 Secret，丢失后无法找回。
+              {intl.formatMessage({ id: 'pages.zwerc721.secretModal.keepSafe' })}
             </p>
           </div>
         )}
@@ -3528,7 +3526,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
         {/* Seed Mode - Loading */}
         {transferSecretMode === 'seed' && secretList.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在扫描，请稍候...</p>
+            <p>{intl.formatMessage({ id: 'pages.zwerc721.secretModal.scanning' })}</p>
           </div>
         )}
 
@@ -3543,14 +3541,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               scroll={{ y: 300, x: 'max-content' }}
               columns={[
                 {
-                  title: '序号',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.index' }),
                   dataIndex: 'index',
                   key: 'index',
                   width: 60,
                   align: 'center',
                 },
                 {
-                  title: 'Secret',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
                   width: 120,
@@ -3566,9 +3564,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         onClick={async () => {
                           const success = await copyToClipboard(text);
                           if (success) {
-                            message.success('Secret 已复制!');
+                            message.success(intl.formatMessage({ id: 'pages.zwerc721.message.secretCopied' }));
                           } else {
-                            message.error('复制失败');
+                            message.error(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.copyFailed' }));
                           }
                         }}
                         style={{ padding: 0, height: 'auto' }}
@@ -3578,16 +3576,16 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: 'NFT 数量',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.nftCount' }),
                   dataIndex: 'amount',
                   key: 'amount',
                   width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
-                      return <span style={{ color: '#999' }}>查询中...</span>;
+                      return <span style={{ color: '#999' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.checking' })}</span>;
                     }
-                    if (amount === '查询失败') {
-                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    if (amount === intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })) {
+                      return <span style={{ color: '#ff4d4f' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })}</span>;
                     }
                     if (amount.startsWith('0 NFT')) {
                       return <span style={{ color: '#52c41a' }}>{amount}</span>;
@@ -3596,7 +3594,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   },
                 },
                 {
-                  title: '是否已提取',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.claimed' }),
                   dataIndex: 'claimedTokenIds',
                   key: 'claimedTokenIds',
                   width: 100,
@@ -3606,13 +3604,13 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (!claimedTokenIds || claimedTokenIds.length === 0) {
-                      return <span style={{ color: '#52c41a' }}>可用</span>;
+                      return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.available' })}</span>;
                     }
-                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.claimedWithIds' }, { ids: claimedTokenIds.join(', ') })}</span>;
                   },
                 },
                 {
-                  title: '操作',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.action' }),
                   key: 'action',
                   width: 80,
                   align: 'center',
@@ -3626,9 +3624,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         size="small"
                         onClick={() => handleSelectSecret(record.secret)}
                         disabled={record.loading || tokenIdClaimed}
-                        title={tokenIdClaimed ? `Token ID ${currentTokenId} 已在此 Secret 上提取过` : '选择此地址'}
+                        title={tokenIdClaimed ? `Token ID ${currentTokenId}` : intl.formatMessage({ id: 'pages.zwerc721.table.selectAddress' })}
                       >
-                        选择
+                        {intl.formatMessage({ id: 'pages.zwerc721.table.select' })}
                       </Button>
                     );
                   },
@@ -3636,15 +3634,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个 Secret 生成转账目标地址。当前 Token ID 已在该 Secret 上提取过则不可选择。
+              {intl.formatMessage({ id: 'pages.zwerc721.table.transferTip' })}
             </p>
           </div>
         )}
       </Modal>
 
-      {/* Simple Mode Remint Secret Modal - 选择 Secret */}
+      {/* Simple Mode Remint Secret Modal */}
       <Modal
-        title="选择 Secret (提取)"
+        title={intl.formatMessage({ id: 'pages.zwerc721.secretModal.remint.title' })}
         open={remintSeedModalVisible}
         onCancel={() => {
           setRemintSeedModalVisible(false);
@@ -3652,14 +3650,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
         }}
         footer={[
           <Button key="close" onClick={() => setRemintSeedModalVisible(false)}>
-            关闭
+            {intl.formatMessage({ id: 'pages.zwerc721.secretModal.close' })}
           </Button>,
         ]}
         width={1000}
       >
         {remintSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在扫描，请稍候...</p>
+            <p>{intl.formatMessage({ id: 'pages.zwerc721.secretModal.scanning' })}</p>
           </div>
         ) : (
           <div>
@@ -3671,14 +3669,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               scroll={{ y: 300, x: 'max-content' }}
               columns={[
                 {
-                  title: '序号',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.index' }),
                   dataIndex: 'index',
                   key: 'index',
                   width: 60,
                   align: 'center',
                 },
                 {
-                  title: 'Secret',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
                   width: 120,
@@ -3694,9 +3692,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         onClick={async () => {
                           const success = await copyToClipboard(text);
                           if (success) {
-                            message.success('Secret 已复制!');
+                            message.success(intl.formatMessage({ id: 'pages.zwerc721.message.secretCopied' }));
                           } else {
-                            message.error('复制失败');
+                            message.error(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.copyFailed' }));
                           }
                         }}
                         style={{ padding: 0, height: 'auto' }}
@@ -3706,16 +3704,16 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: 'NFT 数量',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.nftCount' }),
                   dataIndex: 'amount',
                   key: 'amount',
                   width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
-                      return <span style={{ color: '#999' }}>查询中...</span>;
+                      return <span style={{ color: '#999' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.checking' })}</span>;
                     }
-                    if (amount === '查询失败') {
-                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    if (amount === intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })) {
+                      return <span style={{ color: '#ff4d4f' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })}</span>;
                     }
                     if (amount.startsWith('0 NFT')) {
                       return <span style={{ color: '#999' }}>{amount}</span>;
@@ -3724,7 +3722,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   },
                 },
                 {
-                  title: '是否已提取',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.claimed' }),
                   dataIndex: 'claimedTokenIds',
                   key: 'claimedTokenIds',
                   width: 100,
@@ -3734,28 +3732,28 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (!claimedTokenIds || claimedTokenIds.length === 0) {
-                      return <span style={{ color: '#52c41a' }}>可用</span>;
+                      return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.available' })}</span>;
                     }
-                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.claimedWithIds' }, { ids: claimedTokenIds.join(', ') })}</span>;
                   },
                 },
                 {
-                  title: '操作',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.action' }),
                   key: 'action',
                   width: 80,
                   align: 'center',
                   render: (_: any, record: any) => {
-                    // For remint, only allow selecting addresses with NFTs
-                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
+                    const queryFailedStr = intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' });
+                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== queryFailedStr;
                     return (
                       <Button
                         type={hasNfts ? 'primary' : 'default'}
                         size="small"
                         onClick={() => handleSelectRemintSecret(record.secret)}
                         disabled={record.loading || !hasNfts}
-                        title={!hasNfts ? '没有可提取的 NFT' : '选择此 Secret'}
+                        title={!hasNfts ? intl.formatMessage({ id: 'pages.zwerc721.table.noNft' }) : intl.formatMessage({ id: 'pages.zwerc721.table.selectSecret' })}
                       >
-                        选择
+                        {intl.formatMessage({ id: 'pages.zwerc721.table.select' })}
                       </Button>
                     );
                   },
@@ -3763,15 +3761,15 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个有 NFT 且未提取的 Secret 来提取您的 NFT。
+              {intl.formatMessage({ id: 'pages.zwerc721.table.remintTip' })}
             </p>
           </div>
         )}
       </Modal>
 
-      {/* Advanced Mode Remint Secret Modal - 选择 Secret */}
+      {/* Advanced Mode Remint Secret Modal */}
       <Modal
-        title="选择 Secret (高级提取)"
+        title={intl.formatMessage({ id: 'pages.zwerc721.secretModal.advancedRemint.title' })}
         open={advancedRemintSeedModalVisible}
         onCancel={() => {
           setAdvancedRemintSeedModalVisible(false);
@@ -3779,14 +3777,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
         }}
         footer={[
           <Button key="close" onClick={() => setAdvancedRemintSeedModalVisible(false)}>
-            关闭
+            {intl.formatMessage({ id: 'pages.zwerc721.secretModal.close' })}
           </Button>,
         ]}
         width={1000}
       >
         {advancedRemintSecretList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-            <p>正在扫描，请稍候...</p>
+            <p>{intl.formatMessage({ id: 'pages.zwerc721.secretModal.scanning' })}</p>
           </div>
         ) : (
           <div>
@@ -3798,14 +3796,14 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               scroll={{ y: 300, x: 'max-content' }}
               columns={[
                 {
-                  title: '序号',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.index' }),
                   dataIndex: 'index',
                   key: 'index',
                   width: 60,
                   align: 'center',
                 },
                 {
-                  title: 'Secret',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.secret' }),
                   dataIndex: 'secret',
                   key: 'secret',
                   width: 120,
@@ -3821,9 +3819,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                         onClick={async () => {
                           const success = await copyToClipboard(text);
                           if (success) {
-                            message.success('Secret 已复制!');
+                            message.success(intl.formatMessage({ id: 'pages.zwerc721.message.secretCopied' }));
                           } else {
-                            message.error('复制失败');
+                            message.error(intl.formatMessage({ id: 'pages.zwerc721.lastBurn.copyFailed' }));
                           }
                         }}
                         style={{ padding: 0, height: 'auto' }}
@@ -3833,16 +3831,16 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   ),
                 },
                 {
-                  title: 'NFT 数量',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.nftCount' }),
                   dataIndex: 'amount',
                   key: 'amount',
                   width: 200,
                   render: (amount: string, record: any) => {
                     if (record.loading) {
-                      return <span style={{ color: '#999' }}>查询中...</span>;
+                      return <span style={{ color: '#999' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.checking' })}</span>;
                     }
-                    if (amount === '查询失败') {
-                      return <span style={{ color: '#ff4d4f' }}>查询失败</span>;
+                    if (amount === intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })) {
+                      return <span style={{ color: '#ff4d4f' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' })}</span>;
                     }
                     if (amount.startsWith('0 NFT')) {
                       return <span style={{ color: '#999' }}>{amount}</span>;
@@ -3851,7 +3849,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   },
                 },
                 {
-                  title: '是否已提取',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.claimed' }),
                   dataIndex: 'claimedTokenIds',
                   key: 'claimedTokenIds',
                   width: 100,
@@ -3861,27 +3859,28 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                       return <span style={{ color: '#999' }}>-</span>;
                     }
                     if (!claimedTokenIds || claimedTokenIds.length === 0) {
-                      return <span style={{ color: '#52c41a' }}>可用</span>;
+                      return <span style={{ color: '#52c41a' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.available' })}</span>;
                     }
-                    return <span style={{ color: '#999', fontWeight: 'bold' }}>已提取 (ID: {claimedTokenIds.join(', ')})</span>;
+                    return <span style={{ color: '#999', fontWeight: 'bold' }}>{intl.formatMessage({ id: 'pages.zwerc721.table.claimedWithIds' }, { ids: claimedTokenIds.join(', ') })}</span>;
                   },
                 },
                 {
-                  title: '操作',
+                  title: intl.formatMessage({ id: 'pages.zwerc721.table.action' }),
                   key: 'action',
                   width: 80,
                   align: 'center',
                   render: (_: any, record: any) => {
-                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== '查询失败';
+                    const queryFailedStr = intl.formatMessage({ id: 'pages.zwerc721.table.queryFailed' });
+                    const hasNfts = record.amount && !record.amount.startsWith('0 NFT') && record.amount !== queryFailedStr;
                     return (
                       <Button
                         type={hasNfts ? 'primary' : 'default'}
                         size="small"
                         onClick={() => handleSelectAdvancedRemintSecret(record.secret)}
                         disabled={record.loading || !hasNfts}
-                        title={!hasNfts ? '没有可提取的 NFT' : '选择此 Secret'}
+                        title={!hasNfts ? intl.formatMessage({ id: 'pages.zwerc721.table.noNft' }) : intl.formatMessage({ id: 'pages.zwerc721.table.selectSecret' })}
                       >
-                        选择
+                        {intl.formatMessage({ id: 'pages.zwerc721.table.select' })}
                       </Button>
                     );
                   },
@@ -3889,7 +3888,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
               ]}
             />
             <p style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-              提示: 选择一个有 NFT 且未提取的 Secret 来提取您的 NFT。
+              {intl.formatMessage({ id: 'pages.zwerc721.table.remintTip' })}
             </p>
           </div>
         )}
