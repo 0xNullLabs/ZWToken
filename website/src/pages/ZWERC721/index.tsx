@@ -587,8 +587,7 @@ const ZWERC721: React.FC = () => {
     setSeed('');
     setSecretList([]);
     setTransferBurnAddress(null);
-    // Auto generate seed
-    handleGenerateBySeed('transfer');
+    setTransferSecretMode(undefined);
   };
 
   // Handle Deposit Directly Burn button click (Simple Mode)
@@ -608,8 +607,6 @@ const ZWERC721: React.FC = () => {
     setSeed('');
     setAdvancedDepositSecretList([]);
     setAdvancedDepositSecretMode(undefined);
-    // Auto generate seed
-    handleGenerateBySeed('advancedDeposit');
   };
 
   // Handle Deposit Secret confirmation - Generate Burn Address (Simple Mode)
@@ -3288,15 +3285,72 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           advancedDepositSecretForm.resetFields();
           setSeed('');
           setAdvancedDepositSecretList([]);
+          setAdvancedDepositSecretMode(undefined);
         }}
         footer={null}
         width={1000}
       >
-        {advancedDepositSecretList.length === 0 ? (
+        {/* Mode Selection Buttons */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          <Button
+            type={advancedDepositSecretMode === 'seed' ? 'primary' : 'default'}
+            onClick={() => {
+              setAdvancedDepositSecretMode('seed');
+              if (advancedDepositSecretList.length === 0) {
+                handleGenerateBySeed('advancedDeposit');
+              }
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            使用 Seed 生成
+          </Button>
+          <Button
+            type={advancedDepositSecretMode === 'manual' ? 'primary' : 'default'}
+            onClick={() => {
+              setAdvancedDepositSecretMode('manual');
+              setAdvancedDepositSecretList([]);
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            手动输入
+          </Button>
+        </div>
+
+        {/* Manual Input Mode */}
+        {advancedDepositSecretMode === 'manual' && (
+          <div>
+            <Form form={advancedDepositSecretForm} layout="vertical">
+              <Form.Item
+                label="Secret"
+                name="secret"
+                rules={[
+                  { required: true, message: '请输入 Secret' },
+                  { pattern: /^\d+$/, message: 'Secret 必须为纯数字' },
+                ]}
+              >
+                <Input placeholder="请输入 Secret (纯数字)" />
+              </Form.Item>
+              <Button type="primary" onClick={handleAdvancedDepositSecretConfirm} block size="large">
+                确认
+              </Button>
+            </Form>
+            <p style={{ color: '#666', fontSize: '12px', marginTop: 12 }}>
+              提示: 请妥善保管您的 Secret，丢失后无法找回。
+            </p>
+          </div>
+        )}
+
+        {/* Seed Mode - Loading */}
+        {advancedDepositSecretMode === 'seed' && advancedDepositSecretList.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
             <p>正在扫描，请稍候...</p>
           </div>
-        ) : (
+        )}
+
+        {/* Seed Mode - Secret List */}
+        {advancedDepositSecretMode === 'seed' && advancedDepositSecretList.length > 0 && (
           <div>
             <Table
               dataSource={advancedDepositSecretList}
@@ -3414,15 +3468,72 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           secretForm.resetFields();
           setSeed('');
           setSecretList([]);
+          setTransferSecretMode(undefined);
         }}
         footer={null}
         width={1000}
       >
-        {secretList.length === 0 ? (
+        {/* Mode Selection Buttons */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          <Button
+            type={transferSecretMode === 'seed' ? 'primary' : 'default'}
+            onClick={() => {
+              setTransferSecretMode('seed');
+              if (secretList.length === 0) {
+                handleGenerateBySeed('transfer');
+              }
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            使用 Seed 生成
+          </Button>
+          <Button
+            type={transferSecretMode === 'manual' ? 'primary' : 'default'}
+            onClick={() => {
+              setTransferSecretMode('manual');
+              setSecretList([]);
+            }}
+            size="large"
+            style={{ flex: 1 }}
+          >
+            手动输入
+          </Button>
+        </div>
+
+        {/* Manual Input Mode */}
+        {transferSecretMode === 'manual' && (
+          <div>
+            <Form form={secretForm} layout="vertical">
+              <Form.Item
+                label="Secret"
+                name="secret"
+                rules={[
+                  { required: true, message: '请输入 Secret' },
+                  { pattern: /^\d+$/, message: 'Secret 必须为纯数字' },
+                ]}
+              >
+                <Input placeholder="请输入 Secret (纯数字)" />
+              </Form.Item>
+              <Button type="primary" onClick={handleSecretConfirm} block size="large">
+                确认
+              </Button>
+            </Form>
+            <p style={{ color: '#666', fontSize: '12px', marginTop: 12 }}>
+              提示: 请妥善保管您的 Secret，丢失后无法找回。
+            </p>
+          </div>
+        )}
+
+        {/* Seed Mode - Loading */}
+        {transferSecretMode === 'seed' && secretList.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
             <p>正在扫描，请稍候...</p>
           </div>
-        ) : (
+        )}
+
+        {/* Seed Mode - Secret List */}
+        {transferSecretMode === 'seed' && secretList.length > 0 && (
           <div>
             <Table
               dataSource={secretList}
