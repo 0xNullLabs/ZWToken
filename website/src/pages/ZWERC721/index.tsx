@@ -3188,8 +3188,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   allowFullScreen
                 />
               </div>
-            </div>
-            <div
+              <div
                 style={{
                   position: 'relative',
                   paddingBottom: '56.25%',
@@ -3243,6 +3242,7 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                   allowFullScreen
                 />
               </div>
+            </div>
           </TabPane>
         </Tabs>
       </Card>

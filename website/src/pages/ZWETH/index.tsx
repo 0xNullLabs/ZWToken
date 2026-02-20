@@ -2958,8 +2958,7 @@ const ZWETH: React.FC = () => {
                   allowFullScreen
                 />
               </div>
-            </div>
-            <div
+              <div
                 style={{
                   position: 'relative',
                   paddingBottom: '56.25%',
@@ -3013,6 +3012,7 @@ const ZWETH: React.FC = () => {
                   allowFullScreen
                 />
               </div>
+            </div>
           </TabPane>
         </Tabs>
       </Card>
