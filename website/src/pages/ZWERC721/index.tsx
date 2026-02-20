@@ -3160,10 +3160,89 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
           </TabPane>
 
           {/* Tutorial Tab */}
-          <TabPane tab={intl.formatMessage({ id: 'pages.zwerc721.tab.tutorial' })} key="tutorial">
+          <TabPane tab="Tutorial" key="tutorial">
             <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 0' }}>
-              <Empty description={intl.formatMessage({ id: 'pages.zwerc721.tutorial.empty' })} />
+              <div
+                style={{
+                  position: 'relative',
+                  paddingBottom: '56.25%' /* 16:9 aspect ratio */,
+                  height: 0,
+                  overflow: 'hidden',
+                  maxWidth: '100%',
+                  background: '#000',
+                }}
+              >
+                <iframe
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 0,
+                  }}
+                  src="https://www.youtube.com/embed/aH_Q9idI2Uw?si=4B99x1e1WapJRQe2&cc_load_policy=1"
+                  title="YouTube video player"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
             </div>
+            <div
+                style={{
+                  position: 'relative',
+                  paddingBottom: '56.25%',
+                  height: 0,
+                  overflow: 'hidden',
+                  maxWidth: '100%',
+                  background: '#000',
+                  marginTop: 24,
+                }}
+              >
+                <iframe
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 0,
+                  }}
+                  src="https://www.youtube.com/embed/3Lh7JqpIVL8?si=nyKi4bjIWGzXdfNW"
+                  title="YouTube video player"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+              <div
+                style={{
+                  position: 'relative',
+                  paddingBottom: '56.25%',
+                  height: 0,
+                  overflow: 'hidden',
+                  maxWidth: '100%',
+                  background: '#000',
+                  marginTop: 24,
+                }}
+              >
+                <iframe
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 0,
+                  }}
+                  src="https://www.youtube.com/embed/yyWCOpfki_Q?si=bUy3GZ1WTbR4md4V&start=9539"
+                  title="YouTube video player"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
           </TabPane>
         </Tabs>
       </Card>

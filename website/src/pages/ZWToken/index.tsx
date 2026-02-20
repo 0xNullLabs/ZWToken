@@ -3132,6 +3132,60 @@ const ZWToken: React.FC = () => {
                   allowFullScreen
                 />
               </div>
+              <div
+                style={{
+                  position: 'relative',
+                  paddingBottom: '56.25%',
+                  height: 0,
+                  overflow: 'hidden',
+                  maxWidth: '100%',
+                  background: '#000',
+                  marginTop: 24,
+                }}
+              >
+                <iframe
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 0,
+                  }}
+                  src="https://www.youtube.com/embed/3Lh7JqpIVL8?si=nyKi4bjIWGzXdfNW"
+                  title="YouTube video player"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+              <div
+                style={{
+                  position: 'relative',
+                  paddingBottom: '56.25%',
+                  height: 0,
+                  overflow: 'hidden',
+                  maxWidth: '100%',
+                  background: '#000',
+                  marginTop: 24,
+                }}
+              >
+                <iframe
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 0,
+                  }}
+                  src="https://www.youtube.com/embed/yyWCOpfki_Q?si=bUy3GZ1WTbR4md4V&start=9539"
+                  title="YouTube video player"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
             </div>
           </TabPane>
         </Tabs>
