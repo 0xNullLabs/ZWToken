@@ -85,6 +85,13 @@ const ZWERC721: React.FC = () => {
   // Deposit Directly Burn related states
   const [directBurn, setDirectBurn] = useState(false);
 
+  // Selected tokenId from deposit forms (for approval check)
+  const [simpleDepositTokenId, setSimpleDepositTokenId] = useState<number | null>(null);
+  const [advancedDepositTokenId, setAdvancedDepositTokenId] = useState<number | null>(null);
+  // Is the selected NFT token approved for ZWERC721? (null = unknown or no token selected)
+  const [simpleNftApproved, setSimpleNftApproved] = useState<boolean | null>(null);
+  const [advancedNftApproved, setAdvancedNftApproved] = useState<boolean | null>(null);
+
   // Last Burn information cache - Initialize from localStorage
   const getLastBurnInfoFromStorage = () => {
     try {
@@ -339,6 +346,90 @@ const ZWERC721: React.FC = () => {
       setCacheBuilding(false);
     }
   }, [wallet, account]);
+
+  // Fetch NFT approval status for Simple Mode (Burn) selected tokenId
+  React.useEffect(() => {
+    if (!account || !wallet || !CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) {
+      setSimpleNftApproved(null);
+      return;
+    }
+    if (simpleDepositTokenId === null || simpleDepositTokenId === undefined) {
+      setSimpleNftApproved(null);
+      return;
+    }
+    const tid = Number(simpleDepositTokenId);
+    if (Number.isNaN(tid)) {
+      setSimpleNftApproved(null);
+      return;
+    }
+    let cancelled = false;
+    const fetchApproval = async () => {
+      try {
+        const provider = new ethers.BrowserProvider(wallet.provider);
+        const nftContract = new ethers.Contract(
+          CONTRACT_ADDRESSES.UnderlyingNFT,
+          CONTRACT_ABIS.ERC721Faucet,
+          provider,
+        );
+        const approvedAddress = await nftContract.getApproved(tid);
+        if (!cancelled) {
+          setSimpleNftApproved(approvedAddress.toLowerCase() === CONTRACT_ADDRESSES.ZWERC721.toLowerCase());
+        }
+      } catch {
+        if (!cancelled) setSimpleNftApproved(false);
+      }
+    };
+    fetchApproval();
+    return () => { cancelled = true; };
+  }, [account, wallet, simpleDepositTokenId]);
+
+  // Fetch NFT approval status for Advanced Mode (Wrap) selected tokenId
+  React.useEffect(() => {
+    if (!account || !wallet || !CONTRACT_ADDRESSES.ZWERC721 || !CONTRACT_ADDRESSES.UnderlyingNFT) {
+      setAdvancedNftApproved(null);
+      return;
+    }
+    if (advancedDepositTokenId === null || advancedDepositTokenId === undefined) {
+      setAdvancedNftApproved(null);
+      return;
+    }
+    const tid = Number(advancedDepositTokenId);
+    if (Number.isNaN(tid)) {
+      setAdvancedNftApproved(null);
+      return;
+    }
+    let cancelled = false;
+    const fetchApproval = async () => {
+      try {
+        const provider = new ethers.BrowserProvider(wallet.provider);
+        const nftContract = new ethers.Contract(
+          CONTRACT_ADDRESSES.UnderlyingNFT,
+          CONTRACT_ABIS.ERC721Faucet,
+          provider,
+        );
+        const approvedAddress = await nftContract.getApproved(tid);
+        if (!cancelled) {
+          setAdvancedNftApproved(approvedAddress.toLowerCase() === CONTRACT_ADDRESSES.ZWERC721.toLowerCase());
+        }
+      } catch {
+        if (!cancelled) setAdvancedNftApproved(false);
+      }
+    };
+    fetchApproval();
+    return () => { cancelled = true; };
+  }, [account, wallet, advancedDepositTokenId]);
+
+  // Check if approval is needed - Simple Mode (Burn)
+  const simpleNeedsApproval = React.useMemo(() => {
+    if (simpleDepositTokenId === null || simpleDepositTokenId === undefined) return false;
+    return simpleNftApproved === false;
+  }, [simpleDepositTokenId, simpleNftApproved]);
+
+  // Check if approval is needed - Advanced Mode (Wrap)
+  const advancedNeedsApproval = React.useMemo(() => {
+    if (advancedDepositTokenId === null || advancedDepositTokenId === undefined) return false;
+    return advancedNftApproved === false;
+  }, [advancedDepositTokenId, advancedNftApproved]);
 
   // Check and switch to Sepolia network
   React.useEffect(() => {
@@ -1337,6 +1428,7 @@ const ZWERC721: React.FC = () => {
         await approveTx.wait();
         message.destroy();
         message.success(intl.formatMessage({ id: 'pages.zwerc721.burn.approveSuccess' }));
+        setSimpleNftApproved(true);
         setLoading(false);
         return;
       }
@@ -1366,6 +1458,7 @@ const ZWERC721: React.FC = () => {
       saveLastBurnToStorage(burnTokenId, burnAddress, burnTxHash, burnMode);
       
       simpleDepositForm.resetFields();
+      setSimpleDepositTokenId(null);
       refreshBalances();
       buildZwNftCache();
     } catch (error: any) {
@@ -1445,6 +1538,7 @@ const ZWERC721: React.FC = () => {
         await approveTx.wait();
         message.destroy();
         message.success(intl.formatMessage({ id: 'pages.zwerc721.wrap.approveSuccess' }));
+        setAdvancedNftApproved(true);
         setLoading(false);
         return;
       }
@@ -1478,6 +1572,7 @@ const ZWERC721: React.FC = () => {
       }
       
       advancedDepositForm.resetFields();
+      setAdvancedDepositTokenId(null);
       setDirectBurn(false);
       refreshBalances();
       buildZwNftCache();
@@ -2500,7 +2595,8 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                           placeholder={intl.formatMessage({ id: 'pages.zwerc721.burn.tokenId.placeholder' })}
                           precision={0}
                           min={0}
-                          onChange={() => {
+                          onChange={(value) => {
+                            setSimpleDepositTokenId(value ?? null);
                             simpleDepositForm.setFieldsValue({ targetAddress: undefined });
                           }}
                         />
@@ -2537,7 +2633,9 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
                       <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} block>
-                          {intl.formatMessage({ id: 'pages.zwerc721.burn.button' })}
+                          {simpleNeedsApproval
+                            ? 'Approve'
+                            : intl.formatMessage({ id: 'pages.zwerc721.burn.button' })}
                         </Button>
                       </Form.Item>
 
@@ -2742,7 +2840,8 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
                           placeholder={intl.formatMessage({ id: 'pages.zwerc721.wrap.tokenId.placeholder' })}
                           precision={0}
                           min={0}
-                          onChange={() => {
+                          onChange={(value) => {
+                            setAdvancedDepositTokenId(value ?? null);
                             if (directBurn) {
                               advancedDepositForm.setFieldsValue({ targetAddress: undefined });
                             }
@@ -2791,7 +2890,11 @@ We propose <span style={{ textDecoration: 'underline' }}>ERC-8065</span>: Zero K
 
                       <Form.Item>
                         <Button type="primary" htmlType="submit" loading={loading} block>
-                          {directBurn ? intl.formatMessage({ id: 'pages.zwerc721.wrap.burnButton' }) : intl.formatMessage({ id: 'pages.zwerc721.wrap.button' })}
+                          {advancedNeedsApproval
+                            ? 'Approve'
+                            : directBurn
+                              ? intl.formatMessage({ id: 'pages.zwerc721.wrap.burnButton' })
+                              : intl.formatMessage({ id: 'pages.zwerc721.wrap.button' })}
                         </Button>
                       </Form.Item>
 
