@@ -17,6 +17,7 @@ const path = require("path");
  *
  * Configuration File:
  * - DEPLOY_CONFIG: Path to JSON config file (default: deploy.config.json)
+ * - feeConfig: feeCollector, feeDenominator, deposit/remint/withdraw fees, min* fees, anonymousCap (0 = no max; all amounts may stay anonymous)
  *
  * Usage:
  *   npx hardhat run scripts/deploy.js --network sepolia
@@ -131,6 +132,7 @@ function buildZWConfig(verifierAddress, tokenConfig, deployer) {
     minDepositFee: feeConfig.minDepositFee || 0,
     minWithdrawFee: feeConfig.minWithdrawFee || 0,
     minRemintFee: feeConfig.minRemintFee || 0,
+    anonymousCap: feeConfig.anonymousCap || 0,
   };
 }
 
@@ -582,14 +584,14 @@ async function verifyContracts(toVerify, poseidonT3Address) {
     }
   };
 
-  const libraries = { PoseidonT3: poseidonT3Address };
+  const tokenLibraries = { PoseidonT3: poseidonT3Address };
 
   for (const item of toVerify) {
     await verifyContract(
       item.name,
       item.address,
       item.constructorArgs,
-      libraries
+      item.usesLibrary ? tokenLibraries : {},
     );
   }
 
@@ -725,6 +727,7 @@ async function main() {
           name: `${type} (${result.symbol})`,
           address: result.address,
           constructorArgs,
+          usesLibrary: true,
         });
       }
     } catch (error) {

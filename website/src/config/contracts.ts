@@ -1,36 +1,48 @@
 /**
  * Contract Address Configuration
  * From deployment records - Sepolia Testnet
- * Deployed: Dec 2025
+ * Deployed: 2026-03-29
  */
 
 export const CONTRACT_ADDRESSES = {
   // ZWToken main contract (ZWERC20 implementation)
-  ZWERC20: '0x7E45741E01F5830Ff69a9faB1B6bd3f953da0503',
+  ZWERC20: '0xa2B0a38aF2c18084630a5372398533F5a3225a29',
 
   // Underlying token (USDC)
   UnderlyingToken: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
 
-  // Groth16 verifier
-  Verifier: '0x8C559486527EE8Ed6EA492a1fB061ead7187Db74',
+  // Groth16 verifier (ZWUSDC)
+  Verifier: '0xefD3C89c5B296C6f817bab50B225b8789B80aa16',
 
   // PoseidonT3 library
   PoseidonT3: '0x0305de4B19eaae16947d8b7bec64d29A86B22189',
 
   // ZWETH main contract
-  ZWETH: '0x48E4C0f0BE2a996b36F72dED5A21C170a2404796',
+  ZWETH: '0x76baC0887E4c61F3b9E129063F7a24AA25e62BE8',
 
   // ZWETH Verifier
-  ZWETHVerifier: '0x524a87356540B36BBD82F470B5189ec973B2D759',
+  ZWETHVerifier: '0xbE7f2C6364FAbBd9E7351360D22735f9E7c980D4',
 
   // ZWERC721
-  ZWERC721: '0x12E93b79773B38c0f2bE019D41B23175EDb0254b',
-  
+  ZWERC721: '0x800E52d4Bbe69a372f6Fc27eD59357090DE6fbf8',
+
+  // ZWERC721 Groth16 verifier
+  ZWERC721Verifier: '0xB6b781D99001da6DF57D26783860927467f39A98',
+
+  // ZWERC1155
+  ZWERC1155: '0x6C89AF2F4038fB68A2F3EF9c26037F1895F46a41',
+
+  // ZWERC1155 Groth16 verifier
+  ZWERC1155Verifier: '0x1c6E908f0C8A22dd085761d1D6c9105E6221944d',
+
   // Underlying ERC721 Mock (also serves as faucet)
   UnderlyingNFT: '0xBF85386b4489b51672e23E9cBf9312A13D3D5093',
-  
+
   // ERC721 Faucet (same as UnderlyingNFT)
   ERC721Faucet: '0xBF85386b4489b51672e23E9cBf9312A13D3D5093',
+
+  // Underlying ERC1155 Faucet
+  UnderlyingERC1155: '0x70989278F35C73A204819E8e73c5f3EBa93f3900',
 } as const;
 
 /**

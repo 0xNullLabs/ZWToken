@@ -1,6 +1,6 @@
 {
   "_comment": "ZWToken Deployment Configuration",
-  "_doc": "Each token has its own verifier and feeConfig. After deployment, address and verifier are written back.",
+  "_doc": "Each token has its own verifier and feeConfig. After deployment, address and verifier are written back. feeConfig.anonymousCap: max amount for anonymous remint (0 = no cap, all amounts anonymous).",
 
   "poseidonT3": null,
 
@@ -16,7 +16,11 @@
         "feeDenominator": 10000,
         "depositFee": 0,
         "remintFee": 0,
-        "withdrawFee": 0
+        "withdrawFee": 0,
+        "minDepositFee": 0,
+        "minWithdrawFee": 0,
+        "minRemintFee": 0,
+        "anonymousCap": 0
       }
     },
     {
@@ -28,7 +32,8 @@
       "verifier": null,
       "feeConfig": {
         "depositFee": 10,
-        "withdrawFee": 10
+        "withdrawFee": 10,
+        "anonymousCap": 0
       }
     },
     {
@@ -41,7 +46,8 @@
       "feeConfig": {
         "depositFee": 20,
         "remintFee": 10,
-        "withdrawFee": 20
+        "withdrawFee": 20,
+        "anonymousCap": 0
       }
     },
     {
@@ -51,7 +57,9 @@
       "symbol": "ZWNFT",
       "address": null,
       "verifier": null,
-      "feeConfig": {}
+      "feeConfig": {
+        "anonymousCap": 0
+      }
     },
     {
       "type": "ZWERC1155",
@@ -63,7 +71,8 @@
       "verifier": null,
       "feeConfig": {
         "minDepositFee": 1,
-        "minWithdrawFee": 1
+        "minWithdrawFee": 1,
+        "anonymousCap": 0
       }
     }
   ]

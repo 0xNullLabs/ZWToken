@@ -5,8 +5,8 @@
       "type": "ZWETH",
       "name": "ZK Wrapper ETH",
       "symbol": "ZWETH",
-      "address": "0x48E4C0f0BE2a996b36F72dED5A21C170a2404796",
-      "verifier": "0x524a87356540B36BBD82F470B5189ec973B2D759",
+      "address": "0x76baC0887E4c61F3b9E129063F7a24AA25e62BE8",
+      "verifier": "0xbE7f2C6364FAbBd9E7351360D22735f9E7c980D4",
       "feeConfig": {
         "feeCollector": "0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e",
         "feeDenominator": 10000,
@@ -15,7 +15,8 @@
         "withdrawFee": 0,
         "minDepositFee": 0,
         "minWithdrawFee": 0,
-        "minRemintFee": 0
+        "minRemintFee": 0,
+        "anonymousCap": 0
       }
     },
     {
@@ -23,8 +24,8 @@
       "underlying": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
       "name": "ZK Wrapper USDC",
       "symbol": "ZWUSDC",
-      "address": "0x7E45741E01F5830Ff69a9faB1B6bd3f953da0503",
-      "verifier": "0x8C559486527EE8Ed6EA492a1fB061ead7187Db74",
+      "address": "0xa2B0a38aF2c18084630a5372398533F5a3225a29",
+      "verifier": "0xefD3C89c5B296C6f817bab50B225b8789B80aa16",
       "feeConfig": {
         "feeCollector": "0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e",
         "feeDenominator": 10000,
@@ -33,7 +34,8 @@
         "withdrawFee": 0,
         "minDepositFee": 0,
         "minWithdrawFee": 0,
-        "minRemintFee": 0
+        "minRemintFee": 0,
+        "anonymousCap": 0
       }
     },
     {
@@ -41,8 +43,8 @@
       "underlying": "0xBF85386b4489b51672e23E9cBf9312A13D3D5093",
       "name": "ZK Wrapper Test ERC721 Faucet",
       "symbol": "ZWTEST721",
-      "address": "0x12E93b79773B38c0f2bE019D41B23175EDb0254b",
-      "verifier": "0x8C559486527EE8Ed6EA492a1fB061ead7187Db74",
+      "address": "0x800E52d4Bbe69a372f6Fc27eD59357090DE6fbf8",
+      "verifier": "0xB6b781D99001da6DF57D26783860927467f39A98",
       "feeConfig": {
         "feeCollector": "0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e",
         "feeDenominator": 10000,
@@ -51,7 +53,8 @@
         "withdrawFee": 0,
         "minDepositFee": 0,
         "minWithdrawFee": 0,
-        "minRemintFee": 0
+        "minRemintFee": 0,
+        "anonymousCap": 0
       }
     },
     {
@@ -59,8 +62,8 @@
       "underlying": "0x70989278F35C73A204819E8e73c5f3EBa93f3900",
       "name": "ZK Wrapper Test ERC1155 Faucet",
       "symbol": "ZWTEST1155",
-      "address": "0xc3DB1B665E323cb19fAddAa33aBe49E663560A28",
-      "verifier": "0x8C559486527EE8Ed6EA492a1fB061ead7187Db74",
+      "address": "0x6C89AF2F4038fB68A2F3EF9c26037F1895F46a41",
+      "verifier": "0x1c6E908f0C8A22dd085761d1D6c9105E6221944d",
       "feeConfig": {
         "feeCollector": "0x73ef67FAD3b0c756DCc0efd1c3124C34C7C8126e",
         "feeDenominator": 10000,
@@ -69,7 +72,8 @@
         "withdrawFee": 0,
         "minDepositFee": 0,
         "minWithdrawFee": 0,
-        "minRemintFee": 0
+        "minRemintFee": 0,
+        "anonymousCap": 0
       }
     }
   ]
