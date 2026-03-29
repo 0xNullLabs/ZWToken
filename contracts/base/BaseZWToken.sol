@@ -40,6 +40,7 @@ abstract contract BaseZWToken is PoseidonMerkleTree, IERC8065 {
      * @param minDepositFee Minimum absolute fee for deposits (useful for small amounts)
      * @param minWithdrawFee Minimum absolute fee for withdrawals
      * @param minRemintFee Minimum absolute fee for remints
+     * @param anonymousCap Max amount for anonymous remint (0 = no cap, all amounts anonymous)
      */
     struct ZWConfig {
         address verifier;
@@ -51,6 +52,7 @@ abstract contract BaseZWToken is PoseidonMerkleTree, IERC8065 {
         uint256 minDepositFee;
         uint256 minWithdrawFee;
         uint256 minRemintFee;
+        uint256 anonymousCap;
     }
     
     // ========== Constants ==========
@@ -67,6 +69,10 @@ abstract contract BaseZWToken is PoseidonMerkleTree, IERC8065 {
     uint256 public immutable depositFee;     // basis points
     uint256 public immutable remintFee;      // basis points
     uint256 public immutable withdrawFee;    // basis points
+    
+    // 160-bit birthday attack mitigation: amounts above this require revealing burn address
+    // 0 = no cap (all amounts anonymous)
+    uint256 public immutable anonymousCap;
     
     // ========== State Variables ==========
     
@@ -104,6 +110,8 @@ abstract contract BaseZWToken is PoseidonMerkleTree, IERC8065 {
     error InvalidAmount();
     error InvalidFee();
     error TransferFailed();
+    error RevealRequired();
+    error BurnAddressHasCode();
     
     // ========== Constructor ==========
     
@@ -121,6 +129,7 @@ abstract contract BaseZWToken is PoseidonMerkleTree, IERC8065 {
         depositFee = config.depositFee;
         remintFee = config.remintFee;
         withdrawFee = config.withdrawFee;
+        anonymousCap = config.anonymousCap;
         
         // Initialize minimum fees
         minDepositFee = config.minDepositFee;
@@ -140,6 +149,7 @@ abstract contract BaseZWToken is PoseidonMerkleTree, IERC8065 {
      * @param id Token ID (0 for ERC20/ETH)
      * @param redeem Whether to redeem underlying instead of minting ZWToken
      * @param relayerFee Relayer fee in basis points
+     * @param revealedAddr Revealed burn address (0 for anonymous mode)
      */
     function _verifyProof(
         bytes calldata proof,
@@ -149,16 +159,18 @@ abstract contract BaseZWToken is PoseidonMerkleTree, IERC8065 {
         uint256 amount,
         uint256 id,
         bool redeem,
-        uint256 relayerFee
+        uint256 relayerFee,
+        address revealedAddr
     ) internal view {
-        uint256[7] memory pubInputs = [
-            uint256(commitment),      // Poseidon output, always < BN128_PRIME
-            uint256(nullifier),       // Poseidon output, always < BN128_PRIME
+        uint256[8] memory pubInputs = [
+            uint256(commitment),
+            uint256(nullifier),
             uint256(uint160(to)),
             amount,
             id,
             redeem ? 1 : 0,
-            relayerFee                // Small value, always within BN128 range
+            relayerFee,
+            uint256(uint160(revealedAddr))
         ];
         
         (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c) = 
@@ -166,6 +178,33 @@ abstract contract BaseZWToken is PoseidonMerkleTree, IERC8065 {
         
         if (!verifier.verifyProof(a, b, c, pubInputs)) {
             revert InvalidProof();
+        }
+    }
+    
+    /**
+     * @dev Parse revealed burn address from proverData
+     * @param proverData Prover data bytes (first 32 bytes = ABI-encoded address)
+     * @return revealedAddr Revealed burn address (address(0) for anonymous mode)
+     */
+    function _parseRevealedAddr(bytes calldata proverData) internal pure returns (address revealedAddr) {
+        if (proverData.length >= 32) {
+            revealedAddr = abi.decode(proverData[:32], (address));
+        }
+    }
+    
+    /**
+     * @dev Enforce reveal requirement and validate burn address
+     * @param amount Remint amount
+     * @param revealedAddr Revealed burn address
+     */
+    function _requireRevealIfNeeded(uint256 amount, address revealedAddr) internal view {
+        if (anonymousCap > 0 && amount > anonymousCap && revealedAddr == address(0)) {
+            revert RevealRequired();
+        }
+        // A legitimate privacy address (Poseidon-derived) is always an EOA.
+        // Non-zero code means a CREATE2 collision attack deployed a contract there.
+        if (revealedAddr != address(0) && revealedAddr.code.length != 0) {
+            revert BurnAddressHasCode();
         }
     }
     

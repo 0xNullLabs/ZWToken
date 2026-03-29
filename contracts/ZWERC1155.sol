@@ -271,18 +271,16 @@ contract ZWERC1155 is ERC1155, BaseZWToken {
         uint256 amount,
         IERC8065.RemintData calldata data
     ) external override {
-        // Parameter validation
         if (amount == 0) revert InvalidAmount();
         require(data.nullifiers.length == 1, "Only single nullifier supported");
         
-        // Extract nullifier and validate
         bytes32 nullifier = data.nullifiers[0];
         _validateAndConsumeNullifier(data.commitment, nullifier);
         
-        // Parse relayer fee
         uint256 relayerFee = _parseRelayerFee(data.relayerData);
+        address revealedAddr = _parseRevealedAddr(data.proverData);
+        _requireRevealIfNeeded(amount, revealedAddr);
         
-        // Verify ZK proof
         _verifyProof(
             data.proof,
             data.commitment,
@@ -291,10 +289,15 @@ contract ZWERC1155 is ERC1155, BaseZWToken {
             amount,
             id,
             data.redeem,
-            relayerFee
+            relayerFee,
+            revealedAddr
         );
         
-        // Execute remint
+        // Revealed mode: burn from burn address first to prevent inflation
+        if (revealedAddr != address(0)) {
+            _burn(revealedAddr, id, amount);
+        }
+        
         _executeRemint(to, id, amount, data.redeem, relayerFee);
     }
     

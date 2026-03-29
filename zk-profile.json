@@ -2,60 +2,60 @@
   "circuit": {
     "name": "remint.circom",
     "description": "Privacy-preserving remint circuit with Poseidon Merkle proof",
-    "constraints": 13084,
-    "wires": 13109,
+    "constraints": 13085,
+    "wires": 13110,
     "privateInputs": 44,
-    "publicInputs": 7
+    "publicInputs": 8
   },
   "files": {
     "wasm": {
       "path": "circuits/out/remint_js/remint.wasm",
-      "sizeBytes": 2239488,
+      "sizeBytes": 2239580,
       "sizeMB": 2.14
     },
     "zkey": {
       "path": "circuits/out/remint_0000.zkey",
-      "sizeBytes": 5822396,
+      "sizeBytes": 5822892,
       "sizeMB": 5.55
     },
     "vkey": {
       "path": "circuits/out/verification_key.json",
-      "sizeBytes": 4021,
-      "sizeKB": 3.93
+      "sizeBytes": 4209,
+      "sizeKB": 4.11
     },
     "totalDownloadMB": 7.69
   },
   "proofGeneration": {
     "output": {
-      "proofJsonSize": 724,
-      "publicSignalsCount": 7,
-      "estimatedTxBytes": 948
+      "proofJsonSize": 725,
+      "publicSignalsCount": 8,
+      "estimatedTxBytes": 981
     },
     "runs": 5,
     "times": [
-      698,
-      701,
-      708,
-      714,
-      722
+      722,
+      750,
+      758,
+      761,
+      773
     ],
-    "average": 709,
-    "min": 698,
-    "max": 722,
-    "median": 708,
+    "average": 753,
+    "min": 722,
+    "max": 773,
+    "median": 758,
     "unit": "ms"
   },
   "memory": {
-    "averageHeapIncreaseMB": -0.83,
-    "averageExternalIncreaseMB": -2.87,
-    "totalIncreaseMB": -3.69
+    "averageHeapIncreaseMB": -0.7,
+    "averageExternalIncreaseMB": -2.86,
+    "totalIncreaseMB": -3.56
   },
   "mobileAssessment": {
-    "desktopAvgMs": 709,
+    "desktopAvgMs": 753,
     "estimates": {
       "highEnd": {
         "multiplier": 2.5,
-        "estimatedMs": 1773,
+        "estimatedMs": 1883,
         "devices": [
           "iPhone 14 Pro",
           "Samsung S23",
@@ -64,7 +64,7 @@
       },
       "midRange": {
         "multiplier": 3.5,
-        "estimatedMs": 2482,
+        "estimatedMs": 2636,
         "devices": [
           "iPhone 12",
           "Samsung A53",
@@ -73,7 +73,7 @@
       },
       "lowEnd": {
         "multiplier": 5,
-        "estimatedMs": 3545,
+        "estimatedMs": 3765,
         "devices": [
           "iPhone X",
           "Samsung A32",
@@ -83,8 +83,8 @@
     },
     "memoryRequirement": {
       "baselineMB": 7.69,
-      "runtimeMB": -3.69,
-      "totalMB": 4
+      "runtimeMB": -3.56,
+      "totalMB": 4.13
     },
     "feasibility": {
       "highEnd": "✅ Excellent",

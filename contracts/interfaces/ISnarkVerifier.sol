@@ -8,18 +8,18 @@ pragma solidity ^0.8.20;
  */
 interface ISnarkVerifier {
     /**
-     * @notice Verify a Groth16 proof with 7 public inputs (IERC8065)
+     * @notice Verify a Groth16 proof with 8 public inputs (IERC8065)
      * @param a Proof component A (G1 point)
      * @param b Proof component B (G2 point)
      * @param c Proof component C (G1 point)
-     * @param input Public inputs: [root, nullifier, to, amount, id, redeem, relayerDataHash]
+     * @param input Public inputs: [root, nullifier, to, amount, id, redeem, relayerFee, revealedAddr]
      * @return True if proof is valid, false otherwise
      */
     function verifyProof(
         uint256[2] calldata a,
         uint256[2][2] calldata b,
         uint256[2] calldata c,
-        uint256[7] calldata input
+        uint256[8] calldata input
     ) external view returns (bool);
 }
 

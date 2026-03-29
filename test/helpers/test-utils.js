@@ -44,7 +44,23 @@ function createZWConfig(verifierAddress, feeCollectorAddress, fees = {}) {
     minDepositFee: fees.minDepositFee || 0,
     minWithdrawFee: fees.minWithdrawFee || 0,
     minRemintFee: fees.minRemintFee || 0,
+    anonymousCap: fees.anonymousCap || 0,
   };
+}
+
+/**
+ * Helper: Encode revealedAddr as proverData bytes
+ */
+function encodeProverData(revealedAddr) {
+  if (
+    !revealedAddr ||
+    revealedAddr === ethers.ZeroAddress ||
+    revealedAddr === "0x"
+  ) {
+    return "0x";
+  }
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+  return abiCoder.encode(["address"], [revealedAddr]);
 }
 
 /**
@@ -120,6 +136,7 @@ module.exports = {
   zkeyPath,
   encodeProof,
   encodeRelayerData,
+  encodeProverData,
   createZWConfig,
   derivePrivacyAddress,
   calculateNullifier,

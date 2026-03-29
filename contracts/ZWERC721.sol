@@ -140,15 +140,15 @@ contract ZWERC721 is ERC721, BaseZWToken {
         uint256 amount,
         IERC8065.RemintData calldata data
     ) external override {
-        // Parameter validation
         if (amount != 1) revert InvalidAmount();
         require(data.nullifiers.length == 1, "Only single nullifier supported");
         
-        // Extract nullifier and validate
         bytes32 nullifier = data.nullifiers[0];
         _validateAndConsumeNullifier(data.commitment, nullifier);
         
-        // Verify ZK proof (relayerFee = 0 for NFTs, fees not applicable)
+        address revealedAddr = _parseRevealedAddr(data.proverData);
+        _requireRevealIfNeeded(amount, revealedAddr);
+        
         _verifyProof(
             data.proof,
             data.commitment,
@@ -157,19 +157,21 @@ contract ZWERC721 is ERC721, BaseZWToken {
             amount,
             id,
             data.redeem,
-            0  // relayerFee is always 0 for NFTs
+            0,  // relayerFee is always 0 for NFTs
+            revealedAddr
         );
         
-        // Execute remint
-        // For NFTs: ZW token must exist (if not, underlying NFT was already redeemed)
         require(_ownerOf(id) != address(0), "Token does not exist");
         
+        // In revealed mode, verify burn address actually owns the token
+        if (revealedAddr != address(0)) {
+            require(_ownerOf(id) == revealedAddr, "Burn address mismatch");
+        }
+        
         if (data.redeem) {
-            // Burn ZWERC721 token and transfer underlying NFT to recipient
             _update(address(0), id, address(0));
             underlying.transferFrom(address(this), to, id);
         } else {
-            // Transfer ZW token to new address (ZK proof is the authorization)
             _update(to, id, address(0));
             _recordTokenCommitmentIfNeeded(id, to);
         }

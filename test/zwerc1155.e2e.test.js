@@ -171,6 +171,7 @@ describe("ZWERC1155 - E2E with Real ZK Proof", function () {
       id: tokenId, // ERC1155 tokenId
       redeem: 0n,
       relayerFee: 0n,
+      revealedAddr: 0n,
       secret: SECRET,
       addr20: addr20,
       commitAmount: BigInt(commitAmount),
@@ -307,6 +308,7 @@ describe("ZWERC1155 - E2E with Real ZK Proof", function () {
       id: tokenId,
       redeem: 1n, // TRUE - direct underlying withdrawal
       relayerFee: 0n,
+      revealedAddr: 0n,
       secret: SECRET_REDEEM,
       addr20: addr20,
       commitAmount: BigInt(commitAmount),
@@ -418,6 +420,7 @@ describe("ZWERC1155 - E2E with Real ZK Proof", function () {
       id: tokenId,
       redeem: 0n,
       relayerFee: 0n,
+      revealedAddr: 0n,
       secret: SECRET_REPLAY,
       addr20: addr20,
       commitAmount: BigInt(depositAmount),

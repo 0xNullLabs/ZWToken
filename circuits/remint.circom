@@ -86,12 +86,13 @@ template Selector() {
  * 3. commitment = Poseidon(addr20, commitAmount) is in the Merkle tree
  * 4. remintAmount <= commitAmount
  * 5. nullifier = Poseidon(addr20, secret) is correct (prevents double-spending and protects privacy)
- * 6. Binds to, redeem, relayerDataHash to the constraint system
+ * 6. Binds to, redeem, relayerFee to the constraint system
+ * 7. Optional reveal mode: if revealedAddr != 0, it must equal addr20
  * 
- * Security Guarantees:
- * - All public inputs must participate in constraints to prevent tampering during verification
- * - to, redeem, relayerDataHash are bound via Poseidon hash
- * - If public inputs differ between proof generation and verification, verification will fail
+ * Dual-mode remint (160-bit birthday attack mitigation):
+ * - Anonymous mode (revealedAddr = 0): full privacy, amount capped by contract
+ * - Revealed mode (revealedAddr = addr20): contract burns from burn address, no inflation
+ * - Worst case under attack: privacy loss for large amounts, but funds are always safe
  * 
  * Privacy Protection:
  * - Privacy address derivation: addrScalar = Poseidon(8065, id, secret)
@@ -109,8 +110,9 @@ template Remint(TREE_DEPTH, TWO160) {
     signal input to;                    // Recipient address
     signal input remintAmount;          // Remint amount
     signal input id;                    // Token ID (must be 0 for ERC-20)
-    signal input redeem;    // 1 = withdraw underlying, 0 = mint ZWToken
+    signal input redeem;                // 1 = withdraw underlying, 0 = mint ZWToken
     signal input relayerFee;            // Relayer fee (basis points, e.g., 100 = 1%)
+    signal input revealedAddr;          // 0 = anonymous mode, addr20 = revealed mode
     
     // ========== PRIVATE INPUTS ==========
     signal input secret;            // User secret
@@ -182,12 +184,16 @@ template Remint(TREE_DEPTH, TWO160) {
     
     nullifier === nullifierHasher.out;
     
-    // ========== 6. Bind Unconstrained Public Inputs ==========
+    // ========== 6. Optional Reveal Mode ==========
+    // revealedAddr == 0: anonymous mode (full privacy)
+    // revealedAddr != 0: must equal addr20 (contract can burn from burn address)
+    // Single quadratic constraint: revealedAddr * (revealedAddr - addr20) === 0
+    revealedAddr * (revealedAddr - addr20) === 0;
+    
+    // ========== 7. Bind Unconstrained Public Inputs ==========
     // to, redeem, relayerFee must participate in constraints
     // Otherwise attackers can tamper these values during verification while proof remains valid
-    // Bind them to the constraint system via Poseidon hash
     
-    // 🔒 Security constraint: Ensure redeem can only be 0 or 1
     redeem * (1 - redeem) === 0;
     
     component publicInputsHasher = Poseidon(3);
@@ -195,7 +201,6 @@ template Remint(TREE_DEPTH, TWO160) {
     publicInputsHasher.inputs[1] <== redeem;
     publicInputsHasher.inputs[2] <== relayerFee;
     
-    // Compute binding hash (<== creates constraint, ensuring these public inputs participate in R1CS)
     signal publicInputsBinding;
     publicInputsBinding <== publicInputsHasher.out;
 }
@@ -205,7 +210,7 @@ template Remint(TREE_DEPTH, TWO160) {
 // - TREE_DEPTH: 20 (supports 2^20 = 1,048,576 addresses)
 // - TWO160: 2^160 (address space size)
 
-component main {public [root, nullifier, to, remintAmount, id, redeem, relayerFee]} = Remint(
+component main {public [root, nullifier, to, remintAmount, id, redeem, relayerFee, revealedAddr]} = Remint(
     20,  // TREE_DEPTH
     1461501637330902918203684832716283019655932542976  // 2^160
 );
