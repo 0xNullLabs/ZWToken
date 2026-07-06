@@ -30,11 +30,6 @@ export default [
     component: './ZWERC721',
   },
   {
-    path: '#',
-    name: 'ZWUSDT',
-    icon: 'wallet',
-  },
-  {
     path: '/',
     redirect: '/zwusdc',
   },
