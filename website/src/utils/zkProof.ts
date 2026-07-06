@@ -269,6 +269,7 @@ export function prepareCircuitInput(params: {
   id?: bigint; // Token ID (default 0 for ERC-20)
   redeem?: boolean; // Default false
   relayerFee?: bigint; // Relayer fee in basis points (default 0)
+  revealedAddr?: bigint; // Revealed burn address (default 0 = anonymous mode)
   secret: bigint;
   addr20: bigint;
   commitAmount: bigint;
@@ -276,7 +277,7 @@ export function prepareCircuitInput(params: {
   merkleProof: { pathElements: bigint[]; pathIndices: number[] };
 }) {
   return {
-    // Public inputs (7 total for IERC8065)
+    // Public inputs (8 total for IERC8065)
     root: params.root,
     nullifier: params.nullifier,
     to: BigInt(params.recipient),
@@ -284,6 +285,7 @@ export function prepareCircuitInput(params: {
     id: params.id ?? 0n, // Default to 0 for ERC-20
     redeem: params.redeem ? 1n : 0n, // Convert boolean to 0/1
     relayerFee: params.relayerFee ?? 0n, // Relayer fee (basis points)
+    revealedAddr: params.revealedAddr ?? 0n, // 0 = anonymous mode
 
     // Private inputs
     secret: params.secret,
